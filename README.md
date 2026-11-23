@@ -221,41 +221,45 @@ built, what each one taught and what they cost in memory is in
 ## How it works
 
 ```mermaid
-flowchart TD
-    subgraph G["Games (no_std libraries, no hardware access)"]
-        games["games/*"]
-        g3d["game-3d<br>3D polygons in whole numbers"]
-        kit["game-kit<br>what a game is written against"]
+%%{init: {"flowchart": {"wrappingWidth": 600}}}%%
+flowchart TB
+    subgraph GAMES["Games: plain no_std libraries, no hardware access"]
+        direction LR
+        game["games/*<br>eleven games, two prototypes,<br>one speed test"]
+        libs["game-kit, game-3d<br>what a game is<br>written against"]
+        game --> libs
     end
-    api["game-api<br>the byte-level contract and the slot layout"]
-    subgraph C["The console (no_std, no heap, no unsafe)"]
-        core["console-core<br>boot, home, menus, running a game"]
-        video["console-video<br>160x120 picture, palette, diff"]
-        loader["game-loader<br>checks and loads a game file"]
+
+    gameapi{{"game-api<br>the byte-level contract between a game and the console"}}
+
+    subgraph CONSOLE["Console: no_std, no heap, no unsafe"]
+        direction LR
+        loader["game-loader<br>checks a game file and<br>copies it into its slots"]
+        core["console-core<br>boot, home, menus,<br>runs the game"]
+        video["console-video<br>160x120 picture, palette,<br>diff into rectangles"]
+        loader ~~~ core
+        core --> video
     end
-    board["board-api<br>small traits: Screen, Touch, Keys, Pad, Clock, Files, ..."]
-    subgraph B["Boards"]
-        cyd["boards/cyd<br>ESP32 firmware"]
-        sim["boards/desktop<br>PC simulator"]
+
+    boardapi{{"board-api<br>small traits: Screen, Touch, Keys, Pad, Clock, Files, ..."}}
+
+    subgraph BOARDS["Boards: the only code that knows the hardware"]
+        direction LR
+        cyd["boards/cyd<br>ESP32 firmware: loads each<br>game file into RAM slots"]
+        sim["boards/desktop<br>PC simulator: the games<br>are linked straight in"]
+        cyd ~~~ sim
     end
-    games --> g3d --> kit --> api
-    games --> kit
-    kit --> video
-    core --> video
-    core --> api
-    core --> board
-    video --> board
-    board --> api
-    loader --> api
-    loader --> board
-    cyd --> core
-    cyd --> loader
-    cyd --> board
-    sim --> core
-    sim --> board
-    sim -. "links the games in directly" .-> games
-    cyd -. "loads game files into RAM slots" .-> games
+
+    GAMES --- gameapi --- CONSOLE --- boardapi --- BOARDS
+
+    classDef contract stroke-width:2px,stroke-dasharray:6 4
+    class gameapi,boardapi contract
 ```
+
+Read it from top to bottom: a layer talks to the next one only through
+the contract drawn between them (the two dashed boxes), so a game
+never sees a board. The full dependency graph of the crates is in
+[docs/architecture.md](docs/architecture.md).
 
 One frame, in plain words:
 
