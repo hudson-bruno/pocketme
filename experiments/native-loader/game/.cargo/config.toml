@@ -1,0 +1,13 @@
+[build]
+target = "xtensa-esp32-none-elf"
+# The game's own build folder, next to its sources.
+target-dir = "target"
+rustflags = [
+  # No start-up code: the console calls the game, the chip never "starts" it.
+  "-C", "link-arg=-nostartfiles",
+]
+
+[unstable]
+# The game uses only `core`. No allocator, no esp-hal: nothing that talks
+# to the hardware belongs in a game.
+build-std = ["core"]

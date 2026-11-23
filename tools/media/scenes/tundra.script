@@ -1,0 +1,147 @@
+# TUNDRA: the title menu, then a match at the game's starting settings (pad 1
+# is AMBER player 1, three computer players, computer EASY, 3 MIN, RATE 60).
+# BLUE scores at frame 659 (0-1), then a face-off.
+# Run (from boards/desktop): pocketme-sim --boot off --fps 60 --frames 840 --script tundra.script --shot <frames> --out <folder>
+
+# --- home screen (boot off): step right 13 tiles to TUNDRA, then start it
+92 press right
+94 release right
+96 press right
+98 release right
+100 press right
+102 release right
+104 press right
+106 release right
+108 press right
+110 release right
+112 press right
+114 release right
+116 press right
+118 release right
+120 press right
+122 release right
+124 press right
+126 release right
+128 press right
+130 release right
+132 press right
+134 release right
+136 press right
+138 release right
+140 press right
+142 release right
+144 press south   # start TUNDRA
+146 release south
+
+# Title menu: A on PLAY.
+180 press south  # PLAY
+182 release south
+
+# The lines below were written by a small helper that looked at each picture
+# and chose the next input (stick toward the puck or the blue goal, A to shoot, B to check). They are plain recorded inputs now,
+# written for 30 frames a second and played here with every frame number doubled: the run is the same every time.
+186 stick left 32705 -2002
+194 press east
+198 release east
+218 press east
+222 release east
+238 stick left 32739 -1345
+242 stick left 32721 -1722
+242 press east
+246 stick left 32766 136
+246 release east
+250 stick left 32766 141
+254 stick left 32766 143
+258 stick left 32766 144
+262 stick left 32766 148
+266 stick left 32766 150
+270 stick left 32766 153
+274 stick left 32766 157
+278 stick left 32766 161
+282 stick left 32766 168
+286 stick left 32766 173
+290 stick left 32766 181
+294 stick left 32766 186
+298 stick left 32766 195
+302 stick left 32766 205
+306 stick left 32766 216
+310 stick left 32766 232
+314 stick left 32766 241
+318 stick left 32765 256
+322 stick left 32765 267
+326 stick left 32765 280
+326 press south
+330 stick left 32765 293
+334 stick left 32746 1158
+338 stick left 32744 1220
+342 stick left 32741 1290
+346 stick left 32738 1369
+350 stick left 32730 1551
+354 stick left 32725 1641
+354 release south
+358 stick left 32650 2755
+362 stick left 32644 2833
+366 stick left -13428 29889
+370 stick left -17071 27968
+374 stick left -23540 22793
+378 stick left -25935 20025
+382 stick left -26829 18811
+386 stick left -27983 17047
+386 press east
+390 stick left -31918 7409
+390 release east
+394 stick left -32424 4728
+398 stick left -32664 2592
+406 stick left -32729 -1558
+410 stick left -32491 -4238
+414 stick left -32729 -1558
+426 stick left -32278 -5635
+450 stick left -32729 -1558
+470 stick left -32278 -5635
+494 stick left -32729 -1558
+510 stick left -32278 -5635
+534 stick left 0 0
+554 stick left 32655 2696
+558 stick left 0 0
+570 stick left 32635 2931
+578 stick left 0 0
+586 stick left -23540 22793
+594 stick left 0 0
+602 stick left -26257 19600
+602 press east
+606 stick left -26913 18690
+606 release east
+610 stick left 0 0
+618 stick left 32723 1691
+622 stick left -21844 -5461
+626 stick left 0 0
+650 stick left -21844 -10922
+650 press east
+654 stick left 0 0
+654 release east
+670 stick left 15400 28922
+674 stick left 10176 31146
+674 press east
+678 stick left -17800 27510
+678 release east
+682 stick left -29176 14912
+686 stick left -32113 6512
+690 stick left -32680 -2380
+694 stick left -31630 -8554
+698 stick left -30195 -12723
+702 stick left -29047 -15163
+706 stick left -28186 -16709
+710 stick left -27589 -17677
+714 stick left -26383 -19431
+718 stick left -25781 -20223
+722 stick left -25184 -20962
+726 stick left -24595 -21650
+730 stick left -24016 -22290
+738 stick left -23448 -22887
+742 stick left -22893 -23442
+754 stick left -22352 -23958
+766 stick left -21825 -24439
+782 stick left 32705 -2002
+794 press east
+798 release east
+802 stick left 0 0   # stick back to the middle

@@ -1,0 +1,66 @@
+# LANDER: level 1, one soft landing on the X1 pad; level 2 in the FOLLOW view, a crash,
+# then a landing on the X4 pad on a ridge.
+# Run: pocketme-sim --boot off --fps 60 --frames 2800 --script lander.script
+# (from boards/desktop). LANDER starts at view STILL, steer STICK and 60 pictures a
+# second; the script keeps all three. The game runs one physics tick a frame here.
+
+# Home screen: five steps right, from BENCH to LANDER, then start it.
+10 press right
+12 release right
+16 press right
+18 release right
+22 press right
+24 release right
+28 press right
+30 release right
+34 press right
+36 release right
+52 press south
+54 release south
+120 press plus            # START plays level 1
+122 release plus
+140 press south           # A skips the LEVEL 1 card
+142 release south
+
+# The craft starts high on the left, drifting right at 14 px/s.
+300 press left            # lean left...
+320 release left
+320 press up              # ...and burn: the drift dies away (still at 360)
+446 release up
+446 press east            # B: back upright, over the X1 pad
+470 release east
+540 press up              # short burns to slow the fall
+580 release up
+660 press up              # frames 670-1010: the clip (the landing)
+686 release up
+700 trigger right 560     # a little over half power on the right trigger: the fall slows
+760 trigger right 360     # just over a hover: a slow sink, 3 px/s at the pad
+# 966: LANDED on X1 with a soft touch, the LANDED card (fuel left, SOFT TOUCH +25,
+# pad, points 158).
+980 trigger right 0
+
+# Level 2 in the FOLLOW view: no burn at all, so the craft falls and breaks up.
+1040 press south          # A: the next level, LEVEL 2
+1042 release south
+1070 press south          # A skips the card
+1072 release south
+1090 press minus          # SELECT: VIEW FOLLOW (the camera zooms in near the ground)
+1092 release minus
+# 1416: CRASHED, TOO FAST.
+
+# The same level again: a hover past a ridge, a stop, and a landing on its X4 pad.
+1560 press south          # A: TRY AGAIN, the LEVEL 2 card
+1562 release south
+1590 press south          # A skips the card
+1592 release south
+1760 trigger right 1023   # full power for a second...
+1820 trigger right 420    # ...then a little over a hover: the craft drifts right low over the hills
+2152 press left           # lean left...
+2172 release left
+2172 trigger right 1023   # ...and burn: the drift dies away beside the ridge
+2262 trigger right 420
+2262 press east           # B: back upright, over the X4 pad
+2286 release east
+2312 trigger right 0      # let it fall a little
+2462 trigger right 384    # about a hover: a steady sink
+# 2575: LANDED on X4.

@@ -1,0 +1,38 @@
+[package]
+name        = "console-core"
+description = "The console itself: one frame of work per call (boot screen, home screen, bottom bar, notifications, input, running a game with its pause menu). No std, no heap; runs on any board through board-api."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[features]
+# The optional parts, passed on to the board layer. The board program
+# turns on the same ones (it must then give the part).
+bt-classic = ["board-api/bt-classic"]
+passby     = ["board-api/passby"]
+gps        = ["board-api/gps"]
+sound      = ["board-api/sound"]
+# The renderer's two pictures swap roles at each present, so a board can
+# send one on its second core while the console draws the other
+# (crates/console-video/README.md, "Swap: two cores, two pictures"). Adds
+# `Console::step_with_sender`; `Console::step` keeps sending right away.
+# Off by default.
+swap       = ["console-video/swap"]
+# The GATHER boot animation instead of today's boot screen (src/gather/,
+# src/boot_gather.rs): 2,048 points gather into the name, which hands
+# over to the home screen. About 2.7 s at 60 frames a second, with a
+# BOOT setting (FULL, SHORT, OFF) in the home screen's menu. Off by
+# default: without it the boot screen is today's, unchanged.
+boot-gather = []
+
+[dependencies]
+board-api     = { path = "../board-api" }
+console-video = { path = "../console-video" }
+# The contract with games (plain `core`, no dependencies).
+game-api      = { path = "../game-api" }
+
+[dev-dependencies]
+board-api = { path = "../board-api", features = ["testing"] }
+# Fake games in the tests are written with the game kit, as real ones.
+game-kit  = { path = "../game-kit" }

@@ -1,0 +1,17 @@
+6 RJ
+1 R
+6 LJ
+1 L
+6 RJ
+1 R
+6 LJ
+1 L
+6 RJ
+1 R
+6 LJ
+1 L
+6 RJ
+1 R
+6 LJ
+1 L
+5 RJ

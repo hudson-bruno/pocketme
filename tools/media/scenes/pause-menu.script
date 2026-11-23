@@ -1,0 +1,33 @@
+# The pause menu over a running game: a CAMBER race.
+# Run: --boot off --fps 30 --frames 390
+#
+# Home screen: one step right to the CAMBER tile, start it.
+10 press right
+11 release right
+20 press south
+21 release south
+# 21-59: CAMBER's title menu over its live backdrop; PLAY is chosen
+60 press south
+61 release south
+# 61-100: the start count 3, 2, 1, GO
+# 80: hold the thrust (ZR) from the count on and race the first lap
+80 press zr
+# 240: on the green strip, the home button pauses the game; the console's
+#      pause menu (RESUME, brightness, BACK TO HOME) stands over the still
+#      race
+240 press home
+241 release home
+# 262: down to the brightness bars; 276 one step dimmer, 290 one step
+#      brighter again; 306 up to RESUME
+262 press down
+263 release down
+276 press left
+277 release left
+290 press right
+291 release right
+306 press up
+307 release up
+# 322: OK on RESUME: the menu goes, the race goes on (ZR still held)
+322 press south
+323 release south
+# 323-389: the race again, along the green strip to the orange arrows

@@ -1,0 +1,16 @@
+# The GATHER boot animation, untouched, then the home screen.
+# Run: --boot full --fps 60 --frames 226
+#
+# No input at all: any key would skip the animation.
+# 0-30:    a point grows into a ball of points
+# 30-60:   the ball of points turns
+# 60-90:   the ball pulls apart into a ribbon that ties itself in a loop
+# 90-125:  the ribbon burns away from one end and the name POCKETME is
+#          written out in its place
+# 125-150: the solid name, a gold gleam over it, then it shrinks into the
+#          home screen's title at the top left
+# 150-163: the home screen fades in
+# 163-225: the home screen stands still (BENCH tile chosen)
+#
+# Stills: frame 72 (the ribbon loop), frame 100 (the name being written
+# while the ribbon burns).

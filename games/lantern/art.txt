@@ -1,0 +1,59 @@
+# LANTERN: a mine tunnel by lamplight. Timber frames go back into the
+# dark, rails lead to two eyes far away, a crystal shows in the left
+# wall, and the lamp hangs low on the right.
+# The home tile's picture: 36 x 36 pixels, one letter per pixel.
+# Make the card file with games/art/make_art.py (see games/README.md).
+size 36 36
+colour . 08070A   # the dark
+colour , 1E1A22   # rock, far
+colour r 3A3036   # rock
+colour R 5E4C44   # rock, lit
+colour t 5C3A20   # timber, dark
+colour T 946032   # timber
+colour d 2C2218   # floor, far
+colour D 5A4430   # floor, lit
+colour i 8C8C98   # iron
+colour k 1A1618   # iron, dark
+colour g F2C46A   # lamp glass, glow
+colour G F09030   # lamp flame, warm light
+colour w FFF6D8   # flame core
+colour c 7EE8F4   # crystal
+colour C 2C8CB4   # crystal, dark
+colour e E8483C   # eyes in the dark
+pixels
+....................................
+....................................
+.TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT.
+.TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT.
+.TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT.
+.tttttttttttttttttttttttttttttttttt.
+.TTTtrrrrrrrrrrrrrrrrrrrrrrrrrrtTTT.
+.TTTtRRrrrrrrrrrrrrrrrrrrrrrrRRtTTT.
+.TTTtRRRrrrrrrrrrrrrrrrrrrrrRRRtTTT.
+.TTTtRRRrttttttttttttttttttrRRRtTTT.
+.TTTtRRRrtr,,,,,,,,,,,,,,rtrRRRtTTT.
+.TTTtRRRrtr,,,,,,,,,,,,,,rtrRRRtTTT.
+.TTTtRRRrtr,,tttttttttt,,rtrRRRtTTT.
+.TTTtRRRrtr,,t........t,,rtrRRRtTTT.
+.TTTtRRRrtr,,t........t,,rtrRRRtTTT.
+.TTTtRRRctr,,t........t,,rtrRRRtTTT.
+.TTTtRRccCr,,t........t,,rtrRRRtTTT.
+.TTTtRcCcCr,,t........t,,rtrRRRtTTT.
+.TTTtRRRCtr,,t..e..e..t,,rtrRRRtTTT.
+.TTTtRRRrtr,,t........t,,rtrRRRtTTT.
+.TTTtRRRrtr,,t........t,,rtrRRRtTTT.
+.TTTtRRRrtr,,t........t,,rtrRRRtTTT.
+.TTTtRRRrtr,,t........t,,rkkkRRtTTT.
+.TTTtRRRrtr,,t........t,,ktrRkRtTTT.
+.TTTtRRRrtr,,,dddiiddd,,GiiiiiGtTTT.
+.TTTtRRRrtr,,dddiddiddd,kkkkkkktTTT.
+.TTTtRRRrtr,ddddiddiddddigggggitTTT.
+.TTTtRRRrtrddddiddddidddigGGGgitTTT.
+.TTTtRRRrtrddddiddddiddGigGwGgiGTTT.
+.TTTtRRRrtDDDDiDDDDDiDDDigGwGgitTTT.
+.TTTtRRRrDDDDDiDDDDDDiDDigGwGgitTTT.
+.TTTtRRRDDDDDDiDDDDDDiDGigGGGgiGTTT.
+.TTTtRRRDDDDDiDDDDDDDDiDigggggitTTT.
+.TTTtRRDDDDDDiDDDDDDDDiDkkkkkkktTTT.
+.TTTtRDDDDDDiDDDDDDDDDDiGkkkkkGtTTT.
+.TTTtDDDDDDDiDDDDDDDDDDiDkkkkkDtTTT.

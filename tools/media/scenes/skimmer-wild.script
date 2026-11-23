@@ -1,0 +1,71 @@
+# SKIMMER: the computer plays both sides (CORAL COMPUTER, TEAL AUTO with no
+# pad 2), computer NORMAL, 1 VS 1, the WILD table with its two bumpers on the
+# centre line, rate 60. Nobody touches anything after PLAY; TEAL scores at
+# about frame 656.
+# Run (from boards/desktop): pocketme-sim --boot off --fps 60 --frames 720 --script skimmer-wild.script --shot <frames> --out <folder>
+
+# --- home screen (boot off): step right 11 tiles to SKIMMER, then start it
+46 press right
+47 release right
+48 press right
+49 release right
+50 press right
+51 release right
+52 press right
+53 release right
+54 press right
+55 release right
+56 press right
+57 release right
+58 press right
+59 release right
+60 press right
+61 release right
+62 press right
+63 release right
+64 press right
+65 release right
+66 press right
+67 release right
+68 press south   # start SKIMMER
+69 release south
+
+# Title menu: one DOWN to CORAL and four RIGHTs to COMPUTER, three DOWNs to
+# COMPUTER (left at NORMAL), two DOWNs to TABLE and one RIGHT to WILD, six UPs
+# back to PLAY, then A.
+80 press down
+81 release down
+82 press right
+83 release right
+84 press right
+85 release right
+86 press right
+87 release right
+88 press right
+89 release right
+90 press down
+91 release down
+92 press down
+93 release down
+94 press down
+95 release down
+96 press down
+97 release down
+98 press down
+99 release down
+100 press right
+101 release right
+102 press up
+103 release up
+104 press up
+105 release up
+106 press up
+107 release up
+108 press up
+109 release up
+110 press up
+111 release up
+112 press up
+113 release up
+120 press south
+121 release south

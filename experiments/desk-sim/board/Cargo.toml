@@ -1,0 +1,10 @@
+[package]
+name = "board-layer"
+license = "MIT"
+description = "PROVISIONAL board layer: what the console may ask of the hardware. No std, no dependencies."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# No dependencies on purpose: the same file must build for the ESP32 later.
+[dependencies]

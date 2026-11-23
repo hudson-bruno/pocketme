@@ -1,0 +1,14 @@
+[package]
+name        = "debug-link"
+description = "Wire protocol of the console's debug link: screenshots, injected input and stats over the same serial port as the log"
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[features]
+# The PC side: collecting a screenshot's frames into one picture needs a
+# growable buffer. The firmware builds without it and allocates nothing.
+std = []
+
+[dependencies]

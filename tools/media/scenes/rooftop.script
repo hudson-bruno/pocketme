@@ -1,0 +1,183 @@
+# ROOFTOP: the title menu, then rooms 1 to 8 played through to the delivery,
+# at the game's starting rate of 60 calls a second (one call a frame).
+# Each room's inputs come from the game's own room solutions
+# (games/rooftop/tests/data/room1.txt to room8.txt, written as calls at 30
+# a second), turned into presses with every frame number doubled.
+# Run (from boards/desktop): pocketme-sim --boot off --fps 60 --frames 1740 --script rooftop.script --shot <frames> --out <folder>
+
+# --- home screen (boot off): step right 10 tiles to ROOFTOP, then start it
+92 press right
+94 release right
+96 press right
+98 release right
+100 press right
+102 release right
+104 press right
+106 release right
+108 press right
+110 release right
+112 press right
+114 release right
+116 press right
+118 release right
+120 press right
+122 release right
+124 press right
+126 release right
+128 press right
+130 release right
+132 press south   # start ROOFTOP
+134 release south
+160 press south  # START on the title
+162 release south
+# room1.txt from frame 162
+162 press right
+192 press south
+212 release south
+224 press south
+244 release south
+256 press south
+276 release south
+# room2.txt from frame 304
+326 press south
+336 release south
+374 press south
+378 release south
+408 press south
+424 release south
+# room3.txt from frame 446
+446 press south
+458 release south
+460 release right
+460 press left
+460 press south
+472 release south
+474 release left
+474 press right
+474 press south
+486 release south
+488 release right
+488 press left
+488 press south
+500 release south
+502 release left
+502 press right
+502 press south
+514 release south
+516 release right
+516 press left
+516 press south
+528 release south
+530 release left
+530 press right
+530 press south
+542 release south
+544 release right
+544 press left
+544 press south
+556 release south
+558 release left
+558 press right
+558 press south
+# room4.txt from frame 568
+568 release south
+590 press south
+602 release south
+602 press west
+606 release west
+642 press south
+658 release south
+658 press west
+662 release west
+# room5.txt from frame 684
+712 release right
+712 press south
+728 release south
+728 press up
+728 press west
+732 release up
+732 release west
+732 press right
+768 press south
+780 release south
+780 press up
+780 press west
+784 release up
+784 release west
+# room6.txt from frame 848
+848 press south
+860 release south
+862 release right
+862 press left
+862 press south
+874 release south
+876 release left
+876 press right
+876 press south
+892 release south
+924 press south
+936 release south
+936 press west
+940 release west
+952 release right
+960 press right
+960 press south
+972 release south
+972 press up
+972 press west
+976 release up
+976 release west
+# room7.txt from frame 986
+1030 press south
+1046 release south
+1086 press south
+1090 release south
+1130 press south
+1144 release south
+1144 press west
+1148 release west
+1186 press south
+1200 release south
+1200 press up
+1200 press west
+1204 release up
+1204 release west
+1242 press south
+1254 release south
+1254 press west
+1258 release west
+1378 press south
+1390 release south
+1392 release right
+1392 press left
+1392 press south
+1404 release south
+1406 release left
+1406 press right
+1406 press south
+1430 release south
+# room8.txt from frame 1460
+1460 press south
+1472 release south
+1474 release right
+1474 press left
+1474 press south
+1486 release south
+1488 release left
+1488 press right
+1488 press south
+1504 release south
+1532 press south
+1536 release south
+1536 press west
+1540 release west
+1568 release right
+1570 press right
+1570 press south
+1584 release south
+1584 press up
+1584 press west
+1588 release up
+1588 release west
+1618 release right
+# ends at frame 1618

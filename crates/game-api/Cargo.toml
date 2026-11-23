@@ -1,0 +1,13 @@
+[package]
+edition     = "2024"
+license = "MIT"
+name        = "game-api"
+description = "The contract between the console and a game: the tables they hand each other, where a game is loaded on the chip, and what its file looks like. Version 2."
+version     = "0.2.0"
+publish     = false
+
+# No dependencies on purpose. This crate is compiled into the console (on
+# the chip and on the PC), into every game, and into the PC tool that packs
+# a game file. It must stay plain `core` so that all of them agree byte for
+# byte.
+[dependencies]

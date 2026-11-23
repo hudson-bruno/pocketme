@@ -1,0 +1,106 @@
+[
+  {
+    "scene": "boot",
+    "game": "console",
+    "script": "boot.script",
+    "boot": "full",
+    "fps": 60,
+    "frames": 226,
+    "stills": [],
+    "clips": [
+      {"from": 0, "to": 224, "every": 4, "name": "boot-gather", "caption": "The whole GATHER boot animation, from a single point to the name POCKETME shrinking into the title of the home screen, then about a second of the home screen."}
+    ]
+  },
+  {
+    "scene": "home",
+    "game": "console",
+    "script": "home.script",
+    "boot": "off",
+    "fps": 30,
+    "frames": 180,
+    "stills": [],
+    "clips": [
+      {"from": 0, "to": 175, "every": 2, "name": "home-row", "caption": "The d-pad moves the choice along the home screen's row of tiles from BENCH to TUNDRA, resting on KESTREL and MERCATOR."}
+    ]
+  },
+  {
+    "scene": "start-game",
+    "game": "console",
+    "script": "console-start-game.script",
+    "boot": "off",
+    "fps": 30,
+    "frames": 240,
+    "stills": [],
+    "clips": [
+      {"from": 0, "to": 200, "every": 2, "name": "console-start-game", "caption": "From the home screen the d-pad walks to the KESTREL tile and starts it; KESTREL's title menu shows, then the home button opens the pause menu and BACK TO HOME returns to the home screen with KESTREL still chosen."}
+    ]
+  },
+  {
+    "scene": "console-menu",
+    "game": "console",
+    "script": "console-menu.script",
+    "boot": "full",
+    "fps": 30,
+    "frames": 330,
+    "stills": [],
+    "clips": [
+      {"from": 104, "to": 310, "every": 2, "name": "console-menu", "caption": "The home button opens the console menu over the home screen: the brightness bar goes down from five steps to two and back up, BOOT ANIM goes from FULL to SHORT, OFF and FULL again, and CLOSE shuts the menu."}
+    ]
+  },
+  {
+    "scene": "pause-menu",
+    "game": "console",
+    "script": "pause-menu.script",
+    "boot": "off",
+    "fps": 30,
+    "frames": 390,
+    "stills": [],
+    "clips": [
+      {"from": 214, "to": 372, "every": 2, "name": "console-pause-menu", "caption": "The home button pauses a CAMBER race: the pause menu (RESUME, brightness, BACK TO HOME) stands over the still race and the lap clock stops; the brightness goes one step down and back up, and RESUME lets the race go on."}
+    ]
+  },
+  {
+    "scene": "no-card",
+    "game": "console",
+    "script": "no-card.script",
+    "boot": "off",
+    "fps": 30,
+    "frames": 270,
+    "stills": [],
+    "clips": [
+      {"from": 26, "to": 236, "every": 2, "name": "console-card", "caption": "The home screen with the card slot empty says NO CARD; a card goes in and the row of tiles appears with a green CARD READY note, then the card is pulled out: NO CARD again and a red CARD REMOVED note."}
+    ]
+  },
+  {
+    "scene": "padtest",
+    "game": "padtest",
+    "script": "padtest.script",
+    "boot": "off",
+    "fps": 30,
+    "frames": 740,
+    "stills": [
+      {"frame": 130, "name": "padtest-inputs", "caption": "PADTEST showing player 1's d-pad up and right held, both sticks pushed, the right trigger part pulled, a finger on the screen and the level bubble of a tilted pad."}
+    ],
+    "clips": [
+      {"from": 60, "to": 215, "every": 2, "name": "padtest-inputs", "caption": "PADTEST following player 1's pad: both sticks turn in circles, the triggers rise and fall, the buttons light one after another, a finger drags across the screen and the level bubble follows the tilt."},
+      {"from": 214, "to": 420, "every": 2, "name": "padtest-players", "caption": "Pads 2, 3 and 4 connect, each with its own PAD CONNECTED note; each holds buttons that light in its own row at the right and walks one more button along it, while player 1 holds the d-pad, shoulders, triggers, sticks and a finger on the screen."},
+      {"from": 510, "to": 714, "every": 2, "name": "padtest-motion", "caption": "With nothing held PADTEST goes ON DEMAND. Then the pad alone is tilted round in a circle while it turns: the game wakes, the level bubble and the ACCEL and GYRO numbers follow, and when the pad stops sending motion it shows NO MOTION and goes ON DEMAND again."}
+    ]
+  },
+  {
+    "scene": "bench",
+    "game": "bench",
+    "script": "bench.script",
+    "boot": "off",
+    "fps": 30,
+    "frames": 860,
+    "stills": [
+      {"frame": 540, "name": "bench-city", "caption": "BENCH's CITY test at 32 buildings: driving down a four-lane street between rows of buildings, with cars in both directions."}
+    ],
+    "clips": [
+      {"from": 315, "to": 465, "every": 2, "name": "bench-island", "caption": "BENCH's ISLAND test: the figure runs across the floating island past a tower and round towards a stone arch, the camera following behind."},
+      {"from": 502, "to": 638, "every": 2, "name": "bench-city", "caption": "BENCH's CITY test at 32 buildings: the eye drives down a four-lane street between rows of shops and towers, past cars going both ways, and over a zebra crossing at a junction."},
+      {"from": 646, "to": 838, "every": 2, "name": "bench-tests", "caption": "BENCH's other tests one after another at their default loads: FILL, triangles of 20, 100 and 400 pixels, VERT (corners only, nothing drawn), the SCENE tests' balls of triangles, SEND ROWS, SEND DOTS and TRI SPIN."}
+    ]
+  }
+]

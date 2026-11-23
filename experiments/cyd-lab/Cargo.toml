@@ -1,0 +1,148 @@
+[package]
+edition      = "2024"
+license = "MIT"
+name         = "pocketme-cyd-lab"
+description  = "The console on the CYD board (classic ESP32, ST7789 panel): the board layer for console-core"
+rust-version = "1.95"
+version      = "0.1.0"
+publish      = false
+
+[[bin]]
+name = "pocketme-cyd-lab"
+path = "./src/main.rs"
+test = false
+bench = false
+
+[features]
+default = ["demo-card", "touch", "link", "tour"]
+
+# Where the games list comes from. At most one of the two; with neither
+# the console sees "no card".
+# - demo-card: four made-up games built into the firmware (read only),
+#   the same as boards/desktop's sample card.
+# - sd-card: the real microSD card, read only (never written).
+demo-card = []
+sd-card   = ["dep:embedded-hal", "dep:embedded-hal-bus", "dep:embedded-sdmmc"]
+
+# The resistive touch screen (XPT2046 chip on its own pins).
+touch = []
+
+# The debug link on the USB serial port: `boardctl shot`, `key`, `tap`,
+# `stats`. Without it the port only carries the log.
+link = []
+
+# The tour: a demo that moves along the tiles, scrolls and shows a
+# notification, again and again. Started by the letter `t` on the serial
+# port or a long press on BOOT. Off at start.
+tour = []
+
+# Measuring only: strip buffers of 2 x 15,360 bytes (the size the
+# display-dma experiment used) instead of 2 x 5,120. Also runs the strip
+# timing bench at start.
+wide-strips = []
+
+# Measuring only: links and starts the Bluetooth radio (the patched
+# dual-mode driver of experiments/bt-classic-probe, classic + Low
+# Energy), to see whether it fits beside the console and the two game
+# slots. The radio is only started: no pairing, no searching, nothing
+# sent, nothing written to flash. See radio_fit.rs.
+radio-fit = ["dep:esp-radio", "esp-rtos/esp-radio"]
+
+# Lab only (experiments/cyd-lab): use the second core's flash-cache RAM
+# (32 KB at 0x4007_8000) as extra code RAM. Safe only while the second
+# core stays off. See cpu1-cache.x and src/cpu1_cache.rs.
+# - At start: a pattern test over the whole 32 KB, then the code meant
+#   for it is copied there and checked word by word.
+# - A small test function runs from there (and its speed is compared).
+# - With radio-fit too: the radio's PHY library (its RAM code) moves
+#   there, and the game code slot is the full 64 KB at 0x4009_0000 again.
+# - While running: the 32 KB and a 128 KB block of constant data in
+#   flash are checksummed again and again (a broken cache shows up as
+#   wrong sums).
+cpu1-cache-ram = []
+# Lab, measuring only, a test that is MEANT to fail: after the copy, the
+# radio's PHY code in that RAM is wiped (zeros). If the radio really runs
+# code from there, starting it must stop the board with an "illegal
+# instruction" error at an address 0x4007_8xxx..0x4007_Fxxx.
+cpu1-wipe-test = ["cpu1-cache-ram"]
+
+# Lab (experiments/cyd-lab), the second core:
+# - core2: starts the second core the esp-rtos way, with a small job
+#   box (a game stand-in, or sending the pictures). Letters: P (pictures
+#   sent by the second core), G (game stand-in 0/5/10/20 ms per frame),
+#   H (stand-in on the first or second core), D (console clock 1x/2x,
+#   that is 30 or 60 frames a second asked). Excludes cpu1-cache-ram.
+core2 = []
+# - core2-swap: like core2, but the second core sends straight from the
+#   console's own picture (console-video's swap rule), with no copy box;
+#   it waits for work without spinning (an esp-rtos executor). Letters
+#   as core2, plus V (picture check). See the README section.
+core2-swap = ["core2", "console-core/swap"]
+# - fs-bench: the full-screen scroll bench, letter X (see fs_bench.rs).
+fs-bench = []
+# - cpu1-start-test: what starting the second core does to its cache RAM
+#   (letters S and E, see cpu1_start_test.rs). Needs cpu1-cache-ram.
+cpu1-start-test = ["cpu1-cache-ram"]
+
+[dependencies]
+# The project's own crates.
+board-api     = { path = "../../crates/board-api" }
+console-core  = { path = "../../crates/console-core" }
+console-video = { path = "../../crates/console-video" }
+debug-link    = { path = "../../crates/debug-link" }
+
+# Versions as in the experiments for this board, known to work together.
+esp-hal = { version = "~1.2.2", features = ["esp32", "log-04", "unstable"] }
+esp-rtos = { version = "0.4.0", features = ["embassy", "esp-alloc", "esp32", "log-04"] }
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32", "log-04"] }
+log = "0.4.27"
+# The heap. Nothing in this firmware allocates; it is kept so that the
+# memory layout is the one the radio will need later.
+esp-alloc = { version = "0.11.0", features = ["esp32", "internal-heap-stats"] }
+
+embassy-executor = { version = "0.10.0", features = ["log"] }
+embassy-futures  = "0.1.2"
+embassy-time     = { version = "0.5.0", features = ["log"] }
+esp-backtrace = { version = "0.20.0", features = ["esp32", "panic-handler", "println"] }
+esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
+
+critical-section = "1.2.0"
+# Lab (second reader): reading flash through the flash driver, letter R
+# of cpu1-cache-ram (read only; this firmware never writes flash).
+esp-storage = { version = "0.10.0", features = ["esp32"] }
+static_cell      = "2.1.1"
+# The CPU's cycle counter: the finest clock there is (1/240 us).
+xtensa-lx = "0.13.0"
+
+# The SD card (sd-card feature only). All MIT OR Apache-2.0.
+embedded-hal     = { version = "1.0.0", optional = true }
+embedded-hal-bus = { version = "0.3.0", optional = true }
+embedded-sdmmc   = { version = "0.10.0", optional = true, default-features = false }
+
+# The radio driver (radio-fit feature only). MIT OR Apache-2.0; the
+# radio's own libraries inside it are Espressif's (Apache-2.0).
+esp-radio = { version = "1.0.0-beta.1", optional = true, features = [
+  "ble",
+  "bt-dual",
+  "bt-dual-idf-patches",
+  "esp-alloc",
+  "esp32",
+  "log-04",
+  "unstable",
+] }
+
+# The patched radio driver lives in experiments/bt-classic-probe; it is
+# used from there, not copied (as experiments/bt-gamepad-test does).
+# Only builds with radio-fit compile it.
+[patch.crates-io]
+esp-radio = { path = "../../experiments/bt-classic-probe/vendor/esp-radio" }
+
+[profile.dev]
+# The default debug profile is too slow and too big for this chip.
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1      # LLVM can optimise better with a single unit
+debug         = 2      # symbols in the ELF only; the flash image has none
+lto           = 'fat'
+opt-level     = 3      # the screen fill and the timing need speed

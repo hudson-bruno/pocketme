@@ -1,0 +1,31 @@
+[package]
+name        = "settings-store"
+description = "The console's settings (brightness for now) kept in two small flash sectors: small records appended one after the other, each with a check sum, erased only when a sector is full. A power cut at any moment leaves the old or the new value. No std, no heap, no unsafe."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[features]
+# The store has no optional parts of its own. These only turn on the
+# same parts of the board layer, so that boards/desktop/check.sh can build
+# every shared crate with all parts on (it passes these four names to all
+# of them). They change nothing in this crate.
+bt-classic = ["board-api/bt-classic"]
+passby     = ["board-api/passby"]
+gps        = ["board-api/gps"]
+sound      = ["board-api/sound"]
+
+[dependencies]
+# `Store` (the flash, or a file on the PC), `StoreError` and `SECTOR`.
+board-api = { path = "../board-api" }
+
+[dev-dependencies]
+# The board layer's own fake flash (`FakeStore`), for one test.
+board-api = { path = "../board-api", features = ["testing"] }
+
+# The power-cut tests try every cut point of long sequences: built with
+# some optimisation they take seconds, not minutes. (Only this crate's
+# own builds; the chip build is a release build anyway.)
+[profile.dev]
+opt-level = 1

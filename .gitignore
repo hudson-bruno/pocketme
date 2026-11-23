@@ -1,0 +1,10 @@
+# Build output
+target/
+target-*/
+*.elf
+__pycache__/
+
+# Local notes, logs, test evidence and private data: never in git
+.local/
+*.log
+*.report

@@ -1,0 +1,90 @@
+[
+  {
+    "scene": "proto3d",
+    "game": "proto3d",
+    "script": "proto3d.script",
+    "boot": "off",
+    "fps": 30,
+    "frames": 1040,
+    "stills": [
+      {"frame": 478, "name": "proto3d-sail", "caption": "SAIL: the hero glides over the first gap; the bar at the bottom is the glide left, the clock runs at the top right."}
+    ],
+    "clips": [
+      {"from": 98, "to": 262, "every": 2, "name": "proto3d-island-run", "caption": "ISLAND: the hero runs and jumps across the island and onto a floating islet, taking three of the six pickups; the camera follows."},
+      {"from": 436, "to": 596, "every": 2, "name": "proto3d-sail-glides", "caption": "SAIL: the hero runs off the edge and glides over a gap to a small island, then glides over a second gap to the pad by the steps; the bar at the bottom shows the glide left."},
+      {"from": 640, "to": 800, "every": 2, "name": "proto3d-stone-climb", "caption": "STONE: standing on the slate slab, the hero raises it up the face of the cliff, then jumps off onto the top of the cliff below the GOAL."},
+      {"from": 866, "to": 1024, "every": 2, "name": "proto3d-machines", "caption": "MACHINES: the hero picks up the bob and carries it onto the plate; the plate opens the way, a bridge rises, and the hero crosses it still carrying the bob."}
+    ]
+  },
+  {
+    "scene": "rooftop",
+    "game": "rooftop",
+    "script": "rooftop.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 1740,
+    "stills": [
+      {"frame": 616, "name": "rooftop-dash", "caption": "Room 4, DASH: the courier dashes across a gap and leaves a trail behind."}
+    ],
+    "clips": [
+      {"from": 304, "to": 564, "every": 4, "name": "rooftop-wall-jumps", "caption": "Room 2, BROKEN GLASS: the courier jumps across a roof with glass under the ledges. Room 3, CHIMNEY: it jumps from wall to wall up a narrow shaft to the door."},
+      {"from": 568, "to": 844, "every": 4, "name": "rooftop-rooms", "caption": "Rooms 4 (DASH) and 5 (UPDRAFT) played through: the courier runs, jumps, dashes and rides an updraft between roofs to each room's door."},
+      {"from": 988, "to": 1456, "every": 4, "name": "rooftop-long-roof", "caption": "Room 7, LONG ROOF: the view scrolls with the courier as it runs, jumps and dashes across a roof wider than the screen to the door."},
+      {"from": 1460, "to": 1660, "every": 4, "name": "rooftop-delivery", "caption": "Room 8, LAST ROOF: the courier jumps and dashes up to the door, then DELIVERED shows the total time and the time for each room."}
+    ]
+  },
+  {
+    "scene": "stardust",
+    "game": "stardust",
+    "script": "stardust.script",
+    "boot": "off",
+    "fps": 30,
+    "frames": 460,
+    "stills": [
+      {"frame": 386, "name": "stardust-catch", "caption": "A star caught in the lower right corner, marked by a flash box; 17 stars caught."}
+    ],
+    "clips": [
+      {"from": 72, "to": 200, "every": 2, "name": "stardust-first-stars", "caption": "STARDUST opens at STARS 0, and the comet flies to the finger to catch its first six stars."},
+      {"from": 240, "to": 390, "every": 2, "name": "stardust-catches", "caption": "The comet follows a touch from star to star across the sky."}
+    ]
+  },
+  {
+    "scene": "skimmer",
+    "game": "skimmer",
+    "script": "skimmer.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 430,
+    "stills": [
+      {"frame": 220, "name": "skimmer-2v2", "caption": "Two against two: coral mallets 1 and 3 and teal mallets 2 and 4, with the puck near teal mallet 2."}
+    ],
+    "clip": {"from": 120, "to": 400, "every": 4, "name": "skimmer-goal-run", "caption": "Coral serves, the puck goes back and forth between four mallets, and teal scores."}
+  },
+  {
+    "scene": "skimmer-wild",
+    "game": "skimmer",
+    "script": "skimmer-wild.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 720,
+    "stills": [],
+    "clips": [
+      {"from": 460, "to": 700, "every": 4, "name": "skimmer-wild-table", "caption": "One against one on the WILD table, the computer on both sides: the puck bounces off the bumpers on the centre line, and TEAL scores."}
+    ]
+  },
+  {
+    "scene": "tundra",
+    "game": "tundra",
+    "script": "tundra.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 840,
+    "stills": [
+      {"frame": 474, "name": "tundra-play", "caption": "A BLUE skater carries the puck over centre ice toward AMBER player 1 and an AMBER computer skater."}
+    ],
+    "clips": [
+      {"from": 184, "to": 448, "every": 4, "name": "tundra-face-off", "caption": "The opening face-off: AMBER player 1 takes the puck and pushes it to the BLUE net with two BLUE skaters on it. The BLUE goalie holds the puck and passes it out, and a BLUE skater carries it back toward centre ice."},
+      {"from": 452, "to": 792, "every": 4, "name": "tundra-goal-run", "caption": "A BLUE skater carries the puck over centre ice to the AMBER net, BLUE scores after a scramble in front of it (0 to 1), and the players line up for the next face-off."}
+    ]
+  }
+]

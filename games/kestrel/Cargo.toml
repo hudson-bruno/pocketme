@@ -1,0 +1,21 @@
+[package]
+name        = "kestrel"
+description = "KESTREL: fly a small courier craft through a drifting rock belt, gate by gate, and dock before the clock runs out. Real flat-shaded 3D polygons."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+# A game uses only the game kit and the game library crates (here the
+# shared 3D, game-3d). No heap, no floating point.
+[dependencies]
+game-kit = { path = "../../crates/game-kit" }
+game-3d = { path = "../../crates/game-3d" }
+
+# Tests only: the console's own rule for which screen areas a changed
+# picture sends (console_video::diff), to count what each frame costs
+# the screen. The game itself never uses it.
+[dev-dependencies]
+console-video = { path = "../../crates/console-video" }
+# Tests only: the kit's stand-in console (tests/golden.rs).
+game-kit = { path = "../../crates/game-kit", features = ["testing"] }

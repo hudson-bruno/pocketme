@@ -1,0 +1,9 @@
+[package]
+name        = "pad-store"
+description = "Saves gamepad pairings (Bluetooth link keys) in a small piece of flash, safe against power loss. No heap, no dependencies: tested on the PC with a fake flash."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[dependencies]

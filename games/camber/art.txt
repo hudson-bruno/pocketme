@@ -1,0 +1,59 @@
+# CAMBER: the player's hover ship from behind on LAGOON's straight,
+# rivals ahead, lamp posts and the sea beside the track.
+# The home tile's picture: 36 x 36 pixels, one letter per pixel.
+# Made from a game picture by a tile script at first;
+# edit it by hand freely. Make the card file with games/art/make_art.py.
+size 36 36
+colour . 202831
+colour a BD2073
+colour b 52596A
+colour c 5A6573
+colour d 4A897B
+colour e 8BB6BD
+colour f 83DAFF
+colour g A4CEF6
+colour h C5CED5
+colour i ACD6F6
+colour j BDDEF6
+colour k D5DAE6
+colour l CDE6F6
+colour m FFEA52
+colour n DEEEF6
+colour o F6F6F6
+pixels
+ggggggggggggggggggigiiiiiiiiiiioookb
+gggggggggggigiiiiiiiiiiiiiijjioobooj
+igiiiiiiiiiikiiijijjjjijjjjjjjkjljkl
+iiiiiiiiijjjjjjjjjjjjjkjjlllllklllkl
+jjjjjjjjjjjjjjjjllllllllllllllklnnkn
+jjjjjjjljllllklllllllllnlnnnnnknnnkn
+jeeelellllllllndddddddnnddnnhgkgghkg
+eeeeeeeeeeeddnnddddhhhhhhhhhhhhhhhkd
+eeeeeeeeeeedhhhhhhhhhhhbbbcbcccccckd
+eeeghhhhhhhhhhhhhcfnnccccccccb.bcdkk
+hhhhhhhhhhhhabbbbbb.bbbbbcccccccdddk
+hhhhhhhaccccccccccccccfffobbbbbaaddk
+hheacmaccccccccccccccccc.ccccccannek
+bfemmaaabcccccccccccccccccccccaannnd
+ffff.obbbbbbbbbbbbbbbbbbbbbbbbooonnn
+ffbbbb..bbbbbbbbbbbbbbbbbbbbbbboonnn
+bbb....bbbbbbbbbbbbbbbbbbbbbbbbooonn
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbooon
+ccccccccccccccbbbbbbbbbbbbbbbbbboooo
+ccccccccccccccccccccccaacccccccccooo
+ccccccccccccccccccccaaaaacccccccccoo
+cccccccccccccccccccaaaaaaaccccccccoo
+ccccccccccccccccccmaabaaaamcccccccco
+ccccccccccccccccmmaaabaaaammcccccccc
+ccccccccccccccmmmaaaffaaaammmccccccc
+cccccccccccccmmmmaffffffaammmmcccccc
+cccccccccccmmmmmffffffffffammmmccccc
+ccccccccccmmmccccffffffffffcmmmmmccc
+ccccccccccccccccc.fffffff...cccmmmcc
+cccccccccccccccc...ffff......ccccccc
+cccccccccccccccc...fff.......ccccccc
+ccccccccccccccc....fff........cccccc
+ccccccccccccccccccccfcccccc....ccccc
+cccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccc

@@ -1,0 +1,21 @@
+[package]
+name        = "boardctl"
+description = "PC side of the console's debug link: screenshots, injected input, stats and the log, over the USB serial cable"
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[dependencies]
+debug-link = { path = "../../crates/debug-link", features = ["std"] }
+test-card  = { path = "../../crates/test-card" }
+# `pad`: the Switch reports it injects are built by the gamepad host's
+# own builder (pad_host::inject), the one its tests check.
+board-api  = { path = "../../crates/board-api" }
+pad-host   = { path = "../../crates/pad-host" }
+
+anyhow     = "1"
+clap       = { version = "4", features = ["derive"] }
+png        = "0.18"
+# Without its default feature it needs no libudev on the PC.
+serialport = { version = "4", default-features = false }

@@ -1,0 +1,66 @@
+# The functions of the timed screen paths, and where the linker puts them.
+#
+# build.rs turns this list into the linker script hot-block.x; the guard
+# hot-check.py reads it too and checks a built firmware against it. Why
+# and how: README "The timed paths and the flash cache".
+#
+# One function per line, four columns:
+#   place  `window`: the hot block in flash, part run for every window
+#          (it must never share a cache set with itself);
+#          `present`: the hot block in flash, part run once a present;
+#          `ram`: executable RAM (.rwtext), no flash cache at all.
+#   cores  `two` (core2 builds only), `one` (builds without core2), `all`.
+#   need   `must`: the guard fails if nothing in a build matches;
+#          `may`: matched when the compiler made a function of it.
+#   glob   the function's mangled (Rust v0) name, a linker wildcard: its
+#          code is the section .text.<name>, its literal pool (the
+#          constants its L32R instructions load) .literal.<name>. The
+#          hashes in v0 names change with versions, so the globs name
+#          only the readable parts.
+#
+# The order of the lines is the order in the block. The block comes
+# right after all other flash code (.text_hot right behind .text, so the
+# image keeps one flash code segment): its address moves whenever other
+# code grows or shrinks. That does not matter, because what counts is
+# the block's own lines: a window part of at most 512 cache lines (16 KB)
+# and a block of at most 1024 (32 KB) never put three of its lines in
+# one cache set, wherever it starts. build.rs's linker guards and
+# hot-check.py check both sizes.
+
+# Once a present, on the core that sends: the second core's executor and
+# task (two cores), the plan, its float division and sort.
+present two must _RINv*8esp_rtos7embassy*8Executor9run_inner*12pocketme_cyd5core211second_main*
+present two must _RNv*16embassy_executor3raw*11TaskStorage*12pocketme_cyd5core213___worker_task*4poll*
+present all must _RNv*9send_plan4plan
+present all must _RNv*9send_plan6choose8plan_end
+present all must _RNv*17compiler_builtins5float3div8___divsf3
+present all may  __divsf3
+present all may  _RINv*9smallsort25insertion_sort_shift_left*9send_plan3Job*
+
+# The scanline read (the anchor before each present, and the survey at
+# start): the rest of it is Lcd::scanline_stamped_raw, in RAM.
+present all must _RNv*7esp_hal3spi6master9low_level*6Driver12apply_config
+present all must _RNv*7esp_hal3spi6master3dma*6SpiDma*8BlockingE4read*
+# The beam model's own methods (the anchor with its waits, v_at,
+# cycles_at): inlined into the screen's present today, so this matches
+# nothing; a second caller (seen with a scratch third PixelSource) makes
+# the compiler keep Beam::anchor as a function of its own, and then it
+# belongs here, not in the other flash code.
+present all may  _RNvM*12pocketme_cyd4beam*4Beam*
+
+# Every window: the screen's present (its loop over the windows), the
+# window's send, the window commands, esp-hal's SPI write and its clock
+# switches, the DMA set-up.
+window two must _RINvX*12pocketme_cyd6screen*9CydScreen*6Screen7present*4HeldE*
+window one must _RINvX*12pocketme_cyd6screen*9CydScreen*6Screen7present*6SourceE*
+window two must _R*12pocketme_cyd6screen*9CydScreen4send*4HeldE*
+window one must _R*12pocketme_cyd6screen*9CydScreen4send*6SourceE*
+window all must _RNv*12pocketme_cyd3lcd*3Lcd8begin_in
+window all must _RNv*12pocketme_cyd3lcd*3Lcd13command_bytes
+window all must _RNv*7esp_hal3spi6master3dma*6SpiDma*8BlockingE5write*
+window all must _RNv*7esp_hal3spi6master3dma*6SpiDma*8BlockingE13wait_for_idle*
+window all must _RNv*7esp_hal3dma*9ChannelTx*15SpiDmaTxChannelE10do_prepare*
+window all must _RNv*7esp_hal3soc14implementation6clocks*11SpiInstance22request_function_clock
+window all must _RNv*7esp_hal3soc14implementation6clocks*11SpiInstance22release_function_clock
+window all must _RNv*7esp_hal3soc14implementation6clocks15request_apb_clk
+window all must _RNv*7esp_hal3soc14implementation6clocks15release_apb_clk

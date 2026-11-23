@@ -1,0 +1,22 @@
+[package]
+name        = "bench"
+description = "BENCH: a speed test. Fixed loads (fills, triangles, vertices, 3D scenes, screen sends) and an automatic ramp that finds the largest load that fits 60 and 30 pictures a second."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+# A game uses only the game kit. No heap, no floating point.
+[dependencies]
+game-kit = { path = "../../crates/game-kit" }
+
+# Tests only: the console's own rule for which screen areas a changed
+# picture sends (console_video::diff), to count what each level costs
+# the screen. The game itself never uses it.
+[dev-dependencies]
+console-video = { path = "../../crates/console-video" }
+
+# PC only: the renderer records every triangle it fills, for the
+# draw-order checker in tests/island.rs. Never in a game build.
+[features]
+check = []

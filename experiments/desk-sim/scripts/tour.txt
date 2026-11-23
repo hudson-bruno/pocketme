@@ -1,0 +1,56 @@
+# A tour of the demo: every input once, both test cards, back to the start.
+# Run it with:  cargo run -- headless --frames 120 --script scripts/tour.txt
+# At 30 frames a second, frame 30 is one second in.
+
+at 5 shot                    # the start screen
+at 10 press start            # START leaves the start screen
+at 12 release start
+
+at 15 press right            # the d-pad moves the character
+at 35 release right
+at 35 press up
+at 45 release up
+
+at 50 stick left -64 127     # so does the left stick
+at 60 stick left 0 0
+
+# Hold every button, both triggers and the right stick, and touch.
+at 62 press a
+at 62 press b
+at 62 press x
+at 62 press y
+at 62 press l
+at 62 press r
+at 62 press up
+at 62 press left
+at 62 press start
+at 62 trigger left 128
+at 62 trigger right 255
+at 62 stick right 127 -128
+at 62 touch 200 100
+at 64 shot                   # everything lit
+at 66 release a
+at 66 release b
+at 66 release x
+at 66 release y
+at 66 release l
+at 66 release r
+at 66 release up
+at 66 release left
+at 66 release start
+at 66 trigger left 0
+at 66 trigger right 0
+at 66 stick right 0 0
+at 66 lift
+
+at 70 press select           # the panel test card
+at 71 release select
+at 75 shot
+at 80 press select           # the framebuffer test card, doubled
+at 81 release select
+at 85 shot
+at 90 press select           # back to play
+at 91 release select
+at 100 press home            # back to the start screen
+at 101 release home
+at 110 shot

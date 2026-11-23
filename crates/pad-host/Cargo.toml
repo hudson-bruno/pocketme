@@ -1,0 +1,39 @@
+[package]
+name        = "pad-host"
+description = "The console's gamepad host: takes HCI packets and the time, gives HCI packets, the pad's state for games (buttons, sticks, triggers, motion, presses), connection events and the battery. Reconnect-only: a saved pad may call, nothing else. No std, no heap, no unsafe: tested on the PC with scripted controllers."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[features]
+# The host has no optional parts of its own. These only turn on the same
+# parts of the board layer, so that boards/desktop/check.sh can build
+# every shared crate with all parts on (it passes these four names to all
+# of them). They change nothing in this crate.
+bt-classic = ["board-api/bt-classic"]
+passby     = ["board-api/passby"]
+gps        = ["board-api/gps"]
+sound      = ["board-api/sound"]
+
+[dependencies]
+# `PadState`, `Motion`, `Stick`, the `btn` bits: what games get.
+board-api = { path = "../board-api" }
+# HCI, ACL, L2CAP, SDP, HID and the connection state machine.
+pad-proto = { path = "../pad-proto" }
+# The report decoder (four GuliKit modes and generic HID), the Switch
+# start-up talk and the Xbox battery question. Its screen code is not
+# used here and is left out of the chip build by the linker.
+pad-view = { path = "../pad-view" }
+# The saved pairings, read only (`read_pairings`).
+pad-store = { path = "../pad-store" }
+
+# The fuzz tests feed many thousands of packets: with some optimisation
+# they take seconds. Overflow checks stay on in every test build, release
+# too, so a long run finds any arithmetic overflow.
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+overflow-checks = true
+debug-assertions = true

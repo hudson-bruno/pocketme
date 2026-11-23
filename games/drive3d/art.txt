@@ -1,0 +1,58 @@
+# DRIVE3D: the rally prototype. A red car from behind, sliding on a
+# gravel road that bends into the hills, dust thrown up beside it.
+# The home tile's picture: 36 x 36 pixels, one letter per pixel.
+# Drawn for this prototype (no game picture yet); edit it by hand
+# freely. Make the card file with games/art/make_art.py.
+size 36 36
+colour G 3E7230
+colour L FFD040
+colour R B08850
+colour T 1F4F26
+colour b 141414
+colour c D02828
+colour d E8DCC0
+colour e 8E7A50
+colour g 4F8A3A
+colour h 4E7A6A
+colour k 5A3A20
+colour r C8A06A
+colour s 5B8FD0
+colour t 8DB8E6
+colour w 202838
+pixels
+ssssssssssssssssssssssssssssssssssss
+ssssssssssssssssssssssssssssssssssss
+ssssssssssssssssssssssssssssssssssss
+ssssssssssssssssssssssssssssssssssss
+ssssssssssssssssssssssssssssssssssss
+ssssssssssssssssssssssssssssssssssss
+ssssssssssssssssssssssssssssssssssss
+ssssTsssssssssssssssssssssssssssssss
+ttttTttttttttttttttttttttttttttTtttt
+tttTTTttTttttttttttttttttttttttTttTt
+tTTTTTTtTtthhhhhhtttttttttttthTTThTt
+hTTTTTTTTThhhhhhhhhhtttttthhhTTTTTTT
+TTTTTTTTTTThhhhhhhhhhhhhhhhhhTTTTTTT
+TTTTkhTTTTThhhhhhhhhhhhhhhhhTTTTTTTT
+TTTTgggGkgggggGgggggeRreggggGggTTTTT
+TTTTTgggggGggggggGgeRrrregggggTTTTTT
+TTTTTTGggggggGggggeerrrrRegGggggggkg
+TTTTTTgggGggggggGgerrrrRreggggGggggg
+gkgggGggggggGggggerrrrRrrreggggggGgg
+gGggggggGggggggGerrrrRrrrrRegGgggggg
+ggggGggggggGgggeerrrRrrrrRreggggGggg
+GggggggGggggggGerrrRrrrrRrrreggggggG
+gggGggggggGgggerrrRrrrrRrrrreegGgggg
+ggggggGggggggerrrRrrrrRrrrrRreggggGg
+ggGggggggGggerrrRrrrrRrrrrRrreGggggg
+gggggGgggggerrrccccccrrrrRrrrreggGgg
+gGggggggGgerrrcwwwwwwcrrRrrrrReggggg
+ggggGggggerrrccccccccccRrdrrRreeGggg
+GggggggGerrrRcLccccccLcrdrrdrrregggG
+gggGggeerrrRrccccccccccdrrdrrdregggg
+gggggerrrrRrrbbRrrrrRbbrrdrrdrReegGg
+ggGgerrrrRrrrrRrrrrRrrrrRrrrrRdreggg
+gggerrrrRrrrrRrrrrRrrrrRrrrrRrrreGgg
+geerrrrRrrrrRrrrrRrrrrRrrrrRrrrreggg
+eRrrrrRrrrrRrrrrRrrrrRrrrrRrrrrReggg
+RrrrrRrrrrRrrrrRrrrrRrrrrRrrrrRreggG

@@ -1,0 +1,24 @@
+[package]
+name = "desk-sim"
+license = "MIT"
+description = "The PC side of the simulator: a window (SDL3), or no window with a script."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[features]
+# The window needs the SDL3 library installed on the PC. Without this
+# feature the program builds with no outside library and runs only with
+# no window (`--no-default-features`).
+default = ["window"]
+window = ["dep:sdl3"]
+
+[dependencies]
+board-layer = { path = "../board" }
+console-demo = { path = "../demo" }
+# Window, keyboard and mouse. Links to the SDL3 library on the PC.
+sdl3 = { version = "0.22.1", optional = true }
+
+[dev-dependencies]
+# The tests compare the demo's pictures with the test card's own.
+test-card = { path = "../../../crates/test-card" }

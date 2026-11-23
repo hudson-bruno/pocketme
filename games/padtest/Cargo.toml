@@ -1,0 +1,15 @@
+[package]
+name        = "padtest"
+description = "PADTEST: shows everything a game receives (12 buttons, sticks, triggers, touch, motion). Sleeps when nothing changes."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+# A game uses only the game kit. No heap, no floating point.
+[dependencies]
+game-kit = { path = "../../crates/game-kit" }
+
+# Tests only: the kit's stand-in console (tests/golden.rs).
+[dev-dependencies]
+game-kit = { path = "../../crates/game-kit", features = ["testing"] }

@@ -1,0 +1,8 @@
+# Keep user/runtime configuration values in this file.
+[env]
+ESP_LOG="info"
+# The panel's SPI driver runs from RAM, not from flash: reading the
+# panel's refresh counter must take under 25 us, and a flash cache miss
+# can stretch it past that (seen: every read 41 us or more in the
+# sd-card build, so no tear-free timing). Costs some IRAM (see README).
+ESP_HAL_CONFIG_PLACE_SPI_MASTER_DRIVER_IN_RAM="true"

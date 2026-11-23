@@ -1,0 +1,12 @@
+[package]
+edition     = "2024"
+license = "MIT"
+name        = "game-pack"
+description = "PC tool: turns a game's ELF file into the one file the console loads (header, code, data, checksum), and checks a packed file"
+version     = "0.1.0"
+publish     = false
+
+# Runs on the PC, with the normal Rust toolchain. Its only dependency is the
+# contract itself, so the header it writes is the header the console reads.
+[dependencies]
+game-api = { path = "../../game-api" }

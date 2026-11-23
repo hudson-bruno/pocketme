@@ -1,0 +1,13 @@
+# PocketMe CYD flash layout (4 MB). Pass it on every flash:
+#   espflash flash --partition-table boards/cyd/partitions.csv ...
+# nvs and phy_init are exactly espflash's default ones: the saved gamepad
+# pairing lives in the first 8 KB of nvs and must never move. Only the
+# app partition ends earlier (0x3F0000 instead of 0x400000), to leave
+# the last 8 KB of the chip to "settings" (console settings, see
+# crates/settings-store). Subtype "undefined" (0x06) is the data
+# subtype ESP-IDF keeps for the user: no ESP-IDF part uses it.
+# Name,     Type, SubType, Offset,   Size
+nvs,        data, nvs,     0x9000,   0x6000
+phy_init,   data, phy,     0xf000,   0x1000
+factory,    app,  factory, 0x10000,  0x3e0000
+settings,   data, undefined, 0x3fe000, 0x2000

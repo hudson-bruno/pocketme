@@ -1,0 +1,14 @@
+# A short tour of the console shell, for the desktop simulator:
+#   cargo run -- --script ../../crates/console-core/scripts/tour.txt \
+#     --frames 130 --shot 15,55,63,93,110 --out shots
+# (run from boards/desktop). Frame 0 is the first; 30 frames a second.
+#
+# 15  the boot screen, half way
+# 55  home, first game chosen
+# 63  the selection moved right
+# 93  a notification sliding in
+# 110 the notification resting
+60  press right
+61  release right
+90  press south          # start: "games cannot start yet"
+91  release south

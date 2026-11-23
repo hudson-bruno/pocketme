@@ -1,0 +1,181 @@
+# PROTO3D: the AREAS menu, a run over ISLAND, a look at MACHINES, two glides
+# in SAIL, the slate slab raised in STONE and the cliff climbed, then the bob,
+# the plate and the bridge in MACHINES. Detail stays at HIGH, the level the
+# game starts at (the game has no 60 setting: 30 pictures a second).
+# Run (from boards/desktop): pocketme-sim --boot off --fps 30 --frames 1040 --script proto3d.script --shot <frames> --out <folder>
+
+# --- home screen (boot off): step right 9 tiles to PROTO3D, then start it
+46 press right
+47 release right
+48 press right
+49 release right
+50 press right
+51 release right
+52 press right
+53 release right
+54 press right
+55 release right
+56 press right
+57 release right
+58 press right
+59 release right
+60 press right
+61 release right
+62 press right
+63 release right
+64 press south   # start PROTO3D
+65 release south
+
+# The AREAS menu opens first (still at frame 85). A starts ISLAND.
+90 press south  # ISLAND
+91 release south
+
+# ISLAND: hold UP to run ahead.
+100 press up
+130 release up
+
+# The lines below were written by a small helper that looked at each picture
+# and chose the next input (d-pad toward the next pickup, A to jump). They are plain recorded inputs now:
+# the run is the same every time.
+132 press right
+138 press down
+144 release down
+147 release right
+147 press left
+150 press south
+153 press down
+159 release south
+165 release down
+165 release left
+165 press up
+168 press left
+177 release left
+186 press left
+186 press south
+195 release south
+195 release up
+201 press up
+204 release left
+204 press right
+213 release right
+222 press right
+222 press south
+225 release right
+231 release south
+
+# Stop on the small floating islet (end of the clip).
+262 release up
+
+# START opens the pause menu on HIGH, the detail in use; three DOWNs to
+# AREAS, then A.
+300 press plus
+301 release plus
+306 press down
+307 release down
+310 press down
+311 release down
+314 press down
+315 release down
+324 press south
+325 release south
+
+# AREAS menu: one DOWN to MACHINES, then A.
+330 press down
+331 release down
+336 press south
+337 release south
+
+# Pause menu again: AREAS, then one DOWN from MACHINES to SAIL.
+380 press plus
+381 release plus
+386 press down
+387 release down
+390 press down
+391 release down
+394 press down
+395 release down
+404 press south
+405 release south
+410 press down
+411 release down
+416 press south
+417 release south
+
+# SAIL: run ahead, jump off the first pad, hold B (key X, east) to glide.
+440 press up
+466 press south
+474 release south
+476 press east
+520 release east
+# Then the second gap: steer a little right off the end of the second pad,
+# jump, and glide down onto the third pad by the steps.
+527 release up
+527 stick left 15000 -28000
+531 press south
+536 stick left 8000 -31000
+539 release south
+541 press east
+575 release east
+575 stick left 0 0
+
+# Pause menu again: AREAS, then one DOWN from SAIL to STONE.
+600 press plus
+601 release plus
+606 press down
+607 release down
+610 press down
+611 release down
+614 press down
+615 release down
+624 press south
+625 release south
+630 press down
+631 release down
+636 press south
+637 release south
+
+# STONE: walk to the cliff, place the slab with B, step on it, hold B to raise it
+# all the way, then jump onto the cliff top.
+646 press up
+664 release up
+670 press east
+671 release east
+680 press up
+686 release up
+694 press east
+766 release east
+768 press up
+768 press south
+778 release south
+786 release up
+
+# Pause menu again: AREAS, then two UPs from STONE to MACHINES.
+820 press plus
+821 release plus
+826 press down
+827 release down
+830 press down
+831 release down
+834 press down
+835 release down
+844 press south
+845 release south
+850 press up
+851 release up
+856 press up
+857 release up
+862 press south
+863 release south
+
+# MACHINES: to the brass bob, X (west) picks it up; carry it onto the plate
+# (three pips latch it and the bridge rises), then over the bridge to the yard.
+# Stick values found by looking at the pictures (the camera turns as he runs).
+875 stick left -28800 -15500
+887 stick left 0 0
+894 press west
+895 release west
+900 stick left 28700 -15800
+930 stick left 0 0
+968 stick left -26000 -20000
+984 stick left -8000 -32000
+1020 stick left 0 0

@@ -1,0 +1,15 @@
+[package]
+name        = "stardust"
+description = "STARDUST: a small toy. Steer a comet and catch stars. Runs at 30 frames a second."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+# A game uses only the game kit. No heap, no floating point.
+[dependencies]
+game-kit = { path = "../../crates/game-kit" }
+
+# Tests only: the kit's stand-in console (tests/golden.rs).
+[dev-dependencies]
+game-kit = { path = "../../crates/game-kit", features = ["testing"] }

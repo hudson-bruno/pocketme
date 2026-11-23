@@ -1,0 +1,8 @@
+# Build output.
+target/
+# Serial logs and the firmware copies kept from each run.
+logs/
+*.log
+*.elf
+# A peer address for the SDP test, if one is ever kept in a file here.
+*.private

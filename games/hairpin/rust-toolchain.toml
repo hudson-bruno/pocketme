@@ -1,0 +1,5 @@
+# A normal (stable) Rust for the PC, with its checkers. Building for the chip
+# names the "esp" toolchain on the command line (see games/build-chip.sh).
+[toolchain]
+channel = "1.99.0"
+components = ["clippy", "rustfmt"]

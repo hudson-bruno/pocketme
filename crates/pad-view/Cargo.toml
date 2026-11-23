@@ -1,0 +1,14 @@
+[package]
+name        = "pad-view"
+description = "Understands a Bluetooth gamepad's HID data (report descriptor, reports, known layouts) and draws it on a 320x240 RGB565 screen"
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[dependencies]
+embedded-graphics = "0.8.2"
+
+[dev-dependencies]
+# Only for the tests on the PC: they save each page as a PNG file.
+png = "0.18"

@@ -1,0 +1,58 @@
+# ROOFTOP: the courier mid-dash over a gap between two roofs, at night,
+# lamp lit, with broken glass on the near roof and the moon behind.
+# The home tile's picture: 36 x 36 pixels, one letter per pixel.
+# Make the card file with games/art/make_art.py (see games/README.md).
+size 36 36
+colour . 141A33   # sky
+colour , 232E52   # sky, low
+colour * E8E4C8   # star
+colour o ECE8C8   # moon
+colour O BEBAA0   # moon, dark
+colour f 2C3354   # far city
+colour w F2C95A   # lit window, lamp
+colour B 8C3B2E   # brick
+colour b 5E2620   # brick, dark
+colour c D07A52   # roof edge
+colour k 1A1420   # ink
+colour s F0C098   # skin
+colour r ECEEF4   # helmet
+colour j F48C2C   # vest, dash streak
+colour p 34405E   # trousers
+colour g 9FE4F0   # broken glass
+pixels
+....................................
+................*...................
+...*.......................oooo.....
+..........................oooooO....
+.........................ooooooOO...
+.........*...............oooOooOO...
+................kkkk.*...ooooooOO...
+...............krrrrk....oOooooOO...
+..............krrrrrrrk...ooooOO....
+.............*.kssssk......oOOO.....
+...............kssksk...............
+.....*..........ksssk...............
+.j.j.j.j.j....kkjjjjkk.w............
+.............kbbjjjjjwk.w.........*.
+.............kbbjjjjjwkw............
+...j.j.j.j.j..kbjjjjjk.........fffff
+.*..fffff......kjjjjk..........fffff
+.,.,fffff,.,.,.kppppk,fffff,.,.fwfff
+,j,jfjfjfj,.,fkppkkppkfffff.,.,fffff
+fffffffff,.,.kppkf.kppkwfff,.,.fffff
+fffffffff,,,,kkkff,,kkkfffffffffwfff
+fffffffwffffffffff,,,,ffffffffffffff
+ffffffffffffffffffffffffffffffffffff
+ffffffffffffffwfwfffffffffffffffffwf
+fwfffffwffffffffffffffffffffffffffff
+ffffgfffgffffffffffffffffccccccccccc
+ffgfgfgfgfffffwffffffffffBBBBBbBBBBB
+ffgfgwgfgffffffffffffffffBBBBBbBBBBB
+cccccccccccffffffffffffwfBBBBBbBBBBB
+BBBBBbBBBBBfffffwffffffffbbbbbbbbbbb
+BBBBBbBBBBBffffffffwfffffBBbBBBBBbBB
+BBBBBbBBBBBffffffffffffffBBbBBBBBbBB
+bbbbbbbbbbbffffffffffffffBBbBBBBBbBB
+BBbBBBBBbBBffffffffwfffffbbbbbbbbbbb
+BBbBBBBBbBBffffffffffffffBBBBBbBBBBB
+BBbBBBBBbBBffffffffffffffBBBBBbBBBBB

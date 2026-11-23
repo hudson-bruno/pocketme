@@ -1,0 +1,6 @@
+# Keep user/runtime configuration values in this file.
+[env]
+ESP_LOG="info"
+# The SPI driver runs from fast memory (IRAM), not from flash through the
+# cache: drawing then takes the same time in every build.
+ESP_HAL_CONFIG_PLACE_SPI_MASTER_DRIVER_IN_RAM="true"

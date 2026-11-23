@@ -1,0 +1,17 @@
+[package]
+name        = "proto3d"
+description = "PROTO3D: the showcase's movement prototype. A hero runs, jumps, glides and lands on floating islands with a follow camera: a test island with things to collect and three test areas (MACHINES, SAIL, STONE), in four picture details (LOW to MAX)."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+# A game uses only the game kit and the game library crates (here the
+# shared 3D, game-3d). No heap, no floating point.
+[dependencies]
+game-kit = { path = "../../crates/game-kit" }
+game-3d = { path = "../../crates/game-3d" }
+
+# Tests only: the kit's stand-in console (tests/game.rs).
+[dev-dependencies]
+game-kit = { path = "../../crates/game-kit", features = ["testing"] }

@@ -1,0 +1,88 @@
+[
+  {
+    "scene": "mercator-trade",
+    "game": "mercator",
+    "script": "mercator-trade.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 2000,
+    "stills": [],
+    "clips": [
+      {"from": 150, "to": 500, "every": 4, "name": "mercator-market", "caption": "Trading at JAKEL: the market opens, ORE is picked and A held buys it tonne after tonne until the hold shows 8 and the station has NONE LEFT HERE."},
+      {"from": 1530, "to": 1960, "every": 4, "name": "mercator-jump", "caption": "The chart in flight: the cursor steps from JAKEL to DRILO and XICRA, X zooms out to the whole galaxy and back, A jumps to DRILO through the tunnel, and the ship arrives there with a planet ahead."}
+    ]
+  },
+  {
+    "scene": "mercator-space",
+    "game": "mercator",
+    "script": "mercator-space.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 1600,
+    "stills": [
+      {"frame": 1400, "name": "mercator-station", "caption": "The ship flying back toward the station, with the planet behind the station and a hauler 1.9 km away."}
+    ],
+    "clips": [
+      {"from": 282, "to": 500, "every": 4, "name": "mercator-launch", "caption": "Launching from JAKEL: just outside the station a warden on patrol, about 1 km ahead, comes closer and slides past on the left."},
+      {"from": 1170, "to": 1510, "every": 4, "name": "mercator-flight", "caption": "Flying in toward the station past a departing hauler and a passing warden, until the tow lane takes over."}
+    ]
+  },
+  {
+    "scene": "mercator-combat",
+    "game": "mercator",
+    "script": "mercator-combat.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 3700,
+    "stills": [],
+    "clips": [
+      {"from": 3250, "to": 3590, "every": 4, "name": "mercator-fight", "caption": "A fight with a raider pack in a RISKY system, seen from behind the ship: the pilot's laser and the gunner's turret fire, the ship's shield takes hits, and two raiders are destroyed."}
+    ]
+  },
+  {
+    "scene": "mercator-planet",
+    "game": "mercator",
+    "script": "mercator-planet.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 6600,
+    "stills": [],
+    "clips": [
+      {"from": 2650, "to": 3000, "every": 4, "name": "mercator-entry", "caption": "Down to the planet: the ship dives at the landing site's SITE beacon through the ring of amber lights, falls through streaks of entry, and levels off in a hover above the desert."},
+      {"from": 4980, "to": 5320, "every": 4, "name": "mercator-landing", "caption": "The ship sinks the last few metres onto the landing pad on its jets: LANDED, and then the pilot is out on foot."},
+      {"from": 6030, "to": 6350, "every": 4, "name": "mercator-walk", "caption": "The pilot walks across the landing site back to the ship."}
+    ]
+  },
+  {
+    "scene": "lantern",
+    "game": "lantern",
+    "script": "lantern.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 1440,
+    "stills": [
+      {"frame": 730, "name": "lantern-moth", "caption": "A moth up close, drinking the lamp's oil."}
+    ],
+    "clips": [
+      {"from": 192, "to": 524, "every": 6, "name": "lantern-walk", "caption": "A walk through lamplit tunnels: a crystal is picked up, then a wooden door slides open and the way goes on through it."},
+      {"from": 660, "to": 880, "every": 4, "name": "lantern-flash", "caption": "A moth flies at the lamp and drinks its oil; a flash of the lamp drives it off down the tunnel."},
+      {"from": 1000, "to": 1320, "every": 5, "name": "lantern-lift", "caption": "The lift's crank is picked up (THE CRANK! FIND THE LIFT), the lift waits at the end of the next tunnel, and A works it: THE LIFT CLIMBS, with the level's tally."}
+    ]
+  },
+  {
+    "scene": "lander",
+    "game": "lander",
+    "script": "lander.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 2800,
+    "stills": [
+      {"frame": 360, "name": "lander-burn", "caption": "The craft leaning and firing its engine to stop its sideways drift."}
+    ],
+    "clips": [
+      {"from": 670, "to": 1010, "every": 4, "name": "lander-landing", "caption": "The craft lowers itself onto the X1 pad with a short burn and then a low steady one, and touches down softly: LANDED, SOFT TOUCH +25, 158 points."},
+      {"from": 1200, "to": 1520, "every": 4, "name": "lander-crash", "caption": "Level 2 in the FOLLOW view: with no burn the craft falls, the camera zooms in near the ground, and it breaks apart: CRASHED, TOO FAST."},
+      {"from": 2152, "to": 2620, "every": 4, "name": "lander-ridge", "caption": "Low over the hills in the FOLLOW view, the craft leans back and burns to stop its sideways drift over a ridge, then sinks onto the X4 pad on top of it and lands."}
+    ]
+  }
+]

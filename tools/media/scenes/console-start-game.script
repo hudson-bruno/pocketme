@@ -1,0 +1,28 @@
+# Starting a game from its tile and going back to the home screen.
+# Run: --boot off --fps 30 --frames 240
+#
+# With --boot off the home screen stands at frame 0, BENCH chosen.
+# 10-28: right four times: CAMBER, DRIVE3D, HAIRPIN, KESTREL
+10 press right
+11 release right
+16 press right
+17 release right
+22 press right
+23 release right
+28 press right
+29 release right
+# 50: the bottom face button starts KESTREL; its title menu shows the
+#     craft over the ringed planet
+50 press south
+51 release south
+# 120: Home opens the console's pause menu over the game (RESUME chosen)
+120 press home
+121 release home
+# 140, 152: down twice, to BACK TO HOME
+140 press down
+141 release down
+152 press down
+153 release down
+# 170: OK: the game ends and the home screen is back, KESTREL still chosen
+170 press south
+171 release south

@@ -1,0 +1,75 @@
+# MERCATOR, combat: a jump to a RISKY system and a fight with a raider pack.
+# Run: pocketme-sim --boot off --fps 60 --frames 3700 --script mercator-combat.script
+# (from boards/desktop). MERCATOR's starting settings (2026-11-23): 60 pictures a second,
+# the CHASE view and DETAIL HIGH; the scene plays at those and changes no setting.
+# The start system is SECURE (no raiders near the station), so the scene jumps to XICRA
+# (MINE, RISKY) first. The pilot's ship is lost at about frame 3640; nothing after 3590 is used.
+
+# Home screen: seven steps right, from BENCH to MERCATOR, then start it.
+5 press right
+6 release right
+8 press right
+9 release right
+11 press right
+12 release right
+14 press right
+15 release right
+17 press right
+18 release right
+20 press right
+21 release right
+23 press right
+24 release right
+32 press south
+33 release south
+
+100 press south          # PLAY: docked at JAKEL
+101 release south
+
+# The chart: set the course to XICRA (two steps right from JAKEL).
+140 press down
+141 release down
+150 press down
+151 release down
+160 press down           # CHART line
+161 release down
+170 press south          # open the chart
+171 release south
+200 press right          # DRILO
+201 release right
+220 press right          # XICRA, MINE RISKY, 5.1 LY
+221 release right
+240 press south          # SET: COURSE SET
+241 release south
+260 press east           # back to the dock screen
+261 release east
+280 press up
+281 release up
+290 press up
+291 release up
+300 press up             # LAUNCH line
+301 release up
+320 press south          # launch
+321 release south
+
+# Fly out past 5 km (no jump closer to the station), then jump.
+360 press west           # faster, to top speed
+900 release west
+1350 press minus         # SELECT: the chart, XICRA already chosen
+1351 release minus
+1380 press south         # A: jump (tunnel, then ARRIVED at about 1400)
+1381 release south
+
+# At XICRA: a pad 2 gunner holds the turret's trigger (it aims by itself
+# at raiders within 1.5 km); the pilot slows, noses up at the pack and fires.
+1500 p2 pad on
+1501 p2 press south
+1550 press east          # slower, down to a stop
+1620 release east
+# About 1600: RAIDERS ON THE RADAR.
+1720 press up            # nose up towards the pack
+1745 release up
+1800 press south         # the nose laser, held (it overheats and cools by itself)
+# Frames 3250-3590: the fight (the clip), seen from behind the ship. A raider
+# goes down at 3312; another passes close on the left and goes down at 3561.
+3690 release south

@@ -1,0 +1,13 @@
+[package]
+name        = "game-3d"
+description = "The games' shared 3D library: flat-shaded polygon models in whole numbers (triangle filler, clipping, back faces, painter's order, shading). Compiled into each game that uses it."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+# A game library: like game-kit, it is compiled into each game, never
+# into the console. It needs only the picture (game-kit's Frame). No
+# heap, no floating point, no unsafe.
+[dependencies]
+game-kit = { path = "../game-kit" }

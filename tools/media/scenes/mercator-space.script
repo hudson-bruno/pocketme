@@ -1,0 +1,58 @@
+# MERCATOR, space: title, docked at the start station, a short flight.
+# Run: pocketme-sim --boot off --fps 60 --frames 1600 --script mercator-space.script
+# (from boards/desktop). MERCATOR's starting settings (2026-11-23): 60 pictures a second,
+# the CHASE view and DETAIL HIGH; the scene plays at those and changes no setting.
+
+# Home screen: seven steps right, from BENCH to MERCATOR, then start it.
+5 press right
+6 release right
+8 press right
+9 release right
+11 press right
+12 release right
+14 press right
+15 release right
+17 press right
+18 release right
+20 press right
+21 release right
+23 press right
+24 release right
+32 press south
+33 release south
+
+# Frames 40-90: the title menu over the turning ship and planet.
+100 press south          # PLAY: docked at JAKEL (FORGE, TECH 5, SECURE)
+101 release south
+
+# The market: buy three tonnes of ORE.
+140 press down           # MARKET line
+141 release down
+150 press south          # open the market
+151 release south
+170 press down
+171 release down
+180 press down           # ORE line
+181 release down
+200 press south          # buy 1 t
+201 release south
+210 press south          # buy 1 t
+211 release south
+220 press south          # buy 1 t (HOLD 3)
+221 release south
+260 press east           # back to the dock screen
+261 release east
+280 press up             # LAUNCH line
+281 release up
+290 press south          # launch
+291 release south
+
+# Flight: full speed out of the station, then a turn back towards it.
+310 press west           # faster, to top speed
+390 release west
+990 press left           # a half turn: the station and the planet come into view
+1162 release left
+# Frames 1170-1510: the station in front of the planet, a hauler leaving,
+# a warden passing, the tow lane from about 1436 (the clip). Still at 1400
+# (HAULER 1.9 KM). The launch clip is 282-500: a warden about 1 km ahead
+# comes closer and slides past on the left.

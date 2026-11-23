@@ -1,0 +1,5 @@
+# The simulator runs on the PC, so it uses a normal (stable) Rust, not the
+# ESP toolchain that the board experiments pin in their own folders.
+[toolchain]
+channel = "1.99.0"
+components = ["clippy", "rustfmt"]

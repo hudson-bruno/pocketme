@@ -1,0 +1,230 @@
+[package]
+edition      = "2024"
+license = "MIT"
+name         = "pocketme-cyd"
+description  = "The console on the CYD board (classic ESP32, ST7789 panel): the board layer for console-core"
+rust-version = "1.95"
+version      = "0.1.0"
+publish      = false
+
+[[bin]]
+name = "pocketme-cyd"
+path = "./src/main.rs"
+test = false
+bench = false
+
+[features]
+default = ["demo-card", "touch", "link", "tour", "store", "core2"]
+
+# Where the games list comes from. At most one of the two; with neither
+# the console sees "no card".
+# - demo-card: a card built into the firmware (read only): every game
+#   in games/ (fourteen today) as games/build-chip.sh built it, which
+#   must run first:
+#   GAMES_TARGET=boards/cyd/target games/build-chip.sh (check.sh does).
+# - sd-card: the real microSD card, read only (never written).
+demo-card = []
+sd-card   = ["dep:embedded-hal", "dep:embedded-hal-bus", "dep:embedded-sdmmc"]
+
+# The resistive touch screen (XPT2046 chip on its own pins).
+touch = []
+
+# The debug link on the USB serial port: `boardctl shot`, `key`, `tap`,
+# `stats`. Without it the port only carries the log.
+link = []
+
+# The console's settings (the brightness and, with boot-gather, the
+# boot animation choice) kept in the chip's flash, in
+# the "settings" partition of partitions.csv (the last 8 KB of the chip;
+# flash with `--partition-table partitions.csv`). Nothing else is ever
+# written. Without the partition (an older table) there is no store and
+# the brightness lasts until power off. See src/flash_store.rs.
+store = ["dep:esp-storage", "dep:settings-store"]
+
+# The tour: a demo that moves along the tiles, scrolls and shows a
+# notification, again and again. Started by the letter `t` on the serial
+# port or a long press on BOOT. Off at start.
+tour = []
+
+# Measuring only: the screen's send plan switchable at run time by
+# serial letters, to compare on the board: `o` today's plan (every area
+# its own window), `p` the new one (the windows or one box around them,
+# whichever the timing model says is done sooner; the default), `u` the
+# tear-free timing off and on again (off: fast, may tear). Shown in the
+# report (`m`) and `boardctl stats` as the `send` line. Without it there
+# are no letters and the new plan is always used. Not for a build handed
+# over for use.
+send-ab = []
+
+# Measuring only: strip buffers of 2 x 15,360 bytes (the size the
+# display-dma experiment used) instead of 2 x 5,120. Also runs the strip
+# timing bench at start.
+wide-strips = []
+
+# The gamepad (round 6): the owner's pad, already paired, connects to
+# the console over classic Bluetooth and games see it as pad 0. Starts
+# the radio (the patched dual-mode driver of experiments/bt-classic-probe)
+# and runs the gamepad host (crates/pad-host) from the console's loop
+# (src/pad_radio.rs). Reconnect-only: the saved pairings are read once at
+# start, read only (src/pairing.rs); the console is connectable (page
+# scan) but never discoverable; only a saved pad may call; it never
+# searches, never calls anyone, never pairs, never writes flash. Every
+# packet to the controller passes the gate of hci-rules, which knows the
+# saved pads' addresses (src/hci.rs). With `link`, `boardctl pad` plays a
+# pad without the radio (injected reports). See README "The gamepad".
+pad = [
+  "dep:esp-radio",
+  "esp-rtos/esp-radio",
+  "dep:hci-rules",
+  "dep:esp-storage",
+  "dep:settings-store",
+  "dep:pad-host",
+  "dep:pad-store",
+]
+
+# On by default (the owner chose two cores, 2026-11-18; one core stays
+# supported: leave core2 out). The chip's second core sends the pictures.
+# The console draws on the first core and hands each finished picture to
+# the second (console-video's `swap`: two pictures that swap roles, no
+# copy); the second core sends it to the panel with the same tear-free
+# timing while the first goes on. The radio, the loop and everything
+# else stay on the first core. Every wait for the second core is bounded
+# (500 ms, then the console stops with a message). Who may touch which
+# memory when: src/core2.rs, the crate handover (the hand-over's rules,
+# tested on the PC) and README "One core or two".
+core2 = ["console-core/swap", "console-video/swap", "dep:handover"]
+
+# Measuring only (turns on core2): the serial letter `H` parks the second
+# core for good, as a hang would, to see the watchdog on the board: the
+# first core's next wait for it passes 500 ms and the console stops with
+# the message "core2: the second core still holds job 2 after ...". The
+# console then stays stopped until RST. Not for a build handed over for
+# use.
+hang-test = ["core2"]
+
+# Measuring only (turns on core2; phase A-i of the study of game code run
+# straight from flash): 128 KB of probe code in the firmware's own flash
+# code (before the hot block, src/xip_probe.rs, checked by xip-check.py),
+# run on the first core. Letters: `a` the cost of one flash cache miss
+# (A1), `0`..`5` a load of 0/8/16/32/48/64 KB of probe code per console
+# frame (A2/A3), `j` the next start offset (cache sets), `d` the next
+# delay after a handed picture (0/2/4/8 ms); `r` and `m` also
+# clear and log its counters. See README "Flash code probe". Not for a
+# build handed over for use.
+xip-probe = ["core2"]
+
+# The GATHER boot animation (console-core's `boot-gather`; about 2.7 s,
+# 60 frames a second) instead of today's boot screen, with a BOOT ANIM
+# line (FULL, SHORT, OFF) in the home screen's menu. With `store` the
+# choice is kept in the settings partition beside the brightness. The
+# owner saw it on the board and approved it (2026-11-19): it is in the
+# owner's builds, but not in the default set.
+boot-gather = ["console-core/boot-gather"]
+
+# Game flash parts (README "Game flash parts"): two windows at the start
+# of the firmware's flash (code 0x400D0020 + 128 KB, read-only data
+# 0x3F400120 + 64 KB, from game_api::layout) hold the flash parts of the
+# games that have one (games/<name>/flash.list; MERCATOR today), taken
+# from `<game files>/flash/<NAME>/` when the firmware is built. A game
+# with a flash part ("GAMF" file) runs only when this firmware holds its
+# part byte for byte; without the feature every such game is refused
+# ("FLASH PART MISSING"). Not a measuring switch. Not in `default`; in
+# the owner's builds since 2026-11-23 (the owner's decision).
+game-flash = []
+
+[dependencies]
+# The project's own crates.
+board-api     = { path = "../../crates/board-api" }
+console-core  = { path = "../../crates/console-core" }
+console-video = { path = "../../crates/console-video" }
+debug-link    = { path = "../../crates/debug-link" }
+# The game contract (slot layout, entry function) and the loader that
+# puts a game file into the two slots.
+game-api      = { path = "../../crates/game-api" }
+game-loader   = { path = "../../crates/game-loader" }
+# The touch filter (pressure limits, drop-outs, dead band, lone wild
+# readings): plain logic, tested on the PC.
+touch-filter  = { path = "../../crates/touch-filter" }
+
+# The screen's timing rules (when a changed area may be sent so the
+# panel's refresh never meets the writer): plain logic, tested on the PC
+# (and replayed there by its `model` feature, which this build leaves off).
+send-plan     = { path = "send-plan" }
+# The hand-over between the two cores (core2 only): the job box, the
+# bounded waits, parking for the flash. Plain logic, tested on the PC
+# against a model of the second core in every order.
+handover      = { path = "handover", optional = true }
+
+# The settings' record format and save rules (store feature; pad uses
+# its CRC-32 for the pairing area).
+settings-store = { path = "../../crates/settings-store", optional = true }
+# The gamepad radio's HCI rules (pad feature only): lengths, the gate,
+# the commands, the events. Plain logic, tested on the PC.
+hci-rules      = { path = "hci-rules", optional = true }
+# The gamepad host (pad feature only): HCI in, the pad's state out. No
+# heap, no unsafe; tested on the PC with scripted controllers.
+pad-host       = { path = "../../crates/pad-host", optional = true }
+# The saved pairings' format (pad feature only): read only, through
+# pad-host; here for the partition table look-up (find_nvs).
+pad-store      = { path = "../../crates/pad-store", optional = true }
+
+# Versions as in the experiments for this board, known to work together.
+esp-hal = { version = "~1.2.2", features = ["esp32", "log-04", "unstable"] }
+esp-rtos = { version = "0.4.0", features = ["embassy", "esp-alloc", "esp32", "log-04"] }
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32", "log-04"] }
+log = "0.4.27"
+# The chip's flash (store, and pad for the pairing's CRC), as in
+# experiments/bt-gamepad-test.
+esp-storage = { version = "0.10.0", optional = true, features = ["esp32", "critical-section"] }
+# The heap. Nothing in this firmware allocates; it is kept so that the
+# memory layout is the one the radio will need later.
+esp-alloc = { version = "0.11.0", features = ["esp32", "internal-heap-stats"] }
+
+embassy-executor = { version = "0.10.0", features = ["log"] }
+embassy-futures  = "0.1.2"
+embassy-time     = { version = "0.5.0", features = ["log"] }
+esp-backtrace = { version = "0.20.0", features = ["esp32", "panic-handler", "println"] }
+esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
+
+critical-section = "1.2.0"
+static_cell      = "2.1.1"
+# The CPU's cycle counter: the finest clock there is (1/240 us).
+xtensa-lx = "0.13.0"
+
+# The SD card (sd-card feature only). All MIT OR Apache-2.0.
+embedded-hal     = { version = "1.0.0", optional = true }
+embedded-hal-bus = { version = "0.3.0", optional = true }
+embedded-sdmmc   = { version = "0.10.0", optional = true, default-features = false }
+
+# The radio driver (pad feature only). MIT OR Apache-2.0; the
+# radio's own libraries inside it are Espressif's (Apache-2.0).
+esp-radio = { version = "1.0.0-beta.1", optional = true, features = [
+  "ble",
+  "bt-dual",
+  "bt-dual-idf-patches",
+  "esp-alloc",
+  "esp32",
+  "log-04",
+  "unstable",
+] }
+
+# The patched radio driver lives in experiments/bt-classic-probe; it is
+# used from there, not copied (as experiments/bt-gamepad-test does).
+# Only builds with pad compile it.
+[patch.crates-io]
+esp-radio = { path = "../../experiments/bt-classic-probe/vendor/esp-radio" }
+
+[build-dependencies]
+# build.rs makes the linker's slot numbers from game_api::layout, and
+# checks the demo card's game files against it.
+game-api = { path = "../../crates/game-api" }
+
+[profile.dev]
+# The default debug profile is too slow and too big for this chip.
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1      # LLVM can optimise better with a single unit
+debug         = 2      # symbols in the ELF only; the flash image has none
+lto           = 'fat'
+opt-level     = 3      # the screen fill and the timing need speed

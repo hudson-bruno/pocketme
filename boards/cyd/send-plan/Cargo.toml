@@ -1,0 +1,27 @@
+[package]
+name        = "send-plan"
+description = "The CYD's screen timing as plain logic: when a changed area may be sent so the panel's own refresh never meets the writer (Job, its start window, plan, crossed). No pins, no esp crates, no std, no heap, no unsafe; tested on the PC. Feature `model` (PC only, std) adds a replay model of the whole send."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[features]
+# The PC-only replay model (src/model.rs): plays the firmware's present
+# loop and the console's frame loop over recorded frames. Uses std; the
+# firmware never turns it on.
+model = []
+
+[dependencies]
+
+[[test]]
+name = "model"
+required-features = ["model"]
+
+[[example]]
+name = "replay"
+required-features = ["model"]
+
+[[example]]
+name = "score"
+required-features = ["model"]

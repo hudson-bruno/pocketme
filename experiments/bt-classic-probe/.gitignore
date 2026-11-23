@@ -1,0 +1,4 @@
+# Built firmware kept from each run: several MB each, rebuildable.
+logs/elf/
+# A peer address for the PROBE_PEER test, if one is kept in a file here.
+*.private

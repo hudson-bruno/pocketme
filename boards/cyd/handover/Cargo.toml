@@ -1,0 +1,9 @@
+[package]
+name        = "handover"
+description = "The hand-over between the CYD's two cores (feature core2) as plain logic: the job box, the bounded wait for the second core (500 ms, then the console stops), parking it for the flash and letting it go. No pins, no esp crates, no std, no heap, no unsafe; tested on the PC against a model of the second core, every interleaving."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[dependencies]

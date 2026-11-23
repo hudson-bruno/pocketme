@@ -1,0 +1,41 @@
+# The console's own menu, opened with the home button on the home screen:
+# the brightness steps and the BOOT ANIM setting.
+# Run: --boot full --fps 30 --frames 330
+#
+# --boot full so the menu's BOOT ANIM line shows the default value, FULL.
+# 0-81:    the GATHER boot animation plays (no key, so it is not skipped)
+# 81-109:  the home screen stands still
+110 press home
+111 release home
+# 111: the console menu: brightness (sun and five bars, all lit), BOOT ANIM:
+#      FULL, CLOSE; the gear at the right end of the bottom bar is lit.
+#      BRIGHTNESS is chosen.
+# 135-171: left three times (five bars to two), then right three times
+#          (back to five)
+135 press left
+136 release left
+147 press left
+148 release left
+159 press left
+160 release left
+177 press right
+178 release right
+189 press right
+190 release right
+201 press right
+202 release right
+# 220: down to BOOT ANIM; OK three times: SHORT, OFF, FULL again
+220 press down
+221 release down
+236 press south
+237 release south
+252 press south
+253 release south
+268 press south
+269 release south
+# 285: down to CLOSE, 298: OK closes the menu
+285 press down
+286 release down
+298 press south
+299 release south
+# 299-329: the home screen again, the gear no longer lit

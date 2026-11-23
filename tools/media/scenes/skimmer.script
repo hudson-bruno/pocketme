@@ -1,0 +1,221 @@
+# SKIMMER: four pads, TEAMS 2 VS 2 (coral pads 1 and 3, teal pads 2 and 4),
+# computer NORMAL, plain table, rate 60. Play until TEAL scores at frame 282.
+# Run (from boards/desktop): pocketme-sim --boot off --fps 60 --frames 430 --script skimmer.script --shot <frames> --out <folder>
+
+# Pads 2, 3 and 4 are plugged in from the start.
+0 p2 pad on
+0 p3 pad on
+0 p4 pad on
+# --- home screen (boot off): step right 11 tiles to SKIMMER, then start it
+46 press right
+47 release right
+48 press right
+49 release right
+50 press right
+51 release right
+52 press right
+53 release right
+54 press right
+55 release right
+56 press right
+57 release right
+58 press right
+59 release right
+60 press right
+61 release right
+62 press right
+63 release right
+64 press right
+65 release right
+66 press right
+67 release right
+68 press south   # start SKIMMER
+69 release south
+
+# Title menu: three DOWNs to TEAMS, one RIGHT to 2 VS 2, three UPs back to PLAY, then A.
+80 press down
+81 release down
+82 press down
+83 release down
+84 press down
+85 release down
+86 press right
+87 release right
+88 press up
+89 release up
+90 press up
+91 release up
+92 press up
+93 release up
+100 press south
+101 release south
+
+# The lines below were written by a small helper that looked at each picture
+# and chose the next input (a stick position for each pad, A to dash). They are plain recorded inputs now:
+# the run is the same every time.
+161 p1 stick left 32767 0
+161 p3 stick left -22141 24154
+161 p4 stick left -2721 -32653
+165 p3 stick left -21769 24490
+165 p4 stick left -2179 -32694
+169 p1 stick left -32766 -174
+169 p2 stick left 4681 9362
+169 p3 stick left 25836 20152
+169 p4 stick left 0 0
+173 p1 stick left -32381 5010
+173 p2 stick left 0 32767
+173 p3 stick left 30654 11575
+173 p4 stick left 0 32767
+177 p1 stick left -30680 11505
+177 p2 stick left 0 0
+177 p3 stick left 5110 32366
+177 p4 stick left 23169 23169
+181 p1 stick left -14043 4681
+181 p2 stick left -31204 9997
+181 p3 stick left -5386 32321
+181 p4 stick left 31085 10361
+185 p1 stick left 18724 -4681
+185 p2 stick left 15791 28710
+185 p3 stick left -2513 32670
+185 p4 stick left -27473 17857
+189 p1 stick left 9362 -4681
+189 p2 stick left 15473 28883
+189 p3 stick left 0 9362
+189 p4 stick left -25586 20469
+193 p1 stick left -9362 4681
+193 p2 stick left -32760 -670
+193 p3 stick left 0 -18724
+193 p4 stick left 31688 -8338
+197 p1 stick left 0 0
+197 p2 stick left -28190 -16702
+197 p3 stick left 0 -9362
+197 p4 stick left 32282 5616
+201 p2 stick left -20763 -25348
+201 p3 stick left 0 -23405
+201 p4 stick left 23901 -22413
+205 p2 stick left -14790 -29239
+205 p3 stick left 0 -32767
+205 p4 stick left -21452 -24768
+209 p1 stick left 0 -32767
+209 p2 stick left -17980 -27393
+209 p4 stick left 15913 -28643
+213 p2 stick left -22317 -23991
+213 p4 stick left 12602 -30246
+217 p1 stick left 0 -23405
+217 p2 stick left 21221 -24966
+217 p3 stick left 0 -28086
+217 p4 stick left -26549 -19204
+221 p1 stick left 0 23405
+221 p2 stick left 29584 -14087
+221 p3 stick left 0 -32767
+221 p4 stick left -28508 -16154
+225 p1 stick left 0 28086
+225 p2 stick left 28996 15261
+225 p3 stick left 0 0
+225 p4 stick left -20199 -25800
+229 p1 stick left 0 -23405
+229 p2 stick left 21324 24878
+229 p4 stick left -26668 -19038
+233 p1 stick left 0 -32767
+233 p2 stick left -14043 -14043
+233 p3 stick left 0 9362
+233 p4 stick left 20141 -25845
+237 p1 stick left 0 14043
+237 p2 stick left -21324 -24878
+237 p3 stick left -20293 -25726
+237 p4 stick left 32238 -5861
+241 p1 stick left 29880 -13446
+241 p2 stick left 0 0
+241 p3 stick left -31435 9245
+241 p4 stick left 4681 14043
+245 p1 stick left 26983 -18588
+245 p3 stick left -30538 11876
+245 p4 stick left -23405 4681
+249 p1 stick left -27704 -17497
+249 p3 stick left 32744 1212
+249 p4 stick left 4681 -14043
+253 p1 stick left -32238 5861
+253 p3 stick left 30948 -10764
+253 p4 stick left 14043 9362
+257 p1 stick left -31506 -9001
+257 p3 stick left 29880 13446
+257 p4 stick left -9362 14043
+261 p1 stick left -29148 -14968
+261 p3 stick left 30117 12907
+261 p4 stick left 0 -23405
+265 p1 stick left 32712 -1889
+265 p3 stick left -23405 -18724
+265 p4 stick left 9362 -18724
+269 p1 stick left 31380 9430
+269 p3 stick left -32547 3784
+269 p4 stick left -9362 23405
+273 p1 stick left -1091 32748
+273 p3 stick left -31644 8502
+273 p4 stick left -7367 31927
+277 p1 stick left 19946 25996
+277 p3 stick left -28585 16017
+277 p4 stick left 0 32767
+281 p1 stick left -22535 23787
+281 p2 stick left 2966 32632
+281 p3 stick left 22624 23702
+285 p1 stick left 0 0
+285 p2 stick left 0 0
+285 p3 stick left 0 0
+285 p4 stick left 0 0
+365 p1 stick left 29942 13307
+365 p2 stick left 0 23405
+365 p3 stick left 19184 26563
+365 p4 stick left 0 18724
+369 p1 stick left 30199 12715
+369 p2 stick left 0 -14043
+369 p3 stick left -18175 27263
+369 p4 stick left 0 -14043
+373 p1 stick left 0 0
+373 p2 stick left 0 0
+373 p3 stick left 0 0
+373 p4 stick left 0 0
+377 p1 stick left 30680 11505
+377 p2 stick left 0 -18724
+377 p3 stick left -28449 16256
+377 p4 stick left 0 -9362
+381 p1 stick left 0 0
+381 p2 stick left 0 0
+381 p3 stick left 0 0
+381 p4 stick left 0 0
+385 p1 stick left 30680 11505
+385 p2 stick left 0 14043
+385 p3 stick left -26940 18651
+385 p4 stick left 0 9362
+389 p1 stick left 0 0
+389 p2 stick left 0 0
+389 p3 stick left 0 0
+389 p4 stick left 0 0
+397 p1 stick left 31275 9773
+397 p1 press south
+397 p1 release south
+397 p2 stick left 0 -9362
+397 p3 stick left -25172 20976
+397 p4 stick left 0 -9362
+401 p1 stick left 0 0
+401 p2 stick left 0 0
+401 p3 stick left 0 0
+401 p4 stick left 0 0
+405 p1 stick left 26940 18651
+405 p2 stick left 0 9362
+405 p3 stick left -27263 18175
+405 p4 stick left 0 9362
+409 p1 stick left 0 0
+409 p2 stick left 0 0
+409 p3 stick left 0 0
+409 p4 stick left 0 0
+413 p1 stick left 26940 18651
+413 p2 stick left 0 -9362
+413 p3 stick left -30680 11505
+413 p4 stick left 0 -9362
+417 p1 stick left -11762 30582
+417 p2 stick left 0 32767
+417 p4 stick left 0 32767
+421 p1 stick left 0 0   # stick back to the middle
+421 p2 stick left 0 0   # stick back to the middle
+421 p3 stick left 0 0   # stick back to the middle
+421 p4 stick left 0 0   # stick back to the middle

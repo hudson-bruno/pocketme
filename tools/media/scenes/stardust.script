@@ -1,0 +1,55 @@
+# STARDUST: a touch game. The finger is put on the nearest star each time and
+# the comet follows it; 20 stars are caught by frame 445.
+# Run (from boards/desktop): pocketme-sim --boot off --fps 30 --frames 460 --script stardust.script --shot <frames> --out <folder>
+
+# --- home screen (boot off): step right 12 tiles to STARDUST, then start it
+46 press right
+47 release right
+48 press right
+49 release right
+50 press right
+51 release right
+52 press right
+53 release right
+54 press right
+55 release right
+56 press right
+57 release right
+58 press right
+59 release right
+60 press right
+61 release right
+62 press right
+63 release right
+64 press right
+65 release right
+66 press right
+67 release right
+68 press right
+69 release right
+70 press south   # start STARDUST
+71 release south
+
+# The lines below were written by a small helper that looked at each picture
+# and chose the next input (a touch on the nearest star). They are plain recorded inputs now:
+# the run is the same every time.
+76 touch 211 96   # finger on the first star
+86 touch 184 120   # finger on the nearest star
+90 touch 292 72   # finger on the nearest star
+111 touch 32 96   # finger on the nearest star
+164 touch 16 150   # finger on the nearest star
+175 touch 48 186   # finger on the nearest star
+183 touch 76 64   # finger on the nearest star
+207 touch 232 32   # finger on the nearest star
+240 touch 268 74   # finger on the nearest star
+248 touch 194 112   # finger on the nearest star
+261 touch 176 200   # finger on the nearest star
+279 touch 110 188   # finger on the nearest star
+292 touch 52 116   # finger on the nearest star
+307 touch 94 92   # finger on the nearest star
+314 touch 270 48   # finger on the nearest star
+353 touch 290 200   # finger on the nearest star
+385 touch 282 212   # finger on the nearest star
+388 touch 150 126   # finger on the nearest star
+416 touch 90 158   # finger on the nearest star
+429 touch 104 70   # finger on the nearest star

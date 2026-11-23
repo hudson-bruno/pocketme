@@ -1,0 +1,13 @@
+# PROTO3D STONE: FNV-1a hashes of three moments at each detail
+low cliff c58e9b3880464644
+low gap d71fb98262f0d737
+low goal fa47844decf29905
+mid cliff d10eccb5204540ce
+mid gap 867f140e133f95c7
+mid goal b320d05f1303e403
+high cliff 9a7b023aafc69ecb
+high gap 36e0d523dcd06e98
+high goal b320d05f1303e403
+max cliff 95312e4bf3e4c877
+max gap 9393fcac75ad704f
+max goal 7e1a869cb5bf9109

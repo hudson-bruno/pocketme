@@ -1,0 +1,13 @@
+# The home screen with no SD card, a card put in, and the card pulled out.
+# Run: --boot off --fps 30 --frames 270
+#
+# 0: the slot is empty from the start (the same picture as --no-card)
+0 card out
+# 0-39: NO CARD, INSERT A CARD TO SEE GAMES
+40 card in
+# The console looks at the slot every 2 seconds: at frame 60 it finds the
+# card, shows the fourteen tiles and a green CARD READY note (until about 142)
+100 card out
+# At the next look (frame 120) the row is gone: NO CARD again. The red
+# CARD REMOVED note waits for CARD READY to go up, then slides down
+# (until about 225).

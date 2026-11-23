@@ -1,0 +1,58 @@
+# SKIMMER: a CORAL mallet (round, left) has just hit the puck towards
+# TEAL's slot; the TEAL mallet (eight-sided, right) comes across. The
+# home tile's picture: 36 x 36 pixels, one letter per pixel. Make the
+# card file with games/art/make_art.py (see games/README.md).
+size 36 36
+colour c 0E121A   # cabinet
+colour . 183658   # surface
+colour h 244A72   # air hole
+colour m 4C7CB0   # marking
+colour r D4DAE2   # rail
+colour d 7C8694   # rail shadow
+colour k 04060A   # slot
+colour a F26E4C   # coral
+colour A 862A18   # coral edge
+colour l FFC4B0   # coral knob
+colour t 2CC4B0   # teal
+colour T 0A5A52   # teal edge
+colour u B4F4EA   # teal knob
+colour p FFDC4C   # puck
+colour P B08210   # puck edge
+colour y FFFFFF   # shine
+pixels
+cccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccc
+crrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrc
+cr...............mm...............rc
+cr...............mm...............rc
+cr..h...h...h...hmm.h...h...h...h.rc
+cr...............mm...............rc
+cr...............mm.....TTTTT.....rc
+cr...............mm....TTtttTT....rc
+cr..h...h...h...hmm.h.TTtttttTT.h.rc
+crmmm............mm..TTtttttttTTmmrc
+ca...m.........mmmmmmTtttuuutttT..tc
+ck....m.......mm.mm.mTtttuuutttT..kc
+ck..h..mh...hmm.hmm.hTtttuuutttTh.kc
+ck.....mm...mm...mm..TTtttttttTT..kc
+ck.....AAAAAm....mm...TTtttttTT...kc
+ck....AAaaaAA....mm....TTtttTT....kc
+ck..hAaaaaaaaA..hmm.h..mTTTTT...h.kc
+ck..AAaaalaaaAA..mm....m...m......kc
+ck..AaaalllaaaA..mm...mm...mm.....kc
+ck..AaalllllaaA..mmPPpPP....m.....kc
+ck..AaaalllaaaAmhmmPyppPh...hm..h.kc
+ca..AAaaalaaaAAmmmmppppp......m...tc
+crmmmAaaaaaaaA..PPmPpppP.......mmmrc
+cr....AAaaaAA.P..mmPPpPP..........rc
+cr..h..AAAAAh...hmm.h...h...h...h.rc
+cr...............mm...............rc
+cr...............mm...............rc
+cr...............mm...............rc
+cr..h...h...h...hmm.h...h...h...h.rc
+cr...............mm...............rc
+crrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrc
+cddddddddddddddddddddddddddddddddddc
+cccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccc

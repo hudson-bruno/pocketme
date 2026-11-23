@@ -1,0 +1,677 @@
+# PADTEST: every input of player 1's pad, moving, then four pads at once.
+# Run: --boot off --fps 30 --frames 740
+
+# Home screen: eight steps right from BENCH to the PADTEST tile, then start it.
+10 press right
+11 release right
+12 press right
+13 release right
+14 press right
+15 release right
+16 press right
+17 release right
+18 press right
+19 release right
+20 press right
+21 release right
+22 press right
+23 release right
+24 press right
+25 release right
+30 press south
+31 release south
+
+# 30-59: PADTEST stands still with nothing held (the clip starts at 60).
+# 60-209: both sticks turn round in circles (the right one the other way),
+# the triggers rise and fall, the face buttons, d-pad and shoulders are
+# pressed one after another, the pad is tilted round in a circle
+# (the level bubble follows) and turned, and a finger drags across
+# the screen from frame 120 to 170.
+60 stick left 0 0
+60 stick right 0 0
+60 trigger right 0
+60 trigger left 0
+60 tilt 0 0
+60 spin 0 0 300
+62 stick left 2707 -284
+62 stick right 1702 -2124
+62 trigger right 85
+62 trigger left 0
+62 tilt -250 -21
+64 stick left 5320 -1130
+64 stick right 3826 -3865
+64 trigger right 170
+64 trigger left 0
+64 tilt -495 -83
+66 stick left 7747 -2517
+66 stick right 6304 -5159
+66 trigger right 254
+66 trigger left 0
+66 tilt -728 -187
+68 stick left 9902 -4409
+68 stick right 9060 -5950
+68 trigger right 336
+68 trigger left 0
+68 tilt -944 -329
+70 stick left 11703 -6757
+70 stick right 12009 -6197
+70 trigger right 416
+70 trigger left 0
+70 tilt -1139 -507
+70 spin 199 0 259
+72 stick left 13077 -9501
+72 stick right 15061 -5870
+72 trigger right 492
+72 trigger left 0
+72 tilt -1307 -718
+74 stick left 13961 -12571
+74 stick right 18121 -4956
+74 trigger right 566
+74 trigger left 0
+74 tilt -1444 -959
+76 stick left 14303 -15885
+76 stick right 21095 -3452
+76 trigger right 635
+76 trigger left 0
+76 tilt -1546 -1225
+78 stick left 14064 -19358
+78 stick right 23888 -1375
+78 trigger right 700
+78 trigger left 0
+78 tilt -1610 -1511
+80 stick left 13000 -22516
+80 stick right 25971 1226
+80 trigger right 760
+80 trigger left 0
+80 tilt -1605 -1783
+80 spin 346 0 150
+82 stick left 10575 -23752
+82 stick right 25700 3934
+82 trigger right 814
+82 trigger left 0
+82 tilt -1451 -1911
+84 stick left 8034 -24727
+84 stick right 25148 6599
+84 trigger right 863
+84 trigger left 0
+84 tilt -1285 -2026
+86 stick left 5405 -25431
+86 stick right 24320 9192
+86 trigger right 906
+86 trigger left 0
+86 tilt -1111 -2126
+88 stick left 2717 -25857
+88 stick right 23226 11684
+88 trigger right 943
+88 trigger left 0
+88 tilt -930 -2212
+90 stick left 0 -26000
+90 stick right 21878 14047
+90 trigger right 972
+90 trigger left 0
+90 tilt -741 -2282
+90 spin 400 0 0
+92 stick left -2717 -25857
+92 stick right 20289 16257
+92 trigger right 995
+92 trigger left 0
+92 tilt -548 -2336
+94 stick left -5405 -25431
+94 stick right 18479 18289
+94 trigger right 1012
+94 trigger left 0
+94 tilt -350 -2374
+96 stick left -8034 -24727
+96 stick right 16466 20121
+96 trigger right 1020
+96 trigger left 0
+96 tilt -150 -2395
+98 stick left -10575 -23752
+98 stick right 14272 21732
+98 trigger right 1022
+98 trigger left 0
+98 tilt 50 -2399
+100 stick left -12999 -22516
+100 stick right 11923 23104
+100 trigger right 1017
+100 trigger left 0
+100 tilt 250 -2386
+100 spin 346 0 -149
+102 stick left -15282 -21034
+102 stick right 9442 24224
+102 trigger right 1004
+102 trigger left 0
+102 tilt 449 -2357
+104 stick left -17397 -19321
+104 stick right 6858 25078
+104 trigger right 985
+104 trigger left 0
+104 tilt 645 -2311
+106 stick left -19321 -17397
+106 stick right 4199 25658
+106 trigger right 958
+106 trigger left 0
+106 tilt 836 -2249
+108 stick left -21034 -15282
+108 stick right 1494 25956
+108 trigger right 925
+108 trigger left 0
+108 tilt 1021 -2171
+110 stick left -22516 -13000
+110 stick right -1226 25971
+110 trigger right 885
+110 trigger left 0
+110 tilt 1199 -2078
+110 spin 200 0 -259
+112 stick left -23752 -10575
+112 stick right -3934 25700
+112 trigger right 840
+112 trigger left 0
+112 tilt 1369 -1970
+114 stick left -24727 -8034
+114 stick right -6599 25148
+114 trigger right 788
+114 trigger left 0
+114 tilt 1529 -1849
+116 stick left -25431 -5405
+116 stick right -9192 24320
+116 trigger right 730
+116 trigger left 0
+116 tilt 1679 -1714
+118 stick left -25857 -2717
+118 stick right -11684 23226
+118 trigger right 668
+118 trigger left 0
+118 tilt 1816 -1568
+120 stick left -26000 0
+120 stick right -14047 21878
+120 trigger right 601
+120 trigger left 0
+120 tilt 1941 -1410
+120 spin 0 0 -300
+122 stick left -25857 2717
+122 stick right -16257 20289
+122 trigger right 529
+122 trigger left 0
+122 tilt 2052 -1243
+124 stick left -25431 5405
+124 stick right -18289 18479
+124 trigger right 454
+124 trigger left 0
+124 tilt 2149 -1067
+126 stick left -24727 8034
+126 stick right -20121 16466
+126 trigger right 376
+126 trigger left 0
+126 tilt 2231 -883
+128 stick left -23752 10575
+128 stick right -21732 14272
+128 trigger right 295
+128 trigger left 0
+128 tilt 2297 -693
+130 stick left -22516 13000
+130 stick right -23104 11923
+130 trigger right 212
+130 trigger left 0
+130 tilt 2347 -498
+130 spin -200 0 -259
+132 stick left -21034 15282
+132 stick right -24224 9442
+132 trigger right 128
+132 trigger left 0
+132 tilt 2381 -300
+134 stick left -19321 17397
+134 stick right -25078 6858
+134 trigger right 42
+134 trigger left 0
+134 tilt 2397 -100
+136 stick left -17397 19321
+136 stick right -25658 4199
+136 trigger right 0
+136 trigger left 42
+136 tilt 2397 100
+138 stick left -15282 21034
+138 stick right -25956 1494
+138 trigger right 0
+138 trigger left 128
+138 tilt 2381 300
+140 stick left -13000 22516
+140 stick right -25971 -1226
+140 trigger right 0
+140 trigger left 212
+140 tilt 2347 498
+140 spin -346 0 -150
+142 stick left -10575 23752
+142 stick right -25700 -3934
+142 trigger right 0
+142 trigger left 295
+142 tilt 2297 693
+144 stick left -8034 24727
+144 stick right -25148 -6599
+144 trigger right 0
+144 trigger left 376
+144 tilt 2231 883
+146 stick left -5405 25431
+146 stick right -24320 -9192
+146 trigger right 0
+146 trigger left 454
+146 tilt 2149 1067
+148 stick left -2717 25857
+148 stick right -23226 -11684
+148 trigger right 0
+148 trigger left 529
+148 tilt 2052 1243
+150 stick left 0 26000
+150 stick right -21878 -14047
+150 trigger right 0
+150 trigger left 601
+150 tilt 1941 1410
+150 spin -400 0 0
+152 stick left 2717 25857
+152 stick right -20289 -16257
+152 trigger right 0
+152 trigger left 668
+152 tilt 1816 1568
+154 stick left 5405 25431
+154 stick right -18479 -18289
+154 trigger right 0
+154 trigger left 730
+154 tilt 1679 1714
+156 stick left 8034 24727
+156 stick right -16466 -20121
+156 trigger right 0
+156 trigger left 788
+156 tilt 1529 1849
+158 stick left 10575 23752
+158 stick right -14272 -21732
+158 trigger right 0
+158 trigger left 840
+158 tilt 1369 1970
+160 stick left 12999 22516
+160 stick right -11923 -23104
+160 trigger right 0
+160 trigger left 885
+160 tilt 1200 2078
+160 spin -346 0 149
+162 stick left 15282 21034
+162 stick right -9442 -24224
+162 trigger right 0
+162 trigger left 925
+162 tilt 1021 2171
+164 stick left 17397 19321
+164 stick right -6858 -25078
+164 trigger right 0
+164 trigger left 958
+164 tilt 836 2249
+166 stick left 19321 17397
+166 stick right -4199 -25658
+166 trigger right 0
+166 trigger left 985
+166 tilt 645 2311
+168 stick left 21034 15282
+168 stick right -1494 -25956
+168 trigger right 0
+168 trigger left 1004
+168 tilt 449 2357
+170 stick left 22516 13000
+170 stick right 1226 -25971
+170 trigger right 0
+170 trigger left 1017
+170 tilt 250 2386
+170 spin -200 0 259
+172 stick left 23752 10575
+172 stick right 3934 -25700
+172 trigger right 0
+172 trigger left 1022
+172 tilt 50 2399
+174 stick left 24727 8034
+174 stick right 6599 -25148
+174 trigger right 0
+174 trigger left 1020
+174 tilt -150 2395
+176 stick left 25431 5405
+176 stick right 9192 -24320
+176 trigger right 0
+176 trigger left 1012
+176 tilt -350 2374
+178 stick left 25857 2717
+178 stick right 11684 -23226
+178 trigger right 0
+178 trigger left 995
+178 tilt -548 2336
+180 stick left 26000 0
+180 stick right 14047 -21878
+180 trigger right 0
+180 trigger left 972
+180 tilt -741 2282
+180 spin 0 0 300
+182 stick left 25857 -2717
+182 stick right 16257 -20289
+182 trigger right 0
+182 trigger left 943
+182 tilt -930 2212
+184 stick left 25431 -5405
+184 stick right 18289 -18479
+184 trigger right 0
+184 trigger left 906
+184 tilt -1111 2126
+186 stick left 24727 -8034
+186 stick right 20121 -16466
+186 trigger right 0
+186 trigger left 863
+186 tilt -1285 2026
+188 stick left 23752 -10575
+188 stick right 21732 -14272
+188 trigger right 0
+188 trigger left 814
+188 tilt -1451 1911
+190 stick left 22516 -13000
+190 stick right 23104 -11923
+190 trigger right 0
+190 trigger left 760
+190 tilt -1605 1783
+190 spin 200 0 259
+192 stick left 19358 -14064
+192 stick right 22294 -8690
+192 trigger right 0
+192 trigger left 700
+192 tilt -1610 1511
+194 stick left 15885 -14303
+194 stick right 20619 -5639
+194 trigger right 0
+194 trigger left 635
+194 tilt -1546 1225
+196 stick left 12571 -13961
+196 stick right 18540 -3034
+196 trigger right 0
+196 trigger left 566
+196 tilt -1444 959
+198 stick left 9501 -13077
+198 stick right 16138 -929
+198 trigger right 0
+198 trigger left 492
+198 tilt -1307 718
+200 stick left 6757 -11703
+200 stick right 13499 637
+200 trigger right 0
+200 trigger left 416
+200 tilt -1139 507
+200 spin 346 0 149
+202 stick left 4409 -9902
+202 stick right 10715 1640
+202 trigger right 0
+202 trigger left 336
+202 tilt -944 329
+204 stick left 2517 -7747
+204 stick right 7879 2067
+204 trigger right 0
+204 trigger left 254
+204 tilt -728 187
+206 stick left 1130 -5320
+206 stick right 5087 1922
+206 trigger right 0
+206 trigger left 170
+206 tilt -495 83
+208 stick left 284 -2707
+208 stick right 2431 1223
+208 trigger right 0
+208 trigger left 85
+208 tilt -250 21
+66 press south
+88 release south
+78 press east
+100 release east
+90 press north
+112 release north
+102 press west
+124 release west
+114 press up
+136 release up
+126 press right
+148 release right
+138 press down
+160 release down
+150 press left
+172 release left
+162 press l
+184 release l
+174 press r
+196 release r
+186 press minus
+208 release minus
+120 touch 40 60
+122 touch 49 69
+124 touch 58 79
+126 touch 67 87
+128 touch 76 93
+130 touch 85 97
+132 touch 94 99
+134 touch 103 99
+136 touch 112 96
+138 touch 121 91
+140 touch 130 83
+142 touch 139 75
+144 touch 148 65
+146 touch 157 56
+148 touch 166 46
+150 touch 175 38
+152 touch 184 30
+154 touch 193 25
+156 touch 202 21
+158 touch 211 21
+160 touch 220 22
+162 touch 229 26
+164 touch 238 32
+166 touch 247 40
+168 touch 256 49
+170 touch 265 59
+171 lift
+
+# 210: everything let go; the clip ends at 215 with the pad flat.
+210 stick left 0 0
+210 stick right 0 0
+210 trigger right 0
+210 trigger left 0
+210 tilt 0 0
+210 spin 0 0 0
+
+# 216-479: pads 2, 3 and 4 connect and each holds buttons; player 1 holds
+# the d-pad up-left, north and both shoulders, the left trigger fully,
+# both sticks pushed, a finger on the screen and the pad tilted.
+216 p2 pad on
+217 p3 pad on
+218 p4 pad on
+240 p2 press south
+240 p2 press r
+240 p3 press east
+240 p3 press up
+240 p4 press west
+240 p4 press l
+240 p4 press zr
+244 press up
+244 press left
+244 press north
+244 press l
+244 press r
+244 trigger left 1023
+244 trigger right 400
+244 stick left -18000 -18000
+244 stick right 22000 9000
+244 touch 296 222
+244 tilt -2200 1400
+244 spin 160 -240 80
+
+# 262-408: on top of what they hold, pads 2, 3 and 4 each walk a button
+# along their row (pad 3 four frames after pad 2, pad 4 eight after),
+# a new one every 12 frames, while the PAD 3 and PAD 4 CONNECTED notes
+# come and go.
+262 p2 press north
+274 p2 release north
+274 p2 press down
+286 p2 release down
+286 p2 press left
+298 p2 release left
+298 p2 press right
+310 p2 release right
+310 p2 press minus
+322 p2 release minus
+322 p2 press plus
+334 p2 release plus
+334 p2 press zl
+346 p2 release zl
+346 p2 press east
+358 p2 release east
+358 p2 press west
+370 p2 release west
+370 p2 press up
+382 p2 release up
+382 p2 press l
+394 p2 release l
+394 p2 press north
+400 p2 release north
+266 p3 press north
+278 p3 release north
+278 p3 press down
+290 p3 release down
+290 p3 press left
+302 p3 release left
+302 p3 press right
+314 p3 release right
+314 p3 press minus
+326 p3 release minus
+326 p3 press plus
+338 p3 release plus
+338 p3 press zl
+350 p3 release zl
+350 p3 press south
+362 p3 release south
+362 p3 press west
+374 p3 release west
+374 p3 press r
+386 p3 release r
+386 p3 press l
+398 p3 release l
+398 p3 press north
+404 p3 release north
+270 p4 press north
+282 p4 release north
+282 p4 press down
+294 p4 release down
+294 p4 press left
+306 p4 release left
+306 p4 press right
+318 p4 release right
+318 p4 press minus
+330 p4 release minus
+330 p4 press plus
+342 p4 release plus
+342 p4 press zl
+354 p4 release zl
+354 p4 press east
+366 p4 release east
+366 p4 press south
+378 p4 release south
+378 p4 press up
+390 p4 release up
+390 p4 press r
+402 p4 release r
+402 p4 press north
+408 p4 release north
+
+# 480: everybody lets go of everything; the pads stay connected.
+480 p2 release r
+480 p2 release south
+480 p3 release east
+480 p3 release up
+480 p4 release l
+480 p4 release west
+480 p4 release zr
+480 release up
+480 release left
+480 release north
+480 release l
+480 release r
+480 trigger left 0
+480 trigger right 0
+480 stick left 0 0
+480 stick right 0 0
+480 lift
+480 tilt 0 0
+480 spin 0 0 0
+# About a second later nothing has changed, so PADTEST asks for ON DEMAND.
+# 540-658: the pad alone is tilted round in a circle, turning as it goes;
+# motion alone does not wake the game, so its quarter-second timer moves
+# the level bubble.
+540 tilt 0 -2200
+540 spin 320 0 160
+542 tilt -230 -2188
+544 tilt -457 -2152
+546 tilt -680 -2092
+548 tilt -895 -2010
+550 tilt -1100 -1905
+552 tilt -1293 -1780
+554 tilt -1472 -1635
+556 tilt -1635 -1472
+558 tilt -1780 -1293
+560 tilt -1905 -1100
+560 spin 160 277 160
+562 tilt -2010 -895
+564 tilt -2092 -680
+566 tilt -2152 -457
+568 tilt -2188 -230
+570 tilt -2200 0
+572 tilt -2188 230
+574 tilt -2152 457
+576 tilt -2092 680
+578 tilt -2010 895
+580 tilt -1905 1100
+580 spin -160 277 160
+582 tilt -1780 1293
+584 tilt -1635 1472
+586 tilt -1472 1635
+588 tilt -1293 1780
+590 tilt -1100 1905
+592 tilt -895 2010
+594 tilt -680 2092
+596 tilt -457 2152
+598 tilt -230 2188
+600 tilt 0 2200
+600 spin -320 0 160
+602 tilt 230 2188
+604 tilt 457 2152
+606 tilt 680 2092
+608 tilt 895 2010
+610 tilt 1100 1905
+612 tilt 1293 1780
+614 tilt 1472 1635
+616 tilt 1635 1472
+618 tilt 1780 1293
+620 tilt 1905 1100
+620 spin -160 -277 160
+622 tilt 2010 895
+624 tilt 2092 680
+626 tilt 2152 457
+628 tilt 2188 230
+630 tilt 2200 0
+632 tilt 2188 -230
+634 tilt 2152 -457
+636 tilt 2092 -680
+638 tilt 2010 -895
+640 tilt 1905 -1100
+640 spin 160 -277 160
+642 tilt 1780 -1293
+644 tilt 1635 -1472
+646 tilt 1472 -1635
+648 tilt 1293 -1780
+650 tilt 1100 -1905
+652 tilt 895 -2010
+654 tilt 680 -2092
+656 tilt 457 -2152
+658 tilt 230 -2188
+660 tilt 0 0
+660 spin 0 0 0
+# 672: the pad stops sending motion: NO MOTION; about a second later
+# nothing has changed, and PADTEST is ON DEMAND again.
+672 motion off
+#
+# Still: frame 130 (one player moving everything).

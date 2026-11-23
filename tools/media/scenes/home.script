@@ -1,0 +1,44 @@
+# The home screen: walking along the row of fourteen tiles with the d-pad.
+# Run: --boot off --fps 30 --frames 180
+#
+# With --boot off the home screen stands at frame 0, BENCH chosen.
+# Each tap of right moves the choice one tile on; the row scrolls when the
+# choice reaches the fourth place.
+
+# 0-19: BENCH, still
+# 20-44: right four times: CAMBER, DRIVE3D, HAIRPIN, KESTREL
+20 press right
+21 release right
+28 press right
+29 release right
+36 press right
+37 release right
+44 press right
+45 release right
+# 45-63: rest on KESTREL
+# 64-80: right three times: LANDER, LANTERN, MERCATOR
+64 press right
+65 release right
+72 press right
+73 release right
+80 press right
+81 release right
+# 81-103: rest on MERCATOR
+# 104-128: right four times: PADTEST, PROTO3D, ROOFTOP, SKIMMER
+104 press right
+105 release right
+112 press right
+113 release right
+120 press right
+121 release right
+128 press right
+129 release right
+# 136-144: right twice: STARDUST, TUNDRA (the last tile)
+136 press right
+137 release right
+144 press right
+145 release right
+# 145-179: rest on TUNDRA
+#
+# Stills: frame 10 (BENCH, the start of the row), 100 (MERCATOR, the middle),
+# 132 (SKIMMER, near the end).

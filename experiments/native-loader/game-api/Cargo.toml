@@ -1,0 +1,12 @@
+[package]
+edition     = "2024"
+license = "MIT"
+name        = "game-api"
+description = "The contract between the console and a native game: where a game is loaded, what its file looks like, and the two tables of functions they hand each other"
+version     = "0.1.0"
+publish     = false
+
+# No dependencies on purpose. This crate is compiled three times: into the
+# console firmware, into every game, and into the PC tool that packs a game
+# file. It must stay plain `core` so that all three agree byte for byte.
+[dependencies]

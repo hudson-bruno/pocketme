@@ -1,0 +1,16 @@
+[package]
+name        = "touch-filter"
+description = "Makes a resistive touch panel's readings steady enough for taps and drags (pressure limits, held drop-outs, a dead band at rest, a lone wild reading left out) and counts what the panel does, for tuning. Plain logic, no pins: the CYD's chip readings and the debug link's scripted finger both go through it. No std, no heap, no unsafe."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[dependencies]
+# `TouchPoint`.
+board-api     = { path = "../board-api" }
+# console-core's own `Gesture` (taps, drags, flicks as the console sees
+# them) and its touch limits.
+console-core  = { path = "../console-core" }
+# Panel pixels to picture pixels (`View`).
+console-video = { path = "../console-video" }

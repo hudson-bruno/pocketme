@@ -1,0 +1,13 @@
+# PROTO3D SAIL: FNV-1a hashes of three moments at each detail
+low glide-2 0f14f55ecdf06f68
+low on-s2 9a439731eb84ba07
+low glide-4 28ac91f96798de72
+mid glide-2 75b42651e6614084
+mid on-s2 07fc22118545fe27
+mid glide-4 9108b2efe81541ad
+high glide-2 de112e2406e555e1
+high on-s2 8aec3ea5c65fdad3
+high glide-4 9108b2efe81541ad
+max glide-2 72e6e7c9798ed781
+max on-s2 3f81d85b3c4441bd
+max glide-4 af66d5b19d71c45b

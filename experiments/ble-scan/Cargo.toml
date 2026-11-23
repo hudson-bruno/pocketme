@@ -1,0 +1,102 @@
+[package]
+edition      = "2024"
+license = "MIT"
+name         = "ble-scan"
+description  = "Experiment: Bluetooth LE scanning (central side) on the CYD, with memory figures and a first pass-by beacon"
+rust-version = "1.95"
+version      = "0.1.0"
+publish      = false
+
+[[bin]]
+name = "ble-scan"
+path = "./src/main.rs"
+
+# A second, small program: a WiFi scan that checks the board's receiver
+# without Bluetooth (see the top of the file). Built only when asked for.
+[[bin]]
+name              = "rf-check"
+path              = "./src/bin/rf_check.rs"
+required-features = ["rfcheck"]
+
+[features]
+# With no feature: scan only, the radio listens all the time. This is the
+# build for "does my gamepad speak Low Energy at all?".
+default = []
+# Scan only, but listening 150 ms in every second (15%), the share planned
+# for the console's home screen.
+duty15 = []
+# Beacon and scan together, for a long run: a pass-by beacon every 200 ms
+# while listening 15% of the time.
+beacon = []
+# The measuring build: four phases in turn, each PHASE_SECS long:
+# listen 15%, listen 15% + beacon, listen 100%, listen 100% + beacon.
+# Run back to back so the same neighbours are on air for each.
+sequence = []
+# For a check with a phone held next to the board: the pass-by beacon every
+# 200 ms and listening all the time, for ever.
+phonecheck = []
+# Ask every advertiser for its scan response as well (active scanning).
+# Gives more names, but the board then transmits to other people's devices,
+# so it is off unless asked for.
+active = []
+# Builds the Bluetooth library with pairing support and nothing else changed.
+# Only to learn (a) whether the library still starts on this radio, and
+# (b) what pairing costs in flash and memory. Nothing pairs in this firmware.
+security = ["trouble-host/security", "trouble-host/legacy-pairing"]
+# Only for the `rf-check` program: adds the WiFi half of the radio driver.
+rfcheck = ["esp-radio/wifi"]
+
+[dependencies]
+# Versions copied from the owner's working display firmware for this board.
+esp-hal = { version = "~1.2.2", features = ["esp32", "log-04", "unstable"] }
+
+esp-rtos = { version = "0.4.0", features = [
+  "embassy",
+  "esp-alloc",
+  "esp-radio",
+  "esp32",
+  "log-04",
+] }
+
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32", "log-04"] }
+log                    = "0.4.27"
+
+bt-hci = "0.9.0"
+# "alloc-hooks": the allocator calls two functions of ours on every request
+# (src/mem.rs), which is how the smallest free heap is caught exactly.
+esp-alloc = { version = "0.11.0", features = ["alloc-hooks", "esp32"] }
+esp-radio = { version = "1.0.0-beta.1", features = [
+  "ble",
+  "esp-alloc",
+  "esp32",
+  "log-04",
+  "unstable",
+] }
+# "scan" is the part the display firmware never used. "log" makes the
+# library's own start-up lines show on the serial port.
+trouble-host = { version = "0.7.0", features = ["gatt", "log", "scan"] }
+
+embassy-executor = { version = "0.10.0", features = ["log"] }
+embassy-futures  = "0.1.2"
+embassy-time     = { version = "0.5.0", features = ["log"] }
+esp-backtrace = { version = "0.20.0", features = [
+  "esp32",
+  "panic-handler",
+  "println",
+] }
+esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
+
+critical-section = "1.2.0"
+# Only for the type in the allocator hook's signature; same version esp-alloc uses.
+enumset     = { version = "1.1.15", default-features = false }
+heapless    = "0.9.3"
+static_cell = "2.1.1"
+
+[profile.dev]
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1     # LLVM can perform better optimizations using a single thread
+debug         = 2     # prefer slower builds but better debugging experience
+lto           = 'fat'
+opt-level     = 's'

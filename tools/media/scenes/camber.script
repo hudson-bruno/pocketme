@@ -1,0 +1,138 @@
+# CAMBER: the hover racer, at the game's own defaults (RATE 60 FPS, track
+# LAGOON, class BRISK, mode RACE). Run with --boot off --fps 60
+# --frames 1251.
+#
+# Home screen: one step right to the CAMBER tile.
+90 press right
+91 release right
+# A (south) at 110 opens the game. The title menu stays up with its
+# live race behind it until 690.
+110 press south
+111 release south
+# DOWN (250) to TRACK, then RIGHT three times: FURNACE (300), GLACIER
+# (400) and round to LAGOON again (500); each change starts the live
+# scene behind the menu on that track. UP (620) back to PLAY.
+250 press down
+251 release down
+300 press right
+301 release right
+400 press right
+401 release right
+500 press right
+501 release right
+620 press up
+621 release up
+# A on PLAY starts the race and stays held from here on as the
+# throttle. The lights count down; GO! shows at about 870.
+# (PLAY is pressed at 690 on purpose: with this timing the race runs the
+# same as one started right away, so the lines below stay valid.)
+690 press south
+# From 891 the ship drives itself by these lines: every 4 pictures the
+# stick points at the middle of the road seen on two rows, and B (east),
+# the air brake, is pulled when the road runs far off to one side. A
+# closed-loop helper wrote these lines by looking at each picture; they
+# are plain inputs and replay the same race every time.
+# About 930: the opening straight with the rivals ahead.
+# About 939 to 980: the first right bend, with the air brake.
+891 stick left -10290 0
+891 press south
+895 stick left -2380 0
+899 stick left -980 0
+903 stick left 1190 0
+907 stick left 2590 0
+911 stick left 1959 0
+915 stick left 4899 0
+919 stick left 6510 0
+923 stick left 8610 0
+927 stick left 10710 0
+931 stick left 12950 0
+935 stick left 16379 0
+939 stick left 32059 0
+939 press east
+943 stick left 25059 0
+947 stick left 21630 0
+951 stick left 20509 0
+955 stick left 18270 0
+959 stick left 14910 0
+959 release east
+963 stick left 14279 0
+967 stick left 12950 0
+971 stick left 15819 0
+975 stick left 17360 0
+975 press east
+979 stick left 11619 0
+979 release east
+983 stick left 13439 0
+987 stick left 7770 0
+991 stick left 12109 0
+995 stick left 11480 0
+999 stick left 13369 0
+1003 stick left 15540 0
+1007 stick left 12180 0
+1011 stick left 7979 0
+1015 stick left 11970 0
+1019 stick left -5250 0
+1023 stick left -5809 0
+1027 stick left -14980 0
+1031 stick left -9520 0
+1035 stick left -10219 0
+1039 stick left -11970 0
+1043 stick left -1819 0
+1047 stick left -17360 0
+1051 stick left -3779 0
+1055 stick left -18900 0
+1059 stick left -2170 0
+1063 stick left -17920 0
+1067 stick left -9940 0
+1071 stick left -19880 0
+1075 stick left -140 0
+1079 stick left -9590 0
+1083 stick left 4619 0
+1087 stick left -11060 0
+1091 stick left 7210 0
+1095 stick left -12040 0
+1099 stick left -1049 0
+1103 stick left 18690 0
+1107 stick left 9030 0
+1111 stick left -6160 0
+1115 stick left 5950 0
+1119 stick left 8680 0
+1123 stick left 11830 0
+1127 stick left 28980 0
+1127 press south
+# 1131 to 1195: R held, a carve through the long right bend. The tail
+# throws sparks and the first heat mark fills (about 1180); letting go at
+# 1195 gives the sling, a push to about 300 km/h on the next straight.
+# The shield stays full until 1249; the run stops at 1250, as the ship
+# brushes the right wall.
+1131 stick left 16169 0
+1131 press r
+1135 stick left 17920 0
+1139 stick left 18690 0
+1143 stick left 16730 0
+1147 stick left 18830 0
+1151 stick left 16449 0
+1155 stick left 16730 0
+1159 stick left 16520 0
+1163 stick left 16449 0
+1167 stick left 14490 0
+1171 stick left 14630 0
+1175 stick left 12320 0
+1183 stick left 9099 0
+1187 stick left 8190 0
+1191 stick left 6019 0
+1195 stick left 4200 0
+1195 release r
+1199 stick left 1260 0
+1203 stick left -2100 0
+1207 stick left -5670 0
+1211 stick left -7490 0
+1215 stick left -10220 0
+1219 stick left -11760 0
+1223 stick left -12110 0
+1227 stick left 2660 0
+1231 stick left -13860 0
+1235 stick left -8400 0
+1239 stick left -14420 0
+1243 stick left -8749 0
+1247 stick left -5949 0

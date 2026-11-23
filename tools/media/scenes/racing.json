@@ -1,0 +1,112 @@
+[
+  {
+    "scene": "camber",
+    "game": "CAMBER",
+    "script": "camber.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 1251,
+    "stills": [
+      {"frame": 930, "name": "camber-straight", "caption": "One second into the race, the ship runs 8th on the opening straight at 118 km/h with the rivals ahead."}
+    ],
+    "clips": [
+      {"from": 240, "to": 580, "every": 4, "name": "camber-title-menu", "caption": "In the title menu TRACK steps from LAGOON to FURNACE and GLACIER and round to LAGOON again, and the live scene behind the menu moves to each track in turn."},
+      {"from": 816, "to": 1008, "every": 4, "name": "camber-start", "caption": "The light counts down to GO! and the ship sets off in 8th place behind the seven rivals, out under the chequered banner."},
+      {"from": 1060, "to": 1248, "every": 4, "name": "camber-carve-lap", "caption": "R held carves the ship through a long right bend while the heat marks beside the shield light up; let go, the sling pushes it past a rival on the next straight."}
+    ]
+  },
+  {
+    "scene": "camber-furnace",
+    "game": "CAMBER",
+    "script": "camber-furnace.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 1101,
+    "stills": [],
+    "clips": [
+      {"from": 800, "to": 1010, "every": 4, "name": "camber-tunnel", "caption": "On FURNACE the road runs into a tunnel through the rock; the ship flies through the dark inside and out into the red desert again."}
+    ]
+  },
+  {
+    "scene": "camber-glacier",
+    "game": "CAMBER",
+    "script": "camber-glacier.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 1441,
+    "stills": [],
+    "clips": [
+      {"from": 1256, "to": 1432, "every": 4, "name": "camber-jump", "caption": "On GLACIER a boost pad sends the ship at the jump; it flies over the gap beside the rivals and lands in 6th place."}
+    ]
+  },
+  {
+    "scene": "hairpin",
+    "game": "HAIRPIN",
+    "script": "hairpin.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 2202,
+    "stills": [
+      {"frame": 840, "name": "hairpin-pack", "caption": "The kart races in the pack beside the lake and the birch trees at 104 km/h."}
+    ],
+    "clips": [
+      {"from": 340, "to": 680, "every": 4, "name": "hairpin-start", "caption": "The start light counts down to GO and the kart sets off from 5th place on the RESERVOIR course, under the start banner and up the straight after the pack."},
+      {"from": 1490, "to": 1808, "every": 6, "name": "hairpin-left-bend", "caption": "A left bend in 1st place on lap 1: the kart brakes on the straight before it, takes the bend past the chevron boards and comes out on the straight after it."}
+    ]
+  },
+  {
+    "scene": "hairpin-summit",
+    "game": "HAIRPIN",
+    "script": "hairpin-summit.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 2002,
+    "stills": [],
+    "clips": [
+      {"from": 1200, "to": 1518, "every": 6, "name": "hairpin-summit", "caption": "On the SUMMIT course the kart brakes for a right hairpin marked with chevron boards in the snow, turns round it and drives on through the pines."}
+    ]
+  },
+  {
+    "scene": "kestrel",
+    "game": "KESTREL",
+    "script": "kestrel.script",
+    "boot": "off",
+    "fps": 60,
+    "frames": 3202,
+    "stills": [
+      {"frame": 916, "name": "kestrel-gate", "caption": "The craft lines up with gate 2 of mission 1, with loose rocks around it."}
+    ],
+    "clips": [
+      {"from": 808, "to": 1144, "every": 4, "name": "kestrel-gate-run", "caption": "The craft flies through gate 2 of mission 1 and on towards gate 3 among the rocks."},
+      {"from": 2280, "to": 2500, "every": 4, "name": "kestrel-rock-hit", "caption": "A loose rock strikes the craft (HULL HIT) and the hull drops from 3 to 2; the craft flies on through gate 7 of mission 1."},
+      {"from": 2880, "to": 3180, "every": 4, "name": "kestrel-docking", "caption": "The craft flies into the gold dock gate at the end of mission 1, and the CARGO DELIVERED card shows the gates, time cells, hull, time left and score."}
+    ]
+  },
+  {
+    "scene": "drive3d",
+    "game": "DRIVE3D",
+    "script": "drive3d.script",
+    "boot": "off",
+    "fps": 30,
+    "frames": 567,
+    "stills": [
+      {"frame": 536, "name": "drive3d-bend", "caption": "The car slides through the right bend after the ford at 56 km/h, throwing up dust from the gravel."}
+    ],
+    "clips": [
+      {"from": 330, "to": 478, "every": 2, "name": "drive3d-crest-ford", "caption": "Full throttle on gravel: over the crest, down the drop towards the river and through the ford, the wheels pushing the water aside."},
+      {"from": 478, "to": 566, "every": 2, "name": "drive3d-bend-slide", "caption": "Out of the ford into the right bend: the car slides sideways on the gravel and throws up dust."}
+    ]
+  },
+  {
+    "scene": "drive3d-max",
+    "game": "DRIVE3D",
+    "script": "drive3d-max.script",
+    "boot": "off",
+    "fps": 30,
+    "frames": 561,
+    "stills": [],
+    "clips": [
+      {"from": 140, "to": 320, "every": 2, "name": "drive3d-max-start", "caption": "The start of the run at MAX, the highest detail level: the car pulls away up the gravel road throwing dust, with the hills and trees drawn far ahead."}
+    ]
+  }
+]

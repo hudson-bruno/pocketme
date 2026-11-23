@@ -1,0 +1,92 @@
+[package]
+edition      = "2024"
+license = "MIT"
+name         = "bt-gamepad-test"
+description  = "Experiment: find, pair and read a classic Bluetooth gamepad from bare-metal Rust on the ESP32 (dual-mode controller), show it on the screen and log everything it sends"
+rust-version = "1.95"
+version      = "0.1.0"
+publish      = false
+
+[[bin]]
+name = "bt-gamepad-test"
+path = "./src/main.rs"
+
+[features]
+# Classic Bluetooth needs the controller in dual mode, which only the
+# patched radio driver of bt-classic-probe can start. On by default here:
+# this firmware is useless without it.
+default = ["dual"]
+dual    = ["esp-radio/bt-dual", "esp-radio/bt-dual-idf-patches"]
+# Made-up gamepad data for the screen (src/demo.rs), to check the picture
+# without a gamepad. Never leave a demo build on the board.
+demo = []
+# Board self-test of the pairing store: once per start, while the radio
+# searches, save a made-up pairing for a made-up address (src/pairings.rs).
+# Never leave a self-test build on the board.
+store-selftest = []
+
+[dependencies]
+# The Bluetooth host itself: no_std, no heap, tested on the PC.
+pad-proto = { path = "../../crates/pad-proto" }
+# The screen: the gamepad picture and its data (no_std, tested on the PC).
+pad-view = { path = "../../crates/pad-view" }
+# Screenshots and keys over the serial cable (tools/boardctl).
+debug-link = { path = "../../crates/debug-link" }
+# Saved pairings in flash (no_std, tested on the PC with a fake flash).
+pad-store = { path = "../../crates/pad-store" }
+# Flash access for pad-store. Same version esp-bootloader-esp-idf uses;
+# "critical-section" makes each flash call run with interrupts off, as it
+# must (the program runs from flash).
+esp-storage = { version = "0.10.0", features = ["esp32", "critical-section"] }
+embedded-graphics = "0.8.2"
+
+# Same versions as experiments/bt-classic-probe.
+esp-hal = { version = "~1.2.2", features = ["esp32", "log-04", "unstable"] }
+esp-rtos = { version = "0.4.0", features = [
+  "embassy",
+  "esp-alloc",
+  "esp-radio",
+  "esp32",
+  "log-04",
+] }
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32", "log-04"] }
+log                    = "0.4.27"
+# Only to read whole packets from the radio (the Transport trait).
+bt-hci = "0.9.0"
+esp-alloc = { version = "0.11.0", features = ["alloc-hooks", "esp32"] }
+esp-radio = { version = "1.0.0-beta.1", features = [
+  "ble",
+  "esp-alloc",
+  "esp32",
+  "log-04",
+  "unstable",
+] }
+embassy-executor = { version = "0.10.0", features = ["log"] }
+embassy-futures  = "0.1.2"
+embassy-sync     = "0.8.0"
+embassy-time     = { version = "0.5.0", features = ["log"] }
+esp-backtrace = { version = "0.20.0", features = [
+  "esp32",
+  "panic-handler",
+  "println",
+] }
+esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
+
+critical-section = "1.2.0"
+enumset          = { version = "1.1.15", default-features = false }
+heapless         = "0.9.3"
+static_cell      = "2.1.1"
+
+# The patched radio driver lives in bt-classic-probe; it is used from there,
+# not copied. Nothing in ~/.cargo is touched.
+[patch.crates-io]
+esp-radio = { path = "../bt-classic-probe/vendor/esp-radio" }
+
+[profile.dev]
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1
+debug         = 2
+lto           = 'fat'
+opt-level     = 's'

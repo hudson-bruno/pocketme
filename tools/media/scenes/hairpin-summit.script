@@ -1,0 +1,238 @@
+# HAIRPIN on its third course, SUMMIT, at the game's own starting
+# settings (HEAVY, 60 pictures a second, CHASE view). Run with --boot off
+# --fps 60 --frames 2002.
+#
+# Home screen: three steps right to the HAIRPIN tile; A (south) at 220
+# opens the game. DOWN (250) to COURSE, RIGHT twice (260, 270) from
+# RESERVOIR through PINEWOOD to SUMMIT, UP (280) back to PLAY, A (300)
+# starts the race.
+180 press right
+182 release right
+186 press right
+188 release right
+192 press right
+194 release right
+220 press south
+222 release south
+250 press down
+252 release down
+260 press right
+262 release right
+270 press right
+272 release right
+280 press up
+282 release up
+300 press south
+302 release south
+# From 479 the kart drives itself by these lines: the stick points at
+# the middle of the road seen on two rows, A (south) is the throttle and
+# is let go, with B (east) as brake, when the road runs far off to one
+# side. A closed-loop helper wrote these lines for 30 pictures a second
+# by looking at each picture; for 60 each frame number F became 2F - 1
+# (the game runs 60 ticks a second at either rate). They are plain
+# inputs and replay the same race every time.
+# About 1200 to 1520: up to a right hairpin marked with chevrons in the
+# snow, braking for it (from 1307), round it and on up through the pines.
+479 press south
+479 stick left 8000 0
+485 stick left 14000 0
+485 release south
+491 stick left 8000 0
+491 press south
+515 stick left 0 0
+521 stick left 6000 0
+539 stick left 4000 0
+551 stick left 6000 0
+575 stick left 8000 0
+581 stick left 6000 0
+605 stick left 2000 0
+611 stick left 6000 0
+641 stick left 4000 0
+653 stick left 6000 0
+659 stick left 2000 0
+677 stick left 6000 0
+683 stick left 2000 0
+689 stick left 6000 0
+695 stick left 4000 0
+707 stick left 6000 0
+713 stick left 8000 0
+719 stick left 12000 0
+719 release south
+725 stick left 16000 0
+725 press east
+731 stick left 2000 0
+731 press south
+731 release east
+737 stick left 8000 0
+743 stick left 6000 0
+749 stick left 2000 0
+755 stick left -6000 0
+761 stick left 4000 0
+767 stick left 0 0
+773 stick left 14000 0
+779 stick left -2000 0
+785 stick left 10000 0
+791 stick left -8000 0
+791 release south
+797 stick left -2000 0
+797 press south
+803 stick left -4000 0
+809 stick left 18000 0
+809 release south
+815 stick left 14000 0
+821 stick left 8000 0
+827 stick left 14000 0
+827 press south
+839 stick left 12000 0
+851 stick left 10000 0
+899 stick left 8000 0
+923 stick left 6000 0
+929 stick left 4000 0
+935 stick left -2000 0
+941 stick left -4000 0
+947 stick left 10000 0
+947 release south
+953 stick left -12000 0
+953 press east
+959 stick left -14000 0
+965 stick left -2000 0
+965 press south
+965 release east
+971 stick left 0 0
+977 stick left -16000 0
+977 release south
+977 press east
+983 stick left -6000 0
+983 press south
+983 release east
+989 stick left 0 0
+1001 stick left -16000 0
+1001 release south
+1001 press east
+1007 stick left -14000 0
+1019 stick left -12000 0
+1025 release east
+1067 press east
+1073 press south
+1091 release east
+1103 stick left -16000 0
+1109 stick left -6000 0
+1115 stick left -4000 0
+1127 stick left -14000 0
+1127 release south
+1133 stick left -12000 0
+1145 stick left -10000 0
+1145 press south
+1151 stick left -6000 0
+1157 stick left -4000 0
+1163 stick left -8000 0
+1169 stick left -6000 0
+1175 stick left -4000 0
+1265 stick left -2000 0
+1271 stick left 2000 0
+1277 stick left 6000 0
+1283 stick left 12000 0
+1283 release south
+1289 stick left 4000 0
+1289 press south
+1295 stick left 8000 0
+1301 stick left -2000 0
+1307 stick left 16000 0
+1307 release south
+1307 press east
+1313 stick left 14000 0
+1319 stick left 20000 0
+1331 stick left 18000 0
+1331 release east
+1337 stick left 20000 0
+1343 stick left 14000 0
+1349 stick left 18000 0
+1361 stick left 16000 0
+1367 stick left 14000 0
+1373 press south
+1385 stick left 12000 0
+1391 stick left 10000 0
+1397 stick left 8000 0
+1451 stick left 6000 0
+1505 stick left 4000 0
+1523 stick left 2000 0
+1529 stick left -2000 0
+1535 stick left -4000 0
+1541 stick left -12000 0
+1541 release south
+1547 stick left -14000 0
+1553 stick left -16000 0
+1559 press east
+1565 stick left -18000 0
+1571 stick left -16000 0
+1571 release east
+1583 stick left -14000 0
+1583 press south
+1589 stick left -10000 0
+1595 stick left -8000 0
+1607 stick left -6000 0
+1631 stick left -4000 0
+1655 stick left -6000 0
+1661 stick left -10000 0
+1667 stick left -4000 0
+1673 stick left -6000 0
+1679 stick left -4000 0
+1691 stick left -2000 0
+1697 stick left 4000 0
+1703 stick left 0 0
+1709 stick left 6000 0
+1715 stick left 2000 0
+1721 stick left 4000 0
+1727 stick left 12000 0
+1733 stick left 10000 0
+1739 stick left 8000 0
+1745 stick left 0 0
+1751 stick left 12000 0
+1757 stick left 2000 0
+1763 stick left -2000 0
+1769 stick left 14000 0
+1769 release south
+1775 stick left 12000 0
+1775 press south
+1787 stick left 6000 0
+1793 stick left 12000 0
+1799 stick left 10000 0
+1805 stick left 8000 0
+1811 stick left 6000 0
+1817 stick left 4000 0
+1823 stick left 2000 0
+1829 stick left 0 0
+1835 stick left -2000 0
+1841 stick left -4000 0
+1853 stick left -6000 0
+1865 stick left -12000 0
+1865 release south
+1871 stick left -8000 0
+1877 stick left -10000 0
+1883 press south
+1889 stick left -12000 0
+1895 stick left -6000 0
+1901 stick left -4000 0
+1907 stick left -2000 0
+1913 stick left 2000 0
+1919 stick left 8000 0
+1925 stick left 2000 0
+1937 stick left 16000 0
+1937 release south
+1937 press east
+1943 stick left -8000 0
+1943 press south
+1943 release east
+1949 stick left 18000 0
+1949 release south
+1949 press east
+1955 stick left 20000 0
+1973 stick left 18000 0
+1973 release east
+1979 stick left 2000 0
+1979 press south
+1985 stick left 20000 0
+1985 release south
+1991 stick left 18000 0
+1997 stick left -8000 0
+1997 press south

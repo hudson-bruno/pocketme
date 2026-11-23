@@ -1,0 +1,290 @@
+# KESTREL: the courier craft, mission 1 (THE SHALLOWS), at the game's own
+# starting settings (DETAIL HIGH, 60 pictures a second, CHASE view).
+# Run with --boot off --fps 60 --frames 3202.
+#
+180 press right
+182 release right
+186 press right
+188 release right
+192 press right
+194 release right
+198 press right
+200 release right
+# A (south) at 220 opens the game; about 222 the title menu shows the
+# craft over the ringed planet. A on PLAY (300) shows the mission card,
+# A again (360) launches.
+220 press south
+222 release south
+300 press south
+302 release south
+360 press south
+362 release south
+# From 381 the left stick flies the craft. Every 6 pictures it points at
+# the next cyan gate (at the end, the gold dock), aimed where the ring's
+# centre will pass the craft. A closed-loop helper wrote these lines for
+# 30 pictures a second by looking at each picture; for 60 each frame
+# number F became 2F - 1 (the game runs 60 ticks a second at either
+# rate). They are plain inputs and replay the same flight every time.
+381 stick left 0 0
+507 stick left -9407 3389
+513 stick left -9988 4381
+519 stick left -9199 5044
+525 stick left -9187 2710
+531 stick left -9199 4132
+537 stick left -9684 3597
+543 stick left -6811 5074
+549 stick left -8243 4010
+555 stick left -8112 5256
+561 stick left -6847 4397
+567 stick left -8659 5674
+573 stick left -7291 4509
+579 stick left -6250 6517
+585 stick left -7417 4673
+591 stick left -7853 4121
+597 stick left -8470 3808
+603 stick left -6167 3272
+609 stick left -5077 2938
+615 stick left -8858 3913
+621 stick left -8872 1132
+627 stick left -7105 1350
+633 stick left -5576 5392
+639 stick left -5372 8727
+645 stick left -3862 9832
+651 stick left -5153 10793
+657 stick left -3918 2468
+663 stick left -8485 -4811
+669 stick left 0 0
+# About 684: through gate 1 (GATE +TIME).
+807 stick left 15096 -10825
+813 stick left 14712 -12680
+819 stick left 14433 -10896
+825 stick left 13923 -9813
+831 stick left 13351 -10549
+837 stick left 11499 -11153
+843 stick left 12450 -10076
+849 stick left 11303 -10464
+855 stick left 11586 -9142
+861 stick left 10166 -9987
+867 stick left 10712 -10770
+873 stick left 11019 -9583
+879 stick left 11300 -10559
+885 stick left 9721 -9427
+891 stick left 8432 -8583
+897 stick left 8871 -10483
+903 stick left 6931 -9856
+909 stick left 8067 -8850
+915 stick left 8795 -9037
+# About 940 to 980: gate 2 grows ahead and the craft flies through it.
+921 stick left 8427 -9806
+927 stick left 7416 -10697
+933 stick left 9302 -13530
+939 stick left 7926 -14729
+945 stick left 8731 -11098
+951 stick left 6878 -6066
+957 stick left 4735 -6610
+963 stick left 0 0
+1101 stick left -16363 8451
+1107 stick left -16650 8839
+1113 stick left -15674 8191
+1119 stick left -15089 8563
+1125 stick left -14441 9351
+1131 stick left -14029 8689
+1137 stick left -13199 7240
+1143 stick left -12336 7840
+1149 stick left -12849 7420
+1155 stick left -11442 8341
+1161 stick left -11577 7230
+1167 stick left -10899 9737
+1173 stick left -9927 7771
+1179 stick left -9535 6905
+1185 stick left -9797 6949
+1191 stick left -8789 6831
+1197 stick left -8922 5901
+1203 stick left -9598 5705
+1209 stick left -8075 4661
+1215 stick left -7323 3664
+1221 stick left -6956 10189
+1227 stick left -7306 10945
+1233 stick left -4429 12091
+1239 stick left -4901 12967
+1245 stick left -5570 8572
+1251 stick left -5436 6
+1257 stick left 0 0
+1395 stick left 5604 7698
+1401 stick left 5856 7735
+1407 stick left 6225 7713
+1413 stick left 6851 8012
+1419 stick left 6913 7497
+1425 stick left 6599 7278
+1431 stick left 4889 6910
+1437 stick left 5674 8289
+1443 stick left 7405 7020
+1449 stick left 6927 7966
+1455 stick left 5529 8257
+1461 stick left 7738 7764
+1467 stick left 6212 7881
+1473 stick left 5589 8418
+1479 stick left 6342 6721
+1485 stick left 6908 6153
+1491 stick left 6766 5807
+1497 stick left 5671 5703
+1503 stick left 8798 5191
+1509 stick left 8301 4231
+1515 stick left 5676 7186
+1521 stick left 5700 10782
+1527 stick left 7299 13649
+1533 stick left 4609 14736
+1539 stick left 6533 12268
+1545 stick left 6067 2967
+1551 stick left 7808 -7060
+1557 stick left 0 0
+1689 stick left 11480 2507
+1695 stick left 13391 980
+1701 stick left 12109 1129
+1707 stick left 13083 2143
+1713 stick left 11688 1914
+1719 stick left 12131 1444
+1725 stick left 10250 2700
+1731 stick left 10763 2384
+1737 stick left 9369 3049
+1743 stick left 10175 2857
+1749 stick left 8664 3495
+1755 stick left 9995 2720
+1761 stick left 9371 3617
+1767 stick left 9026 3051
+1773 stick left 7789 2806
+1779 stick left 7519 2173
+1785 stick left 10229 2311
+1791 stick left 8780 1908
+1797 stick left 10104 1547
+1803 stick left 9800 -101
+1809 stick left 7705 -633
+1815 stick left 5088 1804
+1821 stick left 7190 5368
+1827 stick left 6373 7062
+1833 stick left 6843 10970
+1839 stick left 5214 6299
+1845 stick left 5741 -5027
+1851 stick left 0 0
+1989 stick left -5824 966
+1995 stick left -5310 555
+2001 stick left -6480 1279
+2007 stick left -6055 854
+2013 stick left -5404 1013
+2019 stick left -6814 390
+2025 stick left -7021 657
+2031 stick left -6724 938
+2037 stick left -5247 259
+2043 stick left -6917 2306
+2049 stick left -6200 1360
+2055 stick left -5678 1731
+2061 stick left -7009 517
+2067 stick left -4680 1525
+2073 stick left -6508 1497
+2079 stick left -6612 747
+2085 stick left -6775 888
+2091 stick left -7349 -792
+2097 stick left -7706 -1842
+2103 stick left -7438 -2480
+2109 stick left -5634 -4555
+2115 stick left -5164 -3922
+2121 stick left -5822 -279
+2127 stick left -5729 2190
+2133 stick left -5680 3480
+2139 stick left -4944 -3927
+2145 stick left 0 0
+2283 stick left -8795 -2645
+2289 stick left -9385 -4189
+2295 stick left -11212 -4655
+2301 stick left -6743 -5575
+2307 stick left -8619 -4746
+2313 stick left -8432 -4055
+# About 2340: the craft clips a rock (HULL drops from 3 to 2); about 2466
+# it flies through gate 7.
+2319 stick left -6442 -3959
+2325 stick left -7650 -3597
+2331 stick left -7321 -4266
+2337 stick left -7327 -3558
+2343 stick left -7168 -3104
+2349 stick left -5152 -3565
+2355 stick left -4983 -91
+2361 stick left -5634 -1562
+2367 stick left -5665 -2403
+2373 stick left -5665 -1993
+2379 stick left -5681 -2479
+2385 stick left -5915 -3068
+2391 stick left -4583 -1337
+2397 stick left -7256 -2115
+2403 stick left -8270 -3765
+2409 stick left -7139 -5403
+2415 stick left -6090 -6022
+2421 stick left -6710 -8008
+2427 stick left -5357 -9958
+2433 stick left -6410 -6803
+2439 stick left -5478 -2550
+2445 stick left -4952 197
+2451 stick left -5082 -10877
+2457 stick left 0 0
+2595 stick left -9839 -994
+2601 stick left -9249 357
+2607 stick left -8970 -642
+2613 stick left -11240 -658
+2619 stick left -9926 -611
+2625 stick left -9918 -798
+2631 stick left -10473 -723
+2637 stick left -10140 -1778
+2643 stick left -8717 -1256
+2649 stick left -8813 -2018
+2655 stick left -8024 -614
+2661 stick left -6867 -248
+2667 stick left -8367 -238
+2673 stick left -9845 -475
+2679 stick left -7356 -420
+2685 stick left -6466 -1443
+2691 stick left -6992 -94
+2697 stick left -8903 -1051
+2703 stick left -5546 -1598
+2709 stick left -6485 -3066
+2715 stick left -6889 -3435
+2721 stick left -6922 -4907
+2727 stick left -7513 -7048
+2733 stick left -5395 -4585
+2739 stick left -6347 649
+2745 stick left -5433 2
+2751 stick left -4695 -579
+2757 stick left 0 0
+2801 stick left 0 0
+2897 stick left 12541 -1775
+2903 stick left 11491 -2905
+2909 stick left 10512 -4099
+2915 stick left 10401 -3740
+2921 stick left 10501 -3637
+2927 stick left 10298 -3855
+2933 stick left 11847 -5161
+# About 2960 to 3050: the gold dock gate with its red hole; the craft
+# goes through it at about 3050, then (about 3076) the CARGO DELIVERED
+# card shows.
+2939 stick left 9900 -2859
+2945 stick left 4329 -10308
+2951 stick left 5148 -11015
+2957 stick left 4508 -11516
+2963 stick left 4698 -12129
+2969 stick left 5432 -12798
+2975 stick left 5393 -13593
+2981 stick left 5704 -14104
+2987 stick left 5922 -14537
+2993 stick left 6080 -14291
+2999 stick left 5686 -14334
+3005 stick left 5821 -13615
+3011 stick left 5316 -13159
+3017 stick left 5568 -12401
+3023 stick left 5881 -11378
+3029 stick left 7342 -8600
+3035 stick left 9048 -5872
+3041 stick left 9736 -7117
+3047 stick left 9598 -7925
+3053 stick left 4752 -10329
+3059 stick left 4508 -12539
+3065 stick left 4982 -15624
+3071 stick left 4814 -19961
+3077 stick left 4050 32767

@@ -1,0 +1,116 @@
+[package]
+edition      = "2024"
+license = "MIT"
+name         = "loader-console"
+description  = "Experiment: a console firmware that loads a separately compiled game into RAM and runs it through a table of functions"
+rust-version = "1.95"
+version      = "0.1.0"
+publish      = false
+
+[[bin]]
+name = "loader-console"
+path = "./src/main.rs"
+
+[features]
+# Bluetooth advertising runs while the game is loaded and played. This is
+# the build that matters for sizing: the radio takes most of the RAM.
+ble = [
+  "dep:bt-hci",
+  "dep:embassy-futures",
+  "dep:esp-radio",
+  "dep:trouble-host",
+  "esp-rtos/esp-radio",
+]
+# After the game embedded in the firmware, load the same game from the SD
+# card. THIS BUILD WRITES TO THE CARD, once: if /CONSOLE/HELLO.BIN is not
+# there it creates the folder and the file. It touches nothing else.
+sd = ["dep:embedded-hal", "dep:embedded-hal-bus", "dep:embedded-sdmmc"]
+# Experiment: read single bytes from the code slot and see what the chip
+# does. Each try that stops the program is followed by a restart and the
+# next try; the results are printed at the end.
+probe-byte-read = []
+# Experiment: load the game that crashes on purpose (CRASH.BIN), to watch
+# the console restart and remember it.
+crash-test = []
+# Experiment: the same with the game that stops the processor (FAULT.BIN):
+# it reads through a pointer to nowhere. Not together with crash-test.
+fault-test = []
+# Build tests, never to be flashed: each makes the console too big for its
+# share of memory, to see the link fail (README, "Checking the guards").
+test-grow-code = []
+test-grow-heap = []
+
+[dependencies]
+# The contract with the game. The build script uses it too.
+game-api = { path = "../game-api" }
+
+esp-hal = { version = "~1.2.2", features = ["esp32", "log-04", "unstable"] }
+
+esp-rtos = { version = "0.4.0", features = [
+  "embassy",
+  "esp-alloc",
+  "esp32",
+  "log-04",
+] }
+
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32", "log-04"] }
+log                    = "0.4.27"
+
+# The heap. Only the radio allocates from it; it is in every build so that
+# the memory layout is the same with and without Bluetooth.
+# "internal-heap-stats" adds the "most ever used" figure.
+esp-alloc = { version = "0.11.0", features = ["esp32", "internal-heap-stats"] }
+
+# Bluetooth, as in an earlier firmware of the author's that is known to
+# work on this board (same versions, same sizes).
+bt-hci = { version = "0.9.0", optional = true }
+esp-radio = { version = "1.0.0-beta.1", optional = true, features = [
+  "ble",
+  "esp-alloc",
+  "esp32",
+  "log-04",
+  "unstable",
+] }
+trouble-host = { version = "0.7.0", optional = true, features = [
+  "connection-event-queue-size-8",
+  "default-packet-pool-size-64",
+  "gatt",
+  "l2cap-rx-queue-size-32",
+] }
+embassy-futures = { version = "0.1.2", optional = true }
+
+embassy-executor = { version = "0.10.0", features = ["log"] }
+embassy-time     = { version = "0.5.0", features = ["log"] }
+# "custom-halt": after a panic the firmware restarts instead of standing
+# still (see crash.rs).
+esp-backtrace = { version = "0.20.0", features = [
+  "custom-halt",
+  "esp32",
+  "panic-handler",
+  "println",
+] }
+esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
+
+critical-section = "1.2.0"
+heapless         = "0.9.3"
+# For the notes that outlast a restart (crash.rs): esp-hal accepts this
+# crate's types in such memory.
+portable-atomic = { version = "1.15.0", default-features = false }
+static_cell     = "2.1.1"
+
+# The SD card.
+embedded-hal     = { version = "1.0.0", optional = true }
+embedded-hal-bus = { version = "0.3.0", optional = true }
+embedded-sdmmc   = { version = "0.10.0", optional = true, default-features = false }
+
+[build-dependencies]
+game-api = { path = "../game-api" }
+
+[profile.dev]
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1     # LLVM can perform better optimizations using a single thread
+debug         = 2     # prefer slower builds but better debugging experience
+lto           = 'fat'
+opt-level     = 's'

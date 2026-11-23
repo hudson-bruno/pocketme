@@ -1,0 +1,60 @@
+# HAIRPIN: a little electric kart on a mountain road at dusk. The
+# road bends right towards the hills, a bend sign stands on the left,
+# switchbacks climb the dark mountain, the sun sets on the right.
+# Written by a script (kept outside the repository).
+# The home tile's picture: 36 x 36 pixels, one letter per pixel.
+# Make the card file with games/art/make_art.py (see games/README.md).
+size 36 36
+colour . 2A1E48   # sky, high
+colour , 6A3A6E   # sky
+colour ; C8566A   # sky, low
+colour : F2A050   # glow at the horizon
+colour o FFE08A   # the low sun
+colour m 4A3460   # far mountains
+colour M 241A30   # near mountains
+colour g 2C3E2A   # grass, far
+colour G 4C6236   # grass
+colour r 46424E   # road
+colour k E2483C   # kerb red, tail lights
+colour w F4F0E4   # kerb white, lines, helmet
+colour y FAC428   # kart, sign
+colour Y AC7412   # kart, dark
+colour t 1A181E   # tyres, sign marks
+colour R 6E6A78   # switchback road on the mountain
+pixels
+....................................
+....................................
+....................................
+....................................
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,mm,,,,,,,,,,,,,,,,,,,,
+;;;;mm;MM;;;;mmmm;;;;;;;;;;;;;;;;;;;
+;;;mmMMMMM;mmmmmmm;;;;;;;;ooo;;;;;;;
+;mmmMRMMMMMmmmmmmmm;;;;mmooooo;;;;;;
+mmmMMRRRRRMMmmmmmmmm;;mmmmoooomm;;;;
+mmMMRMMMMMRMMmmmmmmmmmmmmmmoommmmm::
+mMMMRRRRRRRMMMmmmmmmmmmmmmmmmmmmmmmm
+MMMMMMMMMMMMRMMMmmmmmmmmmmmmmmmmmmmm
+MMRRRRRRRRRRMMMMMMMMMMMMMMMMMMMMMMMM
+gggggggggggggggggggggggggkrwrkgggggg
+gyyyyyyyggggggggggggggggkrwrrkgggggg
+gytyytyyggggggggggggggwrrwrrwggggggg
+gyytyytyggggggggggggwrrrrrrrwggggggg
+gytyytyygggggggggggkrrrrrrrrkggggggg
+GyyyyyyyGGGGGGGGGkrrrrrrrrrkGGGGGGGG
+GGGGwGGGGGGGGGGGwrrrrwrrrrrwGGGGGGGG
+GGGGwGGGGGGGGGwrrrrrrwrrrrrwGGGGGGGG
+GGGGwGGGGGGGGkrrrrrrwrrrrrrkGGGGGGGG
+GGGGGGGGGGGkrrrrrwwrrrrrrrrkGGGGGGGG
+GGGGGGGGGGwrrrrrwwwwrrrrrrrrwGGGGGGG
+GGGGGGGGwrrrrrrrwttwrrrrrrrrwGGGGGGG
+GGGGGGkkrrryyyyyyyyyyyyyyrrrkkGGGGGG
+GGGGGkkrrrrYYYYYYYYYYYYYYrrrrkkGGGGG
+GGGwwrrrrrrttrryyyyyyrrttrrrrwwGGGGG
+GGwwrrrrrrrtttrYyyyyYrtttrrrrrwwGGGG
+GkkrrrrrrrrtttrkYYYYkrtttrrrrrkkGGGG
+kkrrrrrrrrrtttrYYYYYYrtttrrrrrrkkGGG
+rrrrrrrrrrrttrrrrrrrrrrttrrrrrrrwwwG
+rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrwww

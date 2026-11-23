@@ -1,0 +1,17 @@
+# PROTO3D: FNV-1a hashes of the four moments at each detail
+low a-stand 26a7fe52e9ae933a
+low b-jump 0742c15bf32983a6
+low c-gap 70c18021489e9656
+low d-terrace 2e9dfa6181e229ea
+mid a-stand 978d97d57c005cff
+mid b-jump 738c048d30025e51
+mid c-gap eb389ab7e0f84a1f
+mid d-terrace 7918eb1e23bf99e2
+high a-stand bf8b5875e239d6af
+high b-jump 13fe9490584b65c9
+high c-gap b15acf6f4fdfe762
+high d-terrace 3a9cbe22c6f46b14
+max a-stand 0af729b781f71a98
+max b-jump 808cc99163d1e479
+max c-gap bda2e36742bbe764
+max d-terrace 88eb0b63047ece11

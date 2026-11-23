@@ -1,0 +1,57 @@
+# BENCH, the speed test: its two showcase tests (ISLAND and CITY), then a
+# walk through its other tests.
+# Run: --boot off --fps 30 --frames 860
+#
+# BENCH is the first tile on the home screen: start it. It opens on FILL.
+10 press south
+11 release south
+# 20: left once (the order wraps round): ISLAND at its default MID detail,
+#     a figure running round a floating island, camera behind it
+20 press left
+21 release left
+# 20-499: ISLAND runs (past the tower, round towards the arch, a jump
+#          onto a purple block)
+# 500: left once more: CITY at its default 32 buildings, driving down a
+#      street with traffic (a still at 540)
+500 press left
+501 release left
+# 640, 642: right twice, past ISLAND to FILL (the order wraps round)
+640 press right
+641 release right
+642 press right
+643 release right
+# 660-822: right every 18 frames, through the other tests at their
+# default loads:
+#   660 TRI 20
+#   678 TRI 100
+#   696 TRI 400
+#   714 VERT
+#   732 SCENE 12
+#   750 SCENE 32
+#   768 SCENE 96
+#   786 SEND ROWS
+#   804 SEND DOTS
+#   822 TRI SPIN
+660 press right
+661 release right
+678 press right
+679 release right
+696 press right
+697 release right
+714 press right
+715 release right
+732 press right
+733 release right
+750 press right
+751 release right
+768 press right
+769 release right
+786 press right
+787 release right
+804 press right
+805 release right
+822 press right
+823 release right
+# 823-859: TRI SPIN goes on
+#
+# Still: frame 540 (CITY).

@@ -1,0 +1,9 @@
+[package]
+name        = "pad-proto"
+description = "Classic Bluetooth host logic for one gamepad: HCI, ACL, L2CAP, SDP, HID, and the state machine that ties them together. No radio, no heap: tested on the PC."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[dependencies]

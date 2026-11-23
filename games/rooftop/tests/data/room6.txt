@@ -1,0 +1,13 @@
+6 RJ
+1 R
+6 LJ
+1 L
+8 RJ
+16 R
+6 RJ
+2 RX
+6 R
+4 -
+6 RJ
+2 URX
+5 R

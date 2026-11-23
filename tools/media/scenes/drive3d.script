@@ -1,0 +1,24 @@
+# DRIVE3D: the rally prototype at the settings it starts with: HIGH
+# detail, 30 pictures a second (the game has no 60 setting).
+# Run with --boot off --fps 30 --frames 567.
+#
+# Home screen: two steps right to the DRIVE3D tile, A (south) starts it.
+90 press right
+91 release right
+93 press right
+94 release right
+110 press south
+111 release south
+# Full throttle (A held) from frame 150 to the end; the car runs straight
+# down the gravel road, no steering needed until after the ford.
+150 press south
+# About 340: over the top of the crest at about 90 km/h; 350 to 365 the
+# car is in the air, the valley and the river below it.
+# About 420 to 495: through the ford, water thrown up by the wheels.
+# After the ford the road bends hard right: steer right on the stick.
+488 stick left 26000 0
+512 stick left 32767 0
+# About 520 to 550: the car slides through the right bend on gravel,
+# throwing dust.
+540 stick left 10000 0
+560 stick left 0 0

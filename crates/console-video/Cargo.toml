@@ -1,0 +1,32 @@
+[package]
+name        = "console-video"
+description = "The shared renderer: the 160x120 palette screen, the palette, finding changed areas, handing finished pixels to a board. No std, no heap."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[features]
+# Lets embedded-graphics draw into a Frame (colour Gray8 = palette
+# number). Off by default; the plain drawing helpers never need it.
+embedded-graphics = ["dep:embedded-graphics-core"]
+# The two pictures swap roles at each present, so a second core can send
+# one while the console draws the other (README, "Swap: two cores, two
+# pictures"). Off by default: without it src/video.rs is used, unchanged.
+# Adds no dependency and no unsafe; `Video` keeps its size.
+swap = []
+
+[dependencies]
+board-api = { path = "../board-api" }
+# MIT OR Apache-2.0. Only with the feature above.
+embedded-graphics-core = { version = "0.4.1", optional = true }
+
+[dev-dependencies]
+board-api = { path = "../board-api", features = ["testing"] }
+# Test pictures (crates/test-card, which uses embedded-graphics 0.8.2,
+# MIT OR Apache-2.0). Tests only: never part of a chip build.
+test-card = { path = "../test-card" }
+
+# The PC benchmark (not a test): cargo run --release --example bench
+[[example]]
+name = "bench"

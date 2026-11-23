@@ -1,0 +1,270 @@
+# MERCATOR's flash part: what stays in RAM and what may go to the flash
+# chip (games/README.md, "Flash parts"; checked by games/chip/flash_split.py).
+# A game without this file has no flash part and is built exactly as today.
+#
+# Globs match MANGLED (v0) symbol names, whole name (fnmatch), as
+# boards/cyd/hot-block.list does. Use the length prefixes of the v0 names
+# (`5World4tick`) and a `*` in place of crate hashes.
+#
+#   hot  GLOB   a per-picture root: it and everything it calls stay in RAM,
+#               except calls into a `cold` function (the walk stops there).
+#               The checker fails when a `hot` match is in flash.
+#   cold GLOB   called from per-picture code, but only on an event (dock,
+#               jump, death, a key in a menu, a notice): the walk from the
+#               hot roots stops here, so it and what only it calls may go
+#               to flash. The checker reports each one with its size (the
+#               cost of the step where the event happens).
+#   ram  GLOB   always RAM, whatever the walk says.
+#
+# Built in (no line needed): game_entry, the game!'s `game_entry::*`
+# items (update, exit, CALLBACKS) and every `.text.unlikely.*` section
+# (panics) stay in RAM. Every other function goes to flash. Read-only data
+# goes to flash when only flash code (or flash data) points at it.
+
+# --- per picture (flight, a fight, the chart from flight) ---
+# Step J1 (2026-11-23): brought up to date for the game after M1..M4.
+# The walk from these roots also keeps M1's raider code, M3's smoke and
+# M4's overboost in RAM (they are inside World::tick, scene::draw and
+# hud::panel/view_marks); the lines for scene::smoke and scene::dust only
+# guard them by name (a rename fails the build).
+hot  *10game_entry6update
+hot  *3App6update
+hot  *3App4tick
+hot  *3App4draw
+hot  *3App8controls
+hot  *3App11flight_keys
+hot  *3App11new_colours
+hot  *3App7colours
+hot  *3App12world_events
+hot  *5World4tick
+hot  *5scene6camera
+hot  *5scene4draw
+hot  *5scene5smoke
+hot  *5scene4dust
+hot  *3hud10view_marks
+hot  *3hud5panel
+hot  *3hud4note
+hot  *3Ctx4read
+hot  *3app11stick_steps
+hot  *5chart4draw
+# --- per picture on the other screens (step J1: these were `cold` in
+# L4's list; since M3 the docked screens are live at 30 a second, and
+# the title, the jump tunnel and the LOST/WON card draw on every
+# picture too) ---
+hot  *5World7scenery
+hot  *5scene14station_camera
+hot  *5scene9dock_turn
+# (step G3: moved to flash, see the G3 lines at the end) *3hud6docked
+# (step G3: moved to flash, see the G3 lines at the end) *3hud6market
+# (step G3: moved to flash, see the G3 lines at the end) *3hud6outfit
+# Step M5: the shipyard is a panel over the live docked scene with a
+# turning model, drawn on every picture of its screen (its panel text
+# moved to flash in step G3; the turning model's scene stays in RAM).
+# (step G3: moved to flash, see the G3 lines at the end) *3hud8shipyard
+# (step G3: moved to flash, see the G3 lines at the end) *3hud4lost
+# (step G3: moved to flash, see the G3 lines at the end) *3hud6tunnel
+hot  *6galaxy6system
+hot  *6System4name
+# (step G3: moved to flash, see the G3 lines at the end) *3App10draw_title
+hot  *5scene8showcase
+hot  *3hud4menu
+hot  *7Options5lines
+
+# --- events: run once when something happens, from flash ---
+cold *5World3die*
+cold *5World4dock*
+cold *5World5enter*
+cold *5World4jump*
+cold *5World6launch*
+cold *5World6survey*
+cold *5World3pay*
+cold *5World5crash*
+cold *5World5blast*
+cold *5World5rocks*
+cold *5World8add_ship*
+cold *5World8put_ship*
+# Step J1 (F1): a hauler's canisters, when it is hurt below half or dies.
+cold *5World4shed*
+cold *2Fx6debris*
+cold *3App2go*
+cold *3App4note*
+cold *3App5event*
+cold *8mercator3say*
+cold *3App10open_chart*
+cold *3App9dock_note*
+cold *3App12back_to_dock*
+cold *3App4load*
+cold *2rt7restart*
+cold *panic*
+# --- a key in a menu: called on every picture of its screen, but it
+# only does work on a press (or a held MARKET key's repeat) ---
+cold *3App10pause_menu*
+cold *3App10chart_keys*
+cold *3App10title_menu*
+cold *3App11docked_keys*
+cold *3App11market_keys*
+cold *3App11outfit_keys*
+# Step M5: the shipyard's keys and buying a ship (the ship table itself
+# is read by flight and the panels on every picture: it stays in RAM).
+cold *3App13shipyard_keys*
+cold *5World8buy_ship*
+cold *3App9lost_keys*
+
+# --- Step G1: the planet ---
+# The space side runs in flight on every tick or picture and stays in
+# RAM (the walk keeps it there from App::tick, hud::view_marks and
+# hud::docked; these lines guard it by name): the ring test, the ring's
+# lights, the site's bracket and beacon, the docked SITE line. Where
+# the site is gets worked out once on entering a system (World::enter,
+# `locate` below, from flash) and kept in the world's bodies.
+hot  *5space10ring_check
+hot  *5space10draw_marks
+hot  *5space9dock_line
+# The planet mode runs from flash. NOTE: unlike every other `cold` line,
+# these run on EVERY picture while the ship is below, by design
+# (MODULES.md: the ground scene is its own mode; space is frozen and
+# none of its RAM code runs then). Shared per-picture code they call
+# (fill_tri, Renderer::draw, the fixed helpers, hud text, the scene's
+# projection) stays in RAM through the space roots above.
+cold *5space6locate*
+cold *6planet5begin*
+cold *6planet4tick*
+cold *6planet4draw*
+cold *6planet5panel*
+cold *7palette5below*
+cold *3App11enter_below*
+cold *3App8lift_off*
+cold *6planet8lift_off*
+# --- Step G2: the way down and the flown landing ---
+# The App's tick below (the lander's input, the way out) and the loss
+# below. Like the lines above they run on EVERY tick while the ship is
+# below, by design; the lander, the entry, the camera and the panel are
+# reached only from these planet roots and go to flash with them.
+cold *3App10below_tick*
+cold *5World4lose*
+# --- Step G3 (BOARD-G2.md instruction 3): the planet's per-picture hot
+# set lives in RAM for good. MEASURED ON THE BOARD (BOARD-G2.md, firmware
+# 1123i-site against 1123i-siteram, DETAIL MID): run from flash these
+# inner loops cost twice the time (38.2 against 18.7 ms a step in the
+# 120 m view) because the flash cache does not hold them. The rule: a
+# function called many times a picture below (per triangle, per cell, per
+# corner, per thing) lives in RAM; flash is for code that runs once a
+# picture or tick, or less. ---
+# The land walk (every triangle of the land, every picture below):
+# (land::draw itself runs once a picture: it stays in flash.)
+ram *6planet4landNtB5_4Walk3tri*
+ram *6planet4landNtB5_4Walk4cell*
+ram *6planet4landNtB5_4Walk3row*
+ram *6planet4landNtB5_4Walk4ring*
+ram *6planet4landNtB5_4Walk6sliver*
+ram *6planet4landNtB4_4Walk6corner
+ram *6planet4landNtB4_4Walk9corner_at
+ram *6planet4land4snap
+ram *6planet4land6square
+# The ground's height (every corner of the land, the lander's and the
+# pilot's ground, every chunk and boulder, the things' line of sight):
+ram *6planet4site6height
+ram *6planet4site6octave
+ram *6planet4site3raw
+ram *6planet4site5slope
+ram *6planet4site7steeper
+# Small per-picture helpers (the sky's rows, the colour ramps, the
+# ship's height and place):
+ram *6planet3sky6row_of
+ram *6planet7palette3mix
+ram *6planet7palette5scale
+ram *6planet6lander3alt
+ram *6planet6camera7ship_at
+
+# --- Step G3: out of the ship (walker, cutter, loose bodies, clock) ---
+# Like the lines above, these run on EVERY tick or picture while the
+# pilot is on foot, by design (the ground scene is its own mode). They
+# are reached only from the planet roots above, so the walk sends them to
+# flash anyway; the lines name them so the checker reports their sizes
+# (the per-picture planet hot set, G3.md). clock::step is the one also
+# reached from the App's palette check (App::new_colours, hot): it is
+# called there only while below, and its line sends it to flash with the
+# rest. The docked line's CUT TODAY test (space::cut_today) is a field
+# compare reached from hud::docked and stays in RAM by the walk.
+cold *6walker4walk*
+cold *6cutter3cut*
+cold *5loose6chunks*
+cold *5loose5rocks*
+cold *5clock4tick*
+cold *5clock4step*
+cold *5clock7streaks*
+cold *6camera11foot_follow*
+cold *6camera11foot_camera*
+cold *5panel4foot*
+# The hot set's helpers on foot (BOARD-G2.md instruction 3.2: called
+# many times a picture or tick, READ FROM THE CODE, G3.md lists the
+# counts): the things' draw with its line-of-sight test (once a thing,
+# up to 33 a picture), the points on the view (pad lights, jets, beam),
+# the chunks' and boulders' roll helpers (once a rolling body a tick),
+# the distance across (once a chunk, solid and boulder a tick), the
+# cutter's aim (once a target a tick while firing), the foot map's dots.
+ram *6planet6things0*
+ram *6planet7on_view
+ram *5loose8downhill
+ram *5loose4slow
+ram *5loose3len
+ram *5loose5bumps
+ram *6walker5apart
+ram *6cutter3aim
+ram *5panel3dot
+
+# --- Step G3, BOARD-G2.md instruction 3.3a: room in RAM for the walk.
+# The docked screens' panels, the market, the outfitter, the shipyard's
+# panel, the LOST/WON card, the jump tunnel and the title: each runs once
+# a picture of its own screen and never in flight (J1 kept them in RAM;
+# space flight's per-picture code is untouched). The live scenes behind
+# them (scene::draw, the station camera, the showcase) stay in RAM. ---
+cold *3hud6docked
+cold *3hud6market
+cold *3hud6outfit
+cold *3hud8shipyard
+cold *3hud4lost
+cold *3hud6tunnel
+cold *3App10draw_title
+
+# --- Step G4: drones, the particle pool, props, the scan, the smoke ---
+# Like the planet lines above, these run on EVERY tick or picture while
+# below, by design (the ground scene is its own mode). Roots run once a
+# tick or picture and stay in flash: the drones' tick (4 drones), the
+# pool's tick (64 sparks), the laid plants' tick, the effects, the
+# smoke column, the drones' lines and bolts, the scan's ring and marks.
+cold *6planet7effects
+cold *6drones4tick
+cold *6sparks4tick
+cold *5props4tick
+cold *5props4blow
+cold *6planet9scan_tick
+cold *6planet5smoke
+cold *6planet11drone_marks
+cold *6planet10scan_marks
+# BOARD-G2.md instruction 3 / BOARD-G3.md instruction 4.2: per thing,
+# per prop cell, per spark and per mark they go to RAM (READ FROM THE
+# CODE, G4.md lists the calls a picture): one thing of the sorted list
+# (up to 80 a picture), a prop cell's try and its checks (up to 361
+# cells a picture at HIGH, 9 a tick for the walk's solids), the pool's
+# add, step, look and draw (64 sparks, twice a picture), a mark's point
+# and diamond.
+# (`things` itself, the list and its sort, and `thing`, which picks each
+# thing's model, are inlined into `draw`: flash, and so the models stay
+# with the flash constants. `show`, the cull, the line of sight and the
+# call to the renderer, and `hidden` are kept apart by #[inline(never)]
+# so these lines hold.)
+ram *6planet4show
+ram *6planet6hidden
+ram *5props4spot
+ram *5props4keep
+ram *5props6within
+ram *5props7at_cell
+ram *5props4laid
+ram *5props10rocks_near
+ram *6sparks3add
+ram *6sparks4step
+ram *6sparks4look
+ram *6sparks4draw
+ram *6planet2px
+ram *6planet7diamond

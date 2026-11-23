@@ -1,0 +1,138 @@
+# CAMBER on its third track, GLACIER, at the game's own defaults (RATE
+# 60 FPS, class BRISK, mode RACE). Run with --boot off --fps 60
+# --frames 1441.
+#
+# Home screen: one step right to the CAMBER tile; A (south) at 110 opens
+# the game. DOWN (200) to TRACK, RIGHT twice (230, 260) from LAGOON
+# through FURNACE to GLACIER, UP (300) back to PLAY. A on PLAY (330)
+# starts the race and stays held from here on as the throttle; GO! shows
+# at about 510.
+90 press right
+91 release right
+110 press south
+111 release south
+200 press down
+201 release down
+230 press right
+231 release right
+260 press right
+261 release right
+300 press up
+301 release up
+330 press south
+# From 500 the ship drives itself by these lines: every 4 pictures the
+# stick points at the middle of the road seen on two rows, and B (east),
+# the air brake, is pulled when the road runs far off to one side. A
+# closed-loop helper wrote these lines by looking at each picture; they
+# are plain inputs and replay the same race every time.
+# About 800 to 960: the ship catches the pack and moves up among the
+# rivals. About 1288: a boost pad; about 1330 to 1348 the ship flies
+# over the jump's gap beside the rivals and lands in 6th place.
+500 stick left -2000 0
+512 stick left 16000 0
+512 press east
+524 release east
+544 press east
+548 stick left 14000 0
+548 release east
+556 press east
+560 release east
+564 stick left 12000 0
+572 stick left 8000 0
+576 stick left 10000 0
+592 stick left 12000 0
+596 stick left 14000 0
+600 stick left 16000 0
+600 press east
+604 stick left 22000 0
+608 stick left 6000 0
+608 release east
+612 stick left 20000 0
+612 press east
+616 stick left 18000 0
+620 release east
+628 stick left 16000 0
+640 stick left 14000 0
+648 stick left 12000 0
+656 stick left 10000 0
+664 stick left 8000 0
+692 stick left 6000 0
+744 stick left 4000 0
+784 stick left 2000 0
+808 stick left 0 0
+828 stick left -2000 0
+836 stick left -4000 0
+848 stick left -6000 0
+852 stick left -8000 0
+856 stick left -4000 0
+892 stick left -2000 0
+896 stick left -6000 0
+904 stick left -2000 0
+908 stick left -6000 0
+912 stick left -2000 0
+920 stick left -4000 0
+940 stick left -2000 0
+980 stick left 0 0
+1008 stick left 2000 0
+1016 stick left 0 0
+1020 stick left 4000 0
+1024 stick left 0 0
+1028 stick left -2000 0
+1064 stick left 0 0
+1068 stick left 4000 0
+1072 stick left 8000 0
+1076 stick left 10000 0
+1080 stick left 14000 0
+1084 stick left 18000 0
+1088 stick left 20000 0
+1088 press east
+1092 stick left 22000 0
+1096 stick left 24000 0
+1100 stick left 26000 0
+1100 release east
+1104 stick left 24000 0
+1108 stick left 26000 0
+1120 press east
+1128 stick left 24000 0
+1132 stick left 22000 0
+1132 release east
+1136 stick left 18000 0
+1140 stick left 14000 0
+1144 stick left 12000 0
+1148 stick left 10000 0
+1152 stick left 8000 0
+1160 stick left 6000 0
+1164 stick left 4000 0
+1200 stick left 6000 0
+1216 stick left 8000 0
+1228 stick left 10000 0
+1240 stick left 12000 0
+1248 stick left 10000 0
+1252 stick left 8000 0
+1256 stick left 6000 0
+1260 stick left 4000 0
+1272 stick left 0 0
+1276 stick left 2000 0
+1280 stick left 0 0
+1288 stick left -2000 0
+1296 stick left -4000 0
+1304 stick left -6000 0
+1308 stick left -8000 0
+1316 stick left -10000 0
+1320 stick left -14000 0
+1324 stick left -4000 0
+1328 stick left -6000 0
+1332 stick left -2000 0
+1336 stick left -6000 0
+1356 stick left -4000 0
+1392 stick left -2000 0
+1396 stick left 0 0
+1400 stick left 2000 0
+1404 stick left 4000 0
+1408 stick left 6000 0
+1412 stick left 10000 0
+1420 stick left 16000 0
+1424 stick left 18000 0
+1428 stick left 20000 0
+1432 stick left 24000 0
+1432 press east

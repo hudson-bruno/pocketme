@@ -1,0 +1,15 @@
+[package]
+name        = "spillmax"
+description = "SPILLMAX: the spill probe (experiments/spill-probe), a test game whose code runs on past the code slot into the spill. Never on a normal card."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+# A game uses only the game kit. No heap, no floating point, no unsafe.
+[dependencies]
+game-kit = { path = "../../../crates/game-kit" }
+
+# Tests only: the kit's stand-in console (tests/probe.rs).
+[dev-dependencies]
+game-kit = { path = "../../../crates/game-kit", features = ["testing"] }

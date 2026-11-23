@@ -1,0 +1,83 @@
+# MERCATOR, planet: through the ring, down to the site, out on foot, back aboard and up.
+# Run: pocketme-sim --boot off --fps 60 --frames 6600 --script mercator-planet.script
+# (from boards/desktop). MERCATOR's starting settings (2026-11-23): 60 pictures a second,
+# the CHASE view and DETAIL HIGH; the scene plays at those and changes no setting.
+
+# Home screen: seven steps right, from BENCH to MERCATOR, then start it.
+5 press right
+6 release right
+8 press right
+9 release right
+11 press right
+12 release right
+14 press right
+15 release right
+17 press right
+18 release right
+20 press right
+21 release right
+23 press right
+24 release right
+32 press south
+33 release south
+
+100 press south          # PLAY: docked at JAKEL
+101 release south
+200 press south          # LAUNCH
+201 release south
+
+# Space: turn towards the planet's site ring and dive through it nose down.
+240 press left
+318 release left
+320 press west           # faster, to top speed
+900 release west
+920 press left
+960 release left
+1800 press left
+1870 release left
+1880 press left
+1888 release left
+1888 press up            # nose down at the ring
+1896 release up
+1900 press right
+1907 release right
+# About 2722: through the ring, the entry starts (3 s). The clip mercator-entry
+# is 2650-3000: the ring's lights and the SITE beacon just above the ship, the
+# entry, then the hover (HOLD) from about 2940.
+
+# Below: hold the height, fly over the pad, then sink onto it.
+2935 touch 290 225       # tap on the JETS box: HOLD
+2938 lift
+2940 press up            # forward, towards the pad
+3840 release up
+4140 touch 290 225       # tap on JETS again: SINK; the pad comes into view below
+4143 lift
+# About 5210: LANDED. The hatch opens and the pilot is out on foot from about 5265.
+# The clip mercator-landing is 4980-5320.
+
+# On foot: turn the camera, walk out, look back, walk back to the ship.
+5320 press l             # L taps: the camera turns 45 degrees each
+5324 release l
+5340 press l
+5344 release l
+5360 press l
+5364 release l
+5380 press l
+5384 release l
+5400 press l
+5404 release l
+5460 press up            # walk out (the wreck's smoke on the horizon)
+5900 release up
+5920 press l
+5924 release l
+5940 press l
+5944 release l
+5960 press l
+5964 release l
+5980 press l             # the ship ahead
+5984 release l
+6020 press up            # walk back to the hatch; frames 6030-6350 are the clip
+6460 release up
+6500 press east          # B held 0.5 s at the hatch: board and lift off
+6580 release east
+# About 6555: LIFT OFF, before the day's summary card.

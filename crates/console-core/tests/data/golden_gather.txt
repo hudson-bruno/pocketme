@@ -1,0 +1,13 @@
+full-start f0d246afcb3c46bd
+full-sphere c7d0dabe7c72633d
+full-writing 7fbc5ce47cb5e20d
+full-name 2b7ec7d0d939bce5
+full-gleam a65618738e2f6915
+full-shrink b9298d6e01338d5d
+full-last 580bdce5d39e4a15
+full-home 19cea5bd82ae532d
+short-start b1beadb872daa1e5
+short-gleam ee72ad932c328dad
+short-shrink a80786f2fa6cf255
+short-last 580bdce5d39e4a15
+short-home 19cea5bd82ae532d

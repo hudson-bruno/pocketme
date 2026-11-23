@@ -1,0 +1,65 @@
+# MERCATOR, trade: the market at JAKEL, then the chart in flight and a jump to DRILO.
+# Run: pocketme-sim --boot off --fps 60 --frames 2000 --script mercator-trade.script
+# (from boards/desktop). MERCATOR's starting settings (2026-11-23): 60 pictures a second,
+# the CHASE view and DETAIL HIGH; the scene plays at those and changes no setting.
+
+# Home screen: seven steps right, from BENCH to MERCATOR, then start it.
+5 press right
+6 release right
+8 press right
+9 release right
+11 press right
+12 release right
+14 press right
+15 release right
+17 press right
+18 release right
+20 press right
+21 release right
+23 press right
+24 release right
+32 press south
+33 release south
+
+100 press south          # PLAY: docked at JAKEL (FORGE, TECH 5, SECURE)
+101 release south
+
+# The market: ORE, one tonne, then A held: the buying speeds up until the stock runs out.
+160 press down           # MARKET line
+161 release down
+190 press south          # open the market
+191 release south
+230 press down           # ICE
+231 release down
+260 press down           # ORE
+261 release down
+300 press south          # buy 1 t
+301 release south
+340 press south          # held: 8 t in all, NONE LEFT HERE
+430 release south
+480 press east           # back to the dock screen
+481 release east
+
+# Launch and fly out past 5 km (no jump closer to the station).
+500 press up             # LAUNCH line
+501 release up
+520 press south          # launch
+521 release south
+560 press west           # faster, to top speed
+1100 release west
+
+# The chart in flight: look at two systems, zoom out to the whole Lens and back, jump.
+1540 press minus         # SELECT: the chart, JAKEL in the middle
+1541 release minus
+1580 press right         # DRILO, HAVEN QUIET, 2.7 LY
+1581 release right
+1620 press right         # XICRA, MINE RISKY, 5.1 LY
+1621 release right
+1660 press west          # X: the whole Lens
+1661 release west
+1720 press west          # X: near again
+1721 release west
+1760 press left          # DRILO
+1761 release left
+1800 press south         # A: JUMP TO DRILO; ARRIVED at about 1880
+1801 release south

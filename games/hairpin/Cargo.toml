@@ -1,0 +1,19 @@
+[package]
+name        = "hairpin"
+description = "HAIRPIN: little electric karts race the service roads of a mountain dam at dusk. Three courses, three laps each, four rivals; brake to charge, boost to pass."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+# A game uses only the game kit. No heap, no floating point.
+[dependencies]
+game-kit = { path = "../../crates/game-kit" }
+
+# Tests only: the console's own rule for which screen areas a changed
+# picture sends (console_video::diff), to count what each frame costs
+# the screen. The game itself never uses it.
+[dev-dependencies]
+console-video = { path = "../../crates/console-video" }
+# Tests only: the kit's stand-in console (tests/golden.rs).
+game-kit = { path = "../../crates/game-kit", features = ["testing"] }

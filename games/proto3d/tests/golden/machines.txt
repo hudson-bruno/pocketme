@@ -1,0 +1,13 @@
+# PROTO3D MACHINES: FNV-1a hashes of three moments at each detail
+low a-plate b156c549b96d56f4
+low b-plank 9b43fb18f7e490c0
+low c-ledge b9a89950fe000020
+mid a-plate e47b599d694b60ca
+mid b-plank d5e624d9df96481b
+mid c-ledge e2730b3b1cc309e7
+high a-plate b2fb855aef744ed4
+high b-plank 6dfc1c282b0b6476
+high c-ledge 48c79a93e6b750ed
+max a-plate e9da7f251d5f4ec6
+max b-plank d2e39e3e8582597c
+max c-ledge 684fc0b306c8a890

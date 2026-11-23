@@ -1,0 +1,54 @@
+# PADTEST: a gamepad.
+# The home tile's picture: 36 x 36 pixels, one letter per pixel.
+# Make the card file with games/art/make_art.py (see games/README.md).
+size 36 36
+colour . 2C3650   # background
+colour : 34405E   # background, lighter band
+colour o 1A2033   # shadow
+colour b D8DCE6   # pad body
+colour B F4F6FA   # pad body, light edge
+colour s 9AA2B6   # pad body, dark edge
+colour k 2A2F3C   # d-pad and sticks
+colour K 50586C   # stick tops
+colour g F2A63C   # button A (all four buttons share one amber)
+colour r F2A63C   # button B
+colour u F2A63C   # button X
+colour y F2A63C   # button Y
+colour w FFFFFF   # shine
+pixels
+::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::
+....................................
+....................................
+....................................
+....................................
+::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::
+:::::::BBBBBBBBBBBBBBBBBBBBBB:::::::
+:::::BBBbbbbbbbbbbbbbbbbbbbbbbb:::::
+....bwbbbbbbbbbbbbbbbbbbbbybbbbb....
+....bbbkkkbbbbbbbbbbsbbbbyyybbbb....
+...bbbbkkkbbbbbssbbssbbbbbybbbbbb...
+...bbbbkkkbbbbbbbbbbsbbubbbbbrbbb...
+:::bkkkkkkkkkbbbbbbbbbuuubbbrrrbb:::
+:::bkkkkkkkkkbbbbbbbbbbubbbbbrbbbo::
+:::skkkkkkkkkbbbbbbbbbbbbbgbbbbbso::
+:::sbbbkkkbbbkkkbbbbkkkbbgggbbbbso::
+....sbbkkkbbkKkkkbbkKkkkbbgbbbbsoo..
+....bbbkkkbbkkkkkbbkkkkkbbbbbbbboo..
+.....bbbbbbbkkkkksskkkkkbbbbbbboo...
+....sbbbbbbbbkkksssskkkbbbbbbbbso...
+:::::bbbbbbbbboooooooobbbbbbbbbo::::
+:::::sbbbbbbbsoooooooosbbbbbbbsoo:::
+:::::ssssbsssso:::::::ssssbsssso::::
+::::::sssssssoo::::::::sssssssoo::::
+......ooosooooo........ooosooooo....
+.......ooooooo..........ooooooo.....
+..........o................o........
+....................................
+::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::

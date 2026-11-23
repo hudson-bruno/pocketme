@@ -1,0 +1,18 @@
+# The desktop simulator: the console's own code, built for the PC, with a
+# fake board underneath. Three crates:
+#   board : the board layer (what the console may ask of the hardware). No std.
+#   demo  : a small console program that only uses the board layer. No std.
+#   sim   : the PC side: a window, or no window with a script. Uses std.
+[workspace]
+resolver = "3"
+members = ["board", "demo", "sim"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Keep debug builds quick to make but not painfully slow to run: the
+# drawing code is optimised a little, our own code stays easy to debug.
+[profile.dev.package."*"]
+opt-level = 2

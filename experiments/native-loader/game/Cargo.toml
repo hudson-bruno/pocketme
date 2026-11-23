@@ -1,0 +1,33 @@
+[package]
+edition     = "2024"
+license = "MIT"
+name        = "hello-game"
+description = "A tiny native game for the loader experiment: it does nothing fun, it only uses every kind of memory a real game will use and reports what it found"
+version     = "0.1.0"
+publish     = false
+
+[[bin]]
+name = "hello-game"
+path = "src/main.rs"
+
+[features]
+# Builds the game that crashes on purpose: at frame 150 it reads past the
+# end of a table, which is a Rust panic. Used to watch what the console
+# does about a crashed game.
+crash = []
+# Builds the game that stops the processor: at frame 150 it reads through
+# a pointer to nowhere. No panic, no call to the console: a fault.
+fault = []
+
+[dependencies]
+game-api = { path = "../game-api" }
+
+[build-dependencies]
+# The build script turns the slot addresses into linker symbols.
+game-api = { path = "../game-api" }
+
+[profile.release]
+codegen-units = 1
+debug         = 2     # only in the ELF on the PC; the game file has no debug data
+lto           = 'fat'
+opt-level     = 's'

@@ -1,0 +1,89 @@
+[package]
+edition      = "2024"
+license = "MIT"
+name         = "bt-classic-probe"
+description  = "Experiment: start the ESP32's Bluetooth controller in dual mode (classic + Low Energy) from bare-metal Rust, measure it, and run a classic inquiry"
+rust-version = "1.95"
+version      = "0.1.0"
+publish      = false
+
+[[bin]]
+name = "bt-classic-probe"
+path = "./src/main.rs"
+
+[features]
+# With no feature: the controller starts Low Energy only, exactly as the
+# unchanged esp-radio does. This is the baseline for the memory figures and
+# the "control run" for the classic commands (they should all be refused).
+default = []
+# Dual mode: classic Bluetooth and Low Energy together, started the way
+# ESP-IDF starts it. Switches on the small patch in vendor/esp-radio (see
+# vendor/PATCH-NOTES.md). The build to use.
+dual = ["esp-radio/bt-dual", "esp-radio/bt-dual-idf-patches"]
+# Dual mode, but without ESP-IDF's fixed classic functions: the controller
+# runs the classic code in the chip's ROM as it is. About 10.5 KB less
+# IRAM and 48 KB less flash; whether classic still works this way is one
+# of the things the gamepad test should tell.
+dual-rom = ["esp-radio/bt-dual"]
+
+[dependencies]
+# Same versions as experiments/ble-scan.
+esp-hal = { version = "~1.2.2", features = ["esp32", "log-04", "unstable"] }
+
+esp-rtos = { version = "0.4.0", features = [
+  "embassy",
+  "esp-alloc",
+  "esp-radio",
+  "esp32",
+  "log-04",
+] }
+
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32", "log-04"] }
+log                    = "0.4.27"
+
+# Only used to read whole packets from the radio (the Transport trait).
+# Every command is built by hand, byte by byte, in src/hci.rs.
+bt-hci = "0.9.0"
+# "alloc-hooks": the allocator calls two functions of ours on every request
+# (src/mem.rs), which is how the smallest free heap is caught exactly.
+esp-alloc = { version = "0.11.0", features = ["alloc-hooks", "esp32"] }
+# This name is replaced by the copy in vendor/esp-radio, see [patch.crates-io]
+# at the end of this file.
+esp-radio = { version = "1.0.0-beta.1", features = [
+  "ble",
+  "esp-alloc",
+  "esp32",
+  "log-04",
+  "unstable",
+] }
+
+embassy-executor = { version = "0.10.0", features = ["log"] }
+embassy-futures  = "0.1.2"
+embassy-time     = { version = "0.5.0", features = ["log"] }
+esp-backtrace = { version = "0.20.0", features = [
+  "esp32",
+  "panic-handler",
+  "println",
+] }
+esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
+
+critical-section = "1.2.0"
+# Only for the type in the allocator hook's signature; same version esp-alloc uses.
+enumset     = { version = "1.1.15", default-features = false }
+heapless    = "0.9.3"
+static_cell = "2.1.1"
+
+# The radio driver used here is our own copy, not the one from crates.io.
+# The copy is the same version, with a few lines changed for dual mode.
+# Nothing in ~/.cargo is touched.
+[patch.crates-io]
+esp-radio = { path = "vendor/esp-radio" }
+
+[profile.dev]
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1     # LLVM can perform better optimizations using a single thread
+debug         = 2     # prefer slower builds but better debugging experience
+lto           = 'fat'
+opt-level     = 's'

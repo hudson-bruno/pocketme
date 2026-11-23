@@ -1,0 +1,76 @@
+# LANTERN: level 1 (OLD ENTRANCE) by lamplight: a crystal, two doors, a moth, the flash,
+# the crank and the lift.
+# Run: pocketme-sim --boot off --fps 60 --frames 1440 --script lantern.script
+# (from boards/desktop). LANTERN starts at detail HEAVY (the whole-width view with
+# textured floor and ceiling) and 60 pictures a second; the script keeps both.
+# The walk is dead reckoning on the level's map; the game runs one tick a frame here.
+
+# Home screen: six steps right, from BENCH to LANTERN, then start it.
+10 press right
+12 release right
+16 press right
+18 release right
+22 press right
+24 release right
+28 press right
+30 release right
+34 press right
+36 release right
+40 press right
+42 release right
+56 press south
+58 release south
+140 press plus            # START plays level 1
+142 release plus
+
+200 press up             # east along the first tunnel, over a crystal (A CRYSTAL)
+262 release up
+266 press right          # face south
+294 release right
+300 press up             # down the side tunnel, a door on the left
+340 release up
+344 press left           # face the door (east)
+372 release left
+384 press south          # A: the door slides open
+386 release south
+450 press up             # through the door
+490 release up
+496 press right          # face south
+524 release right
+530 press up
+570 release up
+574 press left           # face the second door (east)
+602 release left
+612 press south          # A: it opens
+614 release south
+660 press up             # through it
+700 release up
+704 press left           # face north: a moth flies to the lamp
+732 release left
+# Still at 730: the moth close in front of the lamp, drinking its oil.
+820 press east           # B: the flash; the moth flies off
+822 release east
+
+# On to the crank and the lift: east, south, west (the crank), south, east.
+880 press right          # face east
+908 release right
+912 press up
+952 release up
+956 press right          # face south
+984 release right
+988 press up
+1028 release up
+1032 press right         # face west
+1060 release right
+1064 press up            # onto the crank (THE CRANK! FIND THE LIFT, about 1088)
+1104 release up
+1108 press left          # face south
+1136 release left
+1140 press up
+1180 release up
+1184 press left          # face east: the lift at the end of the tunnel
+1212 release left
+1216 press up
+1256 release up
+1264 press south         # A: the lift climbs, the level's card
+1266 release south

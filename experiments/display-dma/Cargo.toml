@@ -1,0 +1,86 @@
+[package]
+edition      = "2024"
+license = "MIT"
+name         = "display-dma"
+description  = "Experiment: the console's own ST7789 driver on esp-hal SPI with DMA, measured on the CYD board"
+rust-version = "1.95"
+version      = "0.1.0"
+publish      = false
+
+[[bin]]
+name = "display-dma"
+path = "./src/main.rs"
+
+[features]
+# Bluetooth advertising runs during the measurements, as in the reference
+# firmware, to see whether the radio changes the timings and how much
+# memory is left.
+ble = [
+  "dep:bt-hci",
+  "dep:esp-radio",
+  "dep:trouble-host",
+  "esp-rtos/esp-radio",
+]
+
+[dependencies]
+# The project's own crates, tested on the PC.
+debug-link = { path = "../../crates/debug-link" }
+test-card  = { path = "../../crates/test-card" }
+
+# Versions as in the reference firmware for this board, known to work
+# together.
+esp-hal = { version = "~1.2.2", features = ["esp32", "log-04", "unstable"] }
+
+esp-rtos = { version = "0.4.0", features = ["embassy", "esp-alloc", "esp32", "log-04"] }
+
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32", "log-04"] }
+log                    = "0.4.27"
+
+# The heap. Only the radio allocates from it; it is in every build so the
+# memory layout is the same with and without Bluetooth.
+esp-alloc = { version = "0.11.0", features = ["esp32", "internal-heap-stats"] }
+
+bt-hci = { version = "0.9.0", optional = true }
+esp-radio = { version = "1.0.0-beta.1", optional = true, features = [
+  "ble",
+  "esp-alloc",
+  "esp32",
+  "log-04",
+  "unstable",
+] }
+trouble-host = { version = "0.7.0", optional = true, features = [
+  "connection-event-queue-size-8",
+  "default-packet-pool-size-64",
+  "gatt",
+  "l2cap-rx-queue-size-32",
+] }
+
+embassy-executor = { version = "0.10.0", features = ["log"] }
+embassy-futures  = "0.1.2"
+embassy-time     = { version = "0.5.0", features = ["log"] }
+esp-backtrace = { version = "0.20.0", features = [
+  "esp32",
+  "panic-handler",
+  "println",
+] }
+esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
+
+critical-section = "1.2.0"
+static_cell      = "2.1.1"
+# The CPU's cycle counter: the finest clock there is (1/240 us).
+xtensa-lx = "0.13.0"
+
+# Only to draw the test card into the framebuffer.
+embedded-graphics = "0.8.2"
+
+[profile.dev]
+# The default debug profile is too slow and too big for resource-constrained devices.
+# Always build with some optimizations enabled.
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1     # LLVM can perform better optimizations using a single thread
+debug         = 2     # prefer slower builds but better debugging experience
+lto           = 'fat'
+# This experiment measures speed, so it is built for speed, not size.
+opt-level     = 3

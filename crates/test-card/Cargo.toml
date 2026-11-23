@@ -1,0 +1,10 @@
+[package]
+name        = "test-card"
+description = "Test pictures with known pixel values, drawn the same way by a firmware and by the PC, so a screenshot can be compared with what should be there"
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[dependencies]
+embedded-graphics = "0.8.2"

@@ -1,0 +1,20 @@
+[package]
+name        = "game-kit"
+description = "The game side: a safe face over the game contract (screen, palette, input, motion, time, video, log) and the game! macro that makes a crate a game."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+# A game uses only this crate. It brings the contract (game-api) and the
+# console's drawing and font (console-video), so games and console draw
+# the same way. Both are plain `core`, no heap.
+[dependencies]
+game-api      = { path = "../game-api" }
+console-video = { path = "../console-video" }
+
+[features]
+# Tests only: `game_kit::testing`, a stand-in console that drives a game
+# through its `game_entry` and records its pictures and log (the games'
+# golden tests). Never in a game's own dependencies, only dev-dependencies.
+testing = []

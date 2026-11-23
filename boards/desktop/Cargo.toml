@@ -1,0 +1,63 @@
+[package]
+name        = "desktop-board"
+description = "The simulator: the console's own code on the PC, on a desktop board. No window by default; an SDL3 window behind the `window` feature."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[[bin]]
+name = "pocketme-sim"
+path = "src/main.rs"
+
+[features]
+# The window is on by default. It needs the SDL3 library on the PC.
+# `--no-default-features` builds with no outside library at all; the
+# program then runs with no window only.
+default    = ["window", "boot-gather"]
+window     = ["dep:sdl3"]
+# The GATHER boot animation and its BOOT ANIM setting (crates/console-core,
+# feature `boot-gather`; off there by default, on here so it can be seen
+# and tried). `--boot full|short|off` picks it for one run.
+# `--no-default-features` runs the console without it, as the board does
+# by default.
+boot-gather = ["console-core/boot-gather"]
+# Optional parts, passed on to the console and the board layer. The
+# desktop board gives each one as "absent" for now.
+bt-classic = ["board-api/bt-classic", "console-core/bt-classic", "settings-store/bt-classic"]
+passby     = ["board-api/passby", "console-core/passby", "settings-store/passby"]
+gps        = ["board-api/gps", "console-core/gps", "settings-store/gps"]
+sound      = ["board-api/sound", "console-core/sound", "settings-store/sound"]
+# The console's two pictures swap roles at each present (see
+# crates/console-video/README.md, "Swap: two cores, two pictures"). The
+# simulator has one core: it still sends at once (`Console::step`), so
+# this only runs the swap code here. Off by default.
+swap       = ["console-core/swap", "console-video/swap"]
+
+[dependencies]
+board-api     = { path = "../../crates/board-api" }
+console-video = { path = "../../crates/console-video" }
+console-core  = { path = "../../crates/console-core" }
+# The game contract (for `LinkedGame` and `open_game`).
+game-api      = { path = "../../crates/game-api" }
+# The settings (brightness) kept in the store, as the board keeps them.
+settings-store = { path = "../../crates/settings-store" }
+# The games, linked into the simulator (see src/games.rs). Each is a
+# no_std library that uses only the game kit; games/build-chip.sh builds
+# the same source for the chip.
+bench         = { path = "../../games/bench" }
+camber        = { path = "../../games/camber" }
+drive3d       = { path = "../../games/drive3d" }
+hairpin       = { path = "../../games/hairpin" }
+kestrel       = { path = "../../games/kestrel" }
+lander        = { path = "../../games/lander" }
+lantern       = { path = "../../games/lantern" }
+mercator      = { path = "../../games/mercator" }
+padtest       = { path = "../../games/padtest" }
+proto3d       = { path = "../../games/proto3d" }
+rooftop       = { path = "../../games/rooftop" }
+skimmer       = { path = "../../games/skimmer" }
+stardust      = { path = "../../games/stardust" }
+tundra        = { path = "../../games/tundra" }
+# Window, keyboard and mouse (licence MIT; the SDL3 library itself Zlib).
+sdl3 = { version = "0.22.1", optional = true }

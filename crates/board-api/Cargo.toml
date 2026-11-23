@@ -1,0 +1,31 @@
+[package]
+name        = "board-api"
+description = "The board layer: what the console may ask of the hardware, as small traits. No std, no heap; its only dependency is the game contract (game-api)."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[features]
+# Optional parts. A feature that is off removes the part's trait, its item
+# in Board and Parts, and so every line of code that uses it.
+# Turn them on from the board crate (it must then give the part).
+bt-classic = []   # raw classic Bluetooth packets (HCI), for the gamepad
+passby     = []   # pass-by messages over Bluetooth Low Energy
+gps        = []   # raw bytes from a GPS module
+sound      = []   # sound samples out
+# A fake board for tests on the PC (fake.rs). Other crates turn it on in
+# their [dev-dependencies]. It holds a 320x240 picture (150 KB), so it is
+# never meant for the chip.
+testing    = []
+
+[dependencies]
+# The game contract (tables, entry function). Plain `core`, no
+# dependencies, so the board layer stays as light as it was. Needed for
+# `Board::start_game`, which hands the console a game's functions.
+game-api = { path = "../game-api" }
+
+# Needs the fake board: `cargo test --features testing` (check.sh does).
+[[test]]
+name = "fake_board"
+required-features = ["testing"]

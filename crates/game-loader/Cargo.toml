@@ -1,0 +1,23 @@
+[package]
+name        = "game-loader"
+description = "Loads a game file from the card into the two game slots: reads it in small pieces, checks the header and the checksum, and hands the bytes to the board. No std, no heap, no unsafe. It never touches memory itself."
+version     = "0.1.0"
+edition     = "2024"
+license = "MIT"
+publish     = false
+
+[features]
+# The loader has no optional parts of its own. These only turn on the
+# same parts of the board layer, so that boards/desktop/check.sh can build
+# every shared crate with all parts on (it passes these four names to all
+# of them). They change nothing in this crate.
+bt-classic = ["board-api/bt-classic"]
+passby     = ["board-api/passby"]
+gps        = ["board-api/gps"]
+sound      = ["board-api/sound"]
+
+[dependencies]
+# `Files` (the card) and `FsError`.
+board-api = { path = "../board-api" }
+# The file header, the checksum and the slot layout.
+game-api  = { path = "../game-api" }
