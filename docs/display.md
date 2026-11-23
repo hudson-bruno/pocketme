@@ -252,6 +252,7 @@ over LANTERN's lists it always came out equal to one box, so it was
 left out.
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 600}}}%%
 flowchart TB
     subgraph FIRST["First core"]
         direction LR

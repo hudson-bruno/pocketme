@@ -421,6 +421,7 @@ The script first runs its helpers' self-tests and writes `slots.x` from
 script. Then for each game:
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 600}}}%%
 flowchart TB
     subgraph BUILD["Build and check"]
         direction LR

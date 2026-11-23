@@ -104,8 +104,10 @@ The slot, spill and heap addresses below are written once, in
 the linker scripts are generated from it.
 
 ```mermaid
-flowchart LR
+%%{init: {"flowchart": {"wrappingWidth": 600}}}%%
+flowchart TB
     subgraph IBUS["Instruction bus"]
+        direction LR
         I1["0x40080000<br>console code in RAM<br>73,728 bytes"]
         I2["0x40092000<br>game code slot<br>57,344 bytes"]
         I3["0x400A0000<br>spill: the data slot<br>seen as code,<br>up to 48 KB"]
@@ -113,13 +115,17 @@ flowchart LR
         I1 --> I2 --> I3 --> I4
     end
     subgraph DBUS["Data bus"]
+        direction LR
         D1["0x3FFB0000<br>first 64 KB taken<br>by the radio,<br>gamepad build only"]
         D2["console statics<br>and the main stack"]
         D3["0x3FFE7E30<br>heap<br>49,616 bytes"]
         D4["0x3FFF4000<br>game data slot<br>49,152 bytes, ends<br>at 0x40000000"]
         D1 --> D2 --> D3 --> D4
     end
-    I3 -.-|"same RAM,<br>reverse word order"| D4
+    IBUS -.-|"the two dashed boxes are the same RAM,<br>in reverse word order"| DBUS
+
+    classDef shared stroke-width:2px,stroke-dasharray:6 4
+    class I3,D4 shared
 ```
 
 | Region | Address | Size | Kind |
@@ -213,6 +219,7 @@ and the program at 0x10000.
 | settings | data, undefined (user type) | 0x3FE000 | 0x2000 (8 KB) | the console's saved settings |
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 600}}}%%
 flowchart TB
     subgraph LOW["Below 0x10000: start-up and small data"]
         direction LR
@@ -309,6 +316,7 @@ page scan on, which lets a pad that was paired before call in. Two
 independent layers enforce this:
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 600}}}%%
 flowchart LR
     H["pad-host and pad-proto,<br>reconnect_only set"] --> G["hci-rules Gate,<br>allow-list"]
     G --> C["Bluetooth<br>controller"]
