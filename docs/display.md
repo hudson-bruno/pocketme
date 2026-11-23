@@ -252,15 +252,23 @@ over LANTERN's lists it always came out equal to one box, so it was
 left out.
 
 ```mermaid
-flowchart LR
-    A["Game draws a 160x120 picture"] --> B["console-video finds at most 16 rectangles"]
-    B --> C["Picture handed to the second core"]
-    C --> D["Get Scanline read, the anchor"]
-    D --> E["send-plan picks windows or one box"]
-    E --> F["Wait for each start moment"]
-    F --> G["SPI with DMA at 80 MHz"]
-    G --> H["ST7789 picture memory"]
-    H --> I["Panel refresh, about 58.7 a second"]
+flowchart TB
+    subgraph FIRST["First core"]
+        direction LR
+        A["Game draws a<br>160x120 picture"] --> B["console-video finds<br>at most 16 rectangles"]
+        B --> C["Picture handed<br>to the second core"]
+    end
+    subgraph SECOND["Second core"]
+        direction LR
+        D["Get Scanline read,<br>the anchor"] --> E["send-plan picks<br>windows or one box"]
+        E --> F["Wait for each<br>start moment"]
+        F --> G["SPI with DMA<br>at 80 MHz"]
+    end
+    subgraph PANEL["Panel"]
+        direction LR
+        H["ST7789<br>picture memory"] --> I["Panel refresh,<br>about 58.7 a second"]
+    end
+    FIRST --> SECOND --> PANEL
 ```
 
 A window that misses its moment is still sent, and counted as `late`.

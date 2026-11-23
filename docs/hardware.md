@@ -104,22 +104,22 @@ The slot, spill and heap addresses below are written once, in
 the linker scripts are generated from it.
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph IBUS["Instruction bus"]
-        I1["0x40080000 console code in RAM, 73,728 bytes"]
-        I2["0x40092000 game code slot, 57,344 bytes"]
-        I3["0x400A0000 spill, the data slot seen as code, up to 48 KB"]
-        I4["0x400C0000 RTC fast memory, 8 KB, radio set-up code"]
+        I1["0x40080000<br>console code in RAM<br>73,728 bytes"]
+        I2["0x40092000<br>game code slot<br>57,344 bytes"]
+        I3["0x400A0000<br>spill: the data slot<br>seen as code,<br>up to 48 KB"]
+        I4["0x400C0000<br>RTC fast memory, 8 KB<br>radio set-up code"]
         I1 --> I2 --> I3 --> I4
     end
     subgraph DBUS["Data bus"]
-        D1["0x3FFB0000 first 64 KB taken by the radio, gamepad build only"]
-        D2["console statics and the main stack"]
-        D3["0x3FFE7E30 heap, 49,616 bytes"]
-        D4["0x3FFF4000 game data slot, 49,152 bytes, ends at 0x40000000"]
+        D1["0x3FFB0000<br>first 64 KB taken<br>by the radio,<br>gamepad build only"]
+        D2["console statics<br>and the main stack"]
+        D3["0x3FFE7E30<br>heap<br>49,616 bytes"]
+        D4["0x3FFF4000<br>game data slot<br>49,152 bytes, ends<br>at 0x40000000"]
         D1 --> D2 --> D3 --> D4
     end
-    I3 -.-|"same RAM, reverse word order"| D4
+    I3 -.-|"same RAM,<br>reverse word order"| D4
 ```
 
 | Region | Address | Size | Kind |
@@ -213,13 +213,19 @@ and the program at 0x10000.
 | settings | data, undefined (user type) | 0x3FE000 | 0x2000 (8 KB) | the console's saved settings |
 
 ```mermaid
-flowchart LR
-    B["0x1000 bootloader"] --> T["0x8000 partition table"]
-    T --> N["0x9000 nvs, pairing in the first 8 KB"]
-    N --> P["0xF000 phy_init"]
-    P --> A["0x10000 firmware, to 0x3F0000"]
-    A --> G["0x3F0000 to 0x3FE000 in no partition"]
-    G --> S["0x3FE000 settings, 8 KB"]
+flowchart TB
+    subgraph LOW["Below 0x10000: start-up and small data"]
+        direction LR
+        B["0x1000<br>bootloader"] --> T["0x8000<br>partition table"]
+        T --> N["0x9000 nvs<br>pairing in the<br>first 8 KB"]
+        N --> P["0xF000<br>phy_init"]
+    end
+    subgraph HIGH["From 0x10000 to the end of the 4 MB"]
+        direction LR
+        A["0x10000<br>firmware,<br>to 0x3F0000"] --> G["0x3F0000 to 0x3FE000<br>in no partition"]
+        G --> S["0x3FE000<br>settings, 8 KB"]
+    end
+    LOW --> HIGH
 ```
 
 The firmware image of the build with the gamepad and the game flash
@@ -304,8 +310,8 @@ independent layers enforce this:
 
 ```mermaid
 flowchart LR
-    H["pad-host and pad-proto, reconnect_only set"] --> G["hci-rules Gate, allow-list"]
-    G --> C["Bluetooth controller"]
+    H["pad-host and pad-proto,<br>reconnect_only set"] --> G["hci-rules Gate,<br>allow-list"]
+    G --> C["Bluetooth<br>controller"]
     C --> R["radio"]
 ```
 

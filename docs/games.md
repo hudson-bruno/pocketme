@@ -421,15 +421,19 @@ The script first runs its helpers' self-tests and writes `slots.x` from
 script. Then for each game:
 
 ```mermaid
-flowchart TD
-    A["compile: staticlib for xtensa-esp32-none-elf"]
-    B["link with slots.x and chip/game.x"]
-    C["sizes: fail if it does not fit"]
-    D["stack frames: check_frames.py"]
-    E["pack: pack.py writes NAME.BIN"]
-    F["load check: check_load.py"]
-    G["card folder"]
-    A --> B --> C --> D --> E --> F --> G
+flowchart TB
+    subgraph BUILD["Build and check"]
+        direction LR
+        A["compile: staticlib for<br>xtensa-esp32-none-elf"] --> B["link with slots.x<br>and chip/game.x"]
+        B --> C["sizes: fail if it<br>does not fit"]
+        C --> D["stack frames:<br>check_frames.py"]
+    end
+    subgraph PACK["Pack"]
+        direction LR
+        E["pack: pack.py<br>writes NAME.BIN"] --> F["load check:<br>check_load.py"]
+        F --> G["card folder"]
+    end
+    BUILD --> PACK
 ```
 
 1. **Compile** with the `esp` toolchain as one static library.
