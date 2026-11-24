@@ -1260,7 +1260,7 @@ fn read_only_finds_what_open_finds_over_random_histories() {
             let n = (rng.next() % 7) as u8;
             let v = (rng.next() % 3) as u8;
             // Sometimes the power goes during this step.
-            let cut = rng.next() % 10 == 0;
+            let cut = rng.next().is_multiple_of(10);
             if cut {
                 f.budget = Some(rng.next() % 200);
             }
@@ -1321,4 +1321,671 @@ fn read_only_report_shows_no_secret() {
     let key_hex: String = got[0].key.iter().map(|b| format!("{b:02x}")).collect();
     assert!(!text.contains(&key_hex[..8]), "{text}");
     assert!(!text.contains("16, 32, 48"), "{text}");
+}
+
+// ------------------------------------ attach and save_new (console path)
+
+use crate::store::{AttachError, Attached, SaveError};
+
+/// `save_new` with the parts of a made-up pairing.
+fn sn(s: &mut Store<&mut Fake>, p: &Pairing) -> Result<Saved, SaveError<FakeError>> {
+    s.save_new(p.addr, p.key, p.key_type)
+}
+
+fn attach(f: &mut Fake) -> (Store<&mut Fake>, Attached) {
+    match Store::attach(f, region()) {
+        Ok(x) => x,
+        Err(e) => panic!("attach refused: {e:?}"),
+    }
+}
+
+/// Runs `Store::attach` (and a load) and checks that no write and no
+/// erase reached the flash and that every byte is the same. Returns the
+/// pads it found and its report, or its refusal.
+fn attach_untouched(
+    f: &mut Fake,
+    what: &str,
+) -> Result<(Vec<Pairing>, Attached), AttachError<FakeError>> {
+    let before = f.mem.clone();
+    let (w, e, ops) = (f.writes(), f.erases(), f.ops.len());
+    let got = match Store::attach(&mut *f, region()) {
+        Ok((mut s, rep)) => Ok((all(&mut s), rep)),
+        Err(e) => Err(e),
+    };
+    assert_eq!(
+        (f.writes() - w, f.erases() - e),
+        (0, 0),
+        "{what}: attach wrote or erased"
+    );
+    assert_eq!(f.ops.len(), ops, "{what}: attach called the flash");
+    assert!(f.mem == before, "{what}: attach changed a byte");
+    got
+}
+
+/// A store made the console's way: attach on a blank area, then
+/// `save_new` for each pad. The operation log starts empty.
+fn attached_with(pads: &[Pairing]) -> Fake {
+    let mut f = Fake::new();
+    let (mut s, _) = attach(&mut f);
+    for p in pads {
+        sn(&mut s, p).unwrap();
+    }
+    drop(s);
+    f.ops.clear();
+    f
+}
+
+/// Area 0 holds only the first `k` bytes (and half of the next one) of
+/// our first header: a power cut during the very first header write.
+fn cut_header(k: u64) -> Fake {
+    let mut f = Fake::new();
+    f.budget = Some(k);
+    assert!(Store::open(&mut f, region()).is_err());
+    f.revive();
+    f.ops.clear();
+    f
+}
+
+/// Four pads saved with `save`, then a fifth whose `save` is cut after
+/// `steps` steps (one header rewrite at start-up = 32 steps, the fifth
+/// record = 32, the forget marker for the oldest = 32, its wipe = 32).
+fn fifth_cut_at(steps: u64) -> Fake {
+    let four: Vec<Pairing> = (1..=4).map(|n| pad(n, 0)).collect();
+    let mut f = store_with(&four);
+    f.budget = Some(steps);
+    open_and(&mut f, |s| s.save(&pad(5, 0)).map(drop));
+    assert!(f.dead, "the cut happened");
+    f.revive();
+    f.ops.clear();
+    f
+}
+
+#[derive(Debug, PartialEq)]
+enum Want {
+    Taken,
+    Foreign,
+    TooMany,
+}
+
+/// Every kind of area, with what `attach` must say about it.
+fn area_kinds() -> Vec<(String, Fake, Want)> {
+    let mut v: Vec<(String, Fake, Want)> = Vec::new();
+    v.push(("blank".into(), Fake::new(), Want::Taken));
+    for k in 0..32 {
+        v.push((format!("cut first header {k}"), cut_header(k), Want::Taken));
+    }
+    for n in 0..=4u8 {
+        let pads: Vec<Pairing> = (1..=n).map(|k| pad(k, 0)).collect();
+        v.push((format!("{n} pads"), store_with(&pads), Want::Taken));
+        v.push((
+            format!("{n} pads, made by attach"),
+            attached_with(&pads),
+            Want::Taken,
+        ));
+    }
+    let mut d = store_with(&[pad(1, 0), pad(2, 0), pad(3, 0)]);
+    d.mem[0x9000 + 2 * 32 + 15] ^= 0x01;
+    d.mem[0x9000 + 3 * 32 + 30] = 0x00;
+    v.push(("damaged records".into(), d, Want::Taken));
+    let mut full = store_with(&[pad(1, 0), pad(2, 0)]);
+    {
+        let mut s = open(&mut full);
+        let mut k = 0u8;
+        while s.free_slots() > 0 {
+            k += 1;
+            s.save(&pad(3, k)).unwrap();
+        }
+    }
+    full.ops.clear();
+    v.push(("no free slot".into(), full, Want::Taken));
+    let live = [pad(1, 0), pad(2, 0), pad(3, 0)];
+    v.push(("nearly full".into(), nearly_full(&live), Want::Taken));
+    let mut spare = store_with(&live[..2]);
+    spare.mem[0xA000..0xA400].fill(0x3C);
+    v.push(("half-erased spare".into(), spare, Want::Taken));
+    // Every cut of a clean-up, both erase orders.
+    for backwards in [false, true] {
+        let base = nearly_full(&live);
+        let mut g = base.clone();
+        open_and(&mut g, |_| Ok(()));
+        let total = g.steps - base.steps;
+        for cut in 0..=total {
+            let mut f = base.clone();
+            f.erase_backwards = backwards;
+            f.budget = Some(cut);
+            open_and(&mut f, |_| Ok(()));
+            f.revive();
+            f.ops.clear();
+            v.push((
+                format!("clean-up cut at {cut} of {total}, backwards={backwards}"),
+                f,
+                Want::Taken,
+            ));
+        }
+    }
+    // Somebody else's data.
+    let foreign: [&dyn Fn(&mut Fake); 4] = [
+        &|f| f.mem[0x9000..0x9020].copy_from_slice(&[0xFE; 32]),
+        &|f| f.mem[0xA100] = 0x00,
+        &|f| f.mem[0x9800] = 0x7F,
+        &|f| f.mem[0x9000..0x9008].copy_from_slice(&[0xFE, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0]),
+    ];
+    for (k, make) in foreign.iter().enumerate() {
+        let mut f = Fake::new();
+        make(&mut f);
+        v.push((format!("foreign {k}"), f, Want::Foreign));
+    }
+    // A cut first header, but area 1 is not blank: not ours.
+    let mut f = cut_header(10);
+    f.mem[0xA000] = 0x00;
+    v.push(("cut header, area 1 used".into(), f, Want::Foreign));
+    // Five live keys: the fifth record is in, the marker for the oldest
+    // was cut. The oldest is hidden and would come back.
+    let f = fifth_cut_at(64);
+    assert_eq!(read_only(&f).1.dropped, 1);
+    v.push(("five live keys".into(), f, Want::TooMany));
+    // The marker for the oldest is in, only its wipe was cut: the oldest
+    // is dropped AND forgotten, so nothing can come back.
+    let f = fifth_cut_at(96);
+    assert_eq!(read_only(&f).1.dropped, 1);
+    v.push(("dropped and forgotten".into(), f, Want::Taken));
+    v
+}
+
+/// `attach` never writes and never erases, on any kind of area: counted
+/// calls and compared bytes. Where it takes the area, it finds exactly
+/// what `read_pairings` and `Store::open` find; it refuses only foreign
+/// data and a hidden fifth pad.
+#[test]
+fn attach_never_writes_or_erases_whatever_the_area_holds() {
+    let kinds = area_kinds();
+    assert!(kinds.len() > 100, "{}", kinds.len());
+    let mut taken = 0;
+    for (what, mut f, want) in kinds {
+        let got = attach_untouched(&mut f, &what);
+        match (&got, &want) {
+            (Ok((pads, _)), Want::Taken) => {
+                assert_eq!(*pads, read_only(&f).0, "{what}: read_pairings differs");
+                assert_eq!(*pads, open_copy(&f), "{what}: Store::open differs");
+                taken += 1;
+            }
+            (Err(AttachError::Foreign), Want::Foreign) => {}
+            (Err(AttachError::TooMany), Want::TooMany) => {}
+            (Ok(_), w) => panic!("{what}: taken, wanted {w:?}"),
+            (Err(e), w) => panic!("{what}: {e:?}, wanted {w:?}"),
+        }
+        outside_untouched(&f);
+    }
+    assert!(taken > 100, "{taken}");
+}
+
+/// What `attach` reports about the things `open` would tidy, and that it
+/// leaves them as they are.
+#[test]
+fn attach_reports_what_open_would_tidy_and_leaves_it() {
+    let mut f = Fake::new();
+    let (s, rep) = attach(&mut f);
+    assert_eq!((s.count(), s.free_slots()), (0, SLOTS));
+    drop(s);
+    assert_eq!(
+        rep,
+        Attached {
+            fresh: true,
+            generation: 1,
+            ..Attached::default()
+        }
+    );
+    let mut f = cut_header(7);
+    let (_, rep) = attach(&mut f);
+    assert!(rep.fresh && rep.cut_header);
+    let mut f = store_with(&[pad(1, 0), pad(2, 0)]);
+    f.mem[0xA000..0xA400].fill(0x3C);
+    let (s, rep) = attach(&mut f);
+    assert_eq!(s.count(), 2);
+    drop(s);
+    assert!(rep.spare_dirty && !rep.fresh && rep.damaged == 0);
+    assert!(f.mem[0xA000..0xA400].iter().all(|&b| b == 0x3C), "left");
+    let mut f = store_with(&[pad(1, 0), pad(2, 0), pad(3, 0)]);
+    f.mem[0x9000 + 2 * 32 + 15] ^= 0x01;
+    let (s, rep) = attach(&mut f);
+    assert_eq!((s.count(), rep.damaged), (2, 1));
+    drop(s);
+    assert!(f.ops.is_empty());
+    // A clean-up that got as far as the new header: area 1 is active,
+    // the old area 0 still has data.
+    let live = [pad(1, 0), pad(2, 0), pad(3, 0)];
+    let base = nearly_full(&live);
+    let mut g = base.clone();
+    open_and(&mut g, |_| Ok(()));
+    let total = g.steps - base.steps;
+    // The last erase (16 pieces of the old area) is cut half way.
+    let mut f = base.clone();
+    f.budget = Some(total - 8);
+    open_and(&mut f, |_| Ok(()));
+    f.revive();
+    f.ops.clear();
+    let (mut s, rep) = attach(&mut f);
+    assert_eq!(all(&mut s), live.to_vec());
+    drop(s);
+    assert!(rep.spare_dirty && rep.generation == 2, "{rep:?}");
+    assert!(f.ops.is_empty());
+}
+
+/// A board flashed from zero: the first pair writes the header, then
+/// the record (2 writes, no erase), and every reader finds the pad.
+#[test]
+fn the_first_pair_on_a_blank_area_writes_the_header_then_the_record() {
+    let p = pad(1, 0);
+    let mut f = Fake::new();
+    let (mut s, _) = attach(&mut f);
+    // Forgetting on a blank area writes nothing (no header either).
+    assert_eq!(s.forget(p.addr), Ok(false));
+    assert_eq!(s.forget_all(), Ok(0));
+    assert_eq!(sn(&mut s, &p), Ok(Saved::New { evicted: None }));
+    assert_eq!(s.count(), 1);
+    drop(s);
+    assert_eq!((f.writes(), f.erases()), (2, 0));
+    assert_eq!(f.ops[0].1, 0x9000, "the header first");
+    assert_eq!(&f.mem[0x9000..0x9004], b"PADS");
+    assert_eq!(read_only(&f).0, vec![p]);
+    assert_eq!(open_copy(&f), vec![p]);
+    let (mut s, rep) = attach(&mut f);
+    assert!(!rep.fresh);
+    assert_eq!(all(&mut s), vec![p]);
+    drop(s);
+    outside_untouched(&f);
+    // The same over each cut first header: the header is written whole
+    // over its start, without an erase.
+    for k in 0..32 {
+        let mut f = cut_header(k);
+        let (mut s, _) = attach(&mut f);
+        assert_eq!(sn(&mut s, &p), Ok(Saved::New { evicted: None }), "{k}");
+        drop(s);
+        assert_eq!((f.writes(), f.erases()), (2, 0), "{k}");
+        assert_eq!(read_only(&f).0, vec![p], "{k}");
+        let mut g = f.clone();
+        let (_, rep) = Store::open(&mut g, region()).unwrap();
+        assert!(
+            !rep.repaired && !rep.created,
+            "{k}: open sees a good header"
+        );
+    }
+    // The old `save` on a fresh attached store also writes the header
+    // first.
+    let mut f = Fake::new();
+    let (mut s, _) = attach(&mut f);
+    assert_eq!(s.save(&p), Ok(Saved::New { evicted: None }));
+    drop(s);
+    assert_eq!(read_only(&f).0, vec![p]);
+}
+
+/// A fifth address is refused before anything is written; the same
+/// pairing again writes nothing either.
+#[test]
+fn save_new_refuses_a_fifth_pad_and_writes_nothing() {
+    let four: Vec<Pairing> = (1..=4).map(|n| pad(n, 0)).collect();
+    let mut f = attached_with(&four);
+    let before = f.mem.clone();
+    let (mut s, _) = attach(&mut f);
+    let free = s.free_slots();
+    assert_eq!(sn(&mut s, &pad(5, 0)), Err(SaveError::Full));
+    assert_eq!(sn(&mut s, &pad(5, 0)), Err(SaveError::Full), "again");
+    assert_eq!(sn(&mut s, &pad(3, 0)), Ok(Saved::Unchanged));
+    assert_eq!((s.count(), s.free_slots()), (4, free));
+    drop(s);
+    assert!(f.ops.is_empty(), "something was written");
+    assert!(f.mem == before);
+    assert_eq!(read_only(&f).0, four, "nobody was pushed out");
+    // The same on a store made by `open` + `save`.
+    let mut f = store_with(&four);
+    let (mut s, _) = attach(&mut f);
+    assert_eq!(sn(&mut s, &pad(5, 0)), Err(SaveError::Full));
+    drop(s);
+    assert!(f.ops.is_empty());
+    // After a forget there is room again.
+    let (mut s, _) = attach(&mut f);
+    assert!(s.forget(pad(1, 0).addr).unwrap());
+    assert_eq!(sn(&mut s, &pad(5, 0)), Ok(Saved::New { evicted: None }));
+    drop(s);
+    assert_eq!(f.erases(), 0);
+    assert_eq!(
+        read_only(&f).0,
+        vec![pad(2, 0), pad(3, 0), pad(4, 0), pad(5, 0)]
+    );
+}
+
+/// A new key for a saved pad is a replace, also with four saved: the
+/// new record, then the old one zeroed (2 writes, no erase).
+#[test]
+fn save_new_replaces_a_saved_pad_when_the_list_is_full() {
+    let four: Vec<Pairing> = (1..=4).map(|n| pad(n, 0)).collect();
+    let mut f = attached_with(&four);
+    let (mut s, _) = attach(&mut f);
+    assert_eq!(sn(&mut s, &pad(2, 1)), Ok(Saved::Replaced));
+    drop(s);
+    assert_eq!((f.writes(), f.erases()), (2, 0));
+    assert_eq!(key_records(&f, pad(2, 0).addr), 1, "the old key is gone");
+    let want = vec![pad(1, 0), pad(3, 0), pad(4, 0), pad(2, 1)];
+    assert_eq!(read_only(&f).0, want);
+    assert_eq!(open_copy(&f), want);
+    // A new key type alone is a change too.
+    let mut q = pad(3, 0);
+    q.key_type = 0x05;
+    let (mut s, _) = attach(&mut f);
+    assert_eq!(sn(&mut s, &q), Ok(Saved::Replaced));
+    drop(s);
+    assert_eq!(read_only(&f).0, vec![pad(1, 0), pad(4, 0), pad(2, 1), q]);
+}
+
+/// When the record slots are used up, `save_new` says NoRoom and writes
+/// nothing, for a new pad and for a new key; a forget still works (by
+/// the wipe alone, as today); and nothing is ever erased.
+#[test]
+fn save_new_says_no_room_when_the_slots_are_used_up() {
+    let mut f = attached_with(&[pad(1, 0), pad(2, 0)]);
+    let (mut s, _) = attach(&mut f);
+    let mut v = 0u8;
+    let last = loop {
+        v += 1;
+        match sn(&mut s, &pad(1, v)) {
+            Ok(Saved::Replaced) => {}
+            Err(SaveError::NoRoom) => break pad(1, v - 1),
+            other => panic!("{other:?}"),
+        }
+    };
+    assert_eq!(u32::from(v) - 1, SLOTS - 2, "every slot was used");
+    assert_eq!(s.free_slots(), 0);
+    drop(s);
+    let before = f.mem.clone();
+    let ops = f.ops.len();
+    let (mut s, rep) = attach(&mut f);
+    assert!(!rep.fresh && !rep.spare_dirty);
+    assert_eq!(s.free_slots(), 0);
+    assert_eq!(sn(&mut s, &pad(3, 0)), Err(SaveError::NoRoom), "new pad");
+    assert_eq!(sn(&mut s, &pad(2, 1)), Err(SaveError::NoRoom), "new key");
+    assert_eq!(sn(&mut s, &last), Ok(Saved::Unchanged));
+    assert_eq!(s.count(), 2);
+    drop(s);
+    assert_eq!(f.ops.len(), ops, "something was written");
+    assert!(f.mem == before);
+    // Forget: no room for the marker, but the wipe alone forgets it
+    // (and `forget` says so: Ok(true), as today).
+    let (mut s, _) = attach(&mut f);
+    assert_eq!(s.forget(pad(2, 0).addr), Ok(true));
+    drop(s);
+    assert_eq!(key_records(&f, pad(2, 0).addr), 0);
+    assert_eq!(read_only(&f).0, vec![last]);
+    assert_eq!(open_copy(&f), vec![last]);
+    assert_eq!(f.erases(), 0);
+    outside_untouched(&f);
+}
+
+/// Forget after attach: the marker and the wipe (2 writes, no erase),
+/// and every reader agrees.
+#[test]
+fn forget_after_attach() {
+    let pads = [pad(1, 0), pad(2, 0), pad(3, 0)];
+    let mut f = attached_with(&pads);
+    let (mut s, _) = attach(&mut f);
+    assert_eq!(s.forget(pad(2, 0).addr), Ok(true));
+    assert_eq!(s.forget(pad(9, 0).addr), Ok(false), "never saved");
+    assert_eq!(s.count(), 2);
+    drop(s);
+    assert_eq!((f.writes(), f.erases()), (2, 0));
+    assert_eq!(
+        key_records(&f, pad(2, 0).addr),
+        0,
+        "the key bytes are wiped"
+    );
+    let want = vec![pad(1, 0), pad(3, 0)];
+    assert_eq!(read_only(&f).0, want);
+    assert_eq!(open_copy(&f), want);
+    let (mut s, _) = attach(&mut f);
+    assert_eq!(all(&mut s), want);
+    drop(s);
+    outside_untouched(&f);
+}
+
+/// After a cut: `attach` takes the area (never refuses, writes nothing),
+/// finds what `read_pairings` and `Store::open` find, matches `expect`,
+/// and a `save_new` still works.
+fn check_attached(f: &mut Fake, expect: &Expect, what: &str) {
+    let got = match attach_untouched(f, what) {
+        Ok((v, _)) => v,
+        Err(e) => panic!("{what}: attach refused: {e:?}"),
+    };
+    assert_eq!(read_only(f).0, got, "{what}: read_pairings differs");
+    assert_eq!(open_copy(f), got, "{what}: Store::open differs");
+    let mut seen = Vec::new();
+    for p in &got {
+        assert!(
+            expect.allowed.contains(p),
+            "{what}: a wrong or unexpected key"
+        );
+        assert!(!seen.contains(&p.addr), "{what}: one address twice");
+        seen.push(p.addr);
+    }
+    for a in &expect.required {
+        assert!(seen.contains(a), "{what}: a saved pairing was lost");
+    }
+    assert!(got.len() <= MAX_PADS, "{what}");
+    // It still works: one more pad, or a new key for the first one.
+    let more = if got.len() < MAX_PADS {
+        pad(99, 9)
+    } else {
+        Pairing {
+            key: pad(99, 9).key,
+            ..got[0]
+        }
+    };
+    let (mut s, _) = attach(f);
+    sn(&mut s, &more).unwrap_or_else(|e| panic!("{what}: save after: {e:?}"));
+    drop(s);
+    assert!(read_only(f).0.contains(&more), "{what}");
+}
+
+/// Like `cut_everywhere`, but the console's way: attach, then `op`; and
+/// no erase may happen at all.
+fn cut_everywhere_attached(setup: &dyn Fn() -> Fake, op: &dyn Fn(&mut Fake), expect: &Expect) {
+    let mut f = setup();
+    let start = f.steps;
+    op(&mut f);
+    let total = f.steps - start;
+    assert!(!f.dead);
+    assert!(total > 0, "the operation wrote nothing: no cut to test");
+    assert_eq!(f.erases(), 0, "an erase");
+    check_attached(&mut f, expect, "no cut");
+    for cut in 0..=total {
+        let mut f = setup();
+        f.budget = Some(cut);
+        op(&mut f);
+        f.revive();
+        assert_eq!(f.erases(), 0, "an erase");
+        let what = format!("cut after {cut} of {total} steps");
+        check_attached(&mut f, expect, &what);
+        outside_untouched(&f);
+    }
+}
+
+fn attach_and(
+    f: &mut Fake,
+    work: impl FnOnce(&mut Store<&mut Fake>) -> Result<(), SaveError<FakeError>>,
+) {
+    if let Ok((mut s, _)) = Store::attach(f, region()) {
+        let _ = work(&mut s);
+    }
+}
+
+#[test]
+fn power_loss_during_the_first_pair_on_a_blank_area() {
+    let p = pad(1, 0);
+    let expect = Expect {
+        allowed: vec![p],
+        required: vec![],
+    };
+    let op = |f: &mut Fake| attach_and(f, |s| sn(s, &p).map(drop));
+    cut_everywhere_attached(&Fake::new, &op, &expect);
+    // And over a first header cut before.
+    cut_everywhere_attached(&|| cut_header(13), &op, &expect);
+}
+
+#[test]
+fn power_loss_while_save_new_adds_a_pad() {
+    let (a, b, c) = (pad(1, 0), pad(2, 0), pad(3, 0));
+    cut_everywhere_attached(
+        &|| attached_with(&[a, b]),
+        &|f| attach_and(f, |s| sn(s, &c).map(drop)),
+        &Expect {
+            allowed: vec![a, b, c],
+            required: vec![a.addr, b.addr],
+        },
+    );
+}
+
+#[test]
+fn power_loss_while_save_new_replaces_in_a_full_list() {
+    let four: Vec<Pairing> = (1..=4).map(|n| pad(n, 0)).collect();
+    let mut allowed = four.clone();
+    allowed.push(pad(2, 1));
+    cut_everywhere_attached(
+        &|| attached_with(&four),
+        &|f| attach_and(f, |s| sn(s, &pad(2, 1)).map(drop)),
+        &Expect {
+            allowed,
+            required: four.iter().map(|p| p.addr).collect(),
+        },
+    );
+}
+
+#[test]
+fn power_loss_while_forgetting_after_attach() {
+    let pads = [pad(1, 0), pad(2, 0), pad(3, 0)];
+    cut_everywhere_attached(
+        &|| attached_with(&pads),
+        &|f| {
+            attach_and(f, |s| {
+                let _ = s.forget(pad(2, 0).addr);
+                Ok(())
+            })
+        },
+        &Expect {
+            allowed: pads.to_vec(),
+            required: vec![pads[0].addr, pads[2].addr],
+        },
+    );
+}
+
+/// Random lives of the console's kind (attach, then save_new or forget)
+/// with power cuts at random moments. After every step: attach takes
+/// the area without writing, finds what read_pairings and Store::open
+/// find, and that is exactly what a simple model says (the old or the
+/// new list after a cut). Never more than four pads, never one pushed
+/// out, never an erase.
+#[test]
+fn an_attached_life_never_erases_never_evicts_and_matches_a_model() {
+    let mut rng = Rng(0x00C0_FFEE_D00D_F00D);
+    let mut fulls = 0;
+    let mut no_rooms = 0;
+    for history in 0..30 {
+        let mut f = Fake::new();
+        let mut model: Vec<Pairing> = Vec::new();
+        for step in 0..300 {
+            let what = rng.next() % 100;
+            let n = (rng.next() % 6) as u8;
+            let v = (rng.next() % 3) as u8;
+            if rng.next().is_multiple_of(8) {
+                f.budget = Some(rng.next() % 100);
+            }
+            let old = model.clone();
+            // What the list becomes if the step goes through.
+            let mut new = model.clone();
+            let (mut s, _) = attach(&mut f);
+            if what < 65 {
+                let p = pad(n, v);
+                let r = sn(&mut s, &p);
+                let at = new.iter().position(|q| q.addr == p.addr);
+                match at {
+                    Some(i) if new[i] == p => {}
+                    Some(i) => {
+                        new.remove(i);
+                        new.push(p);
+                    }
+                    None if new.len() == MAX_PADS => {}
+                    None => new.push(p),
+                }
+                match r {
+                    Err(SaveError::Full) => {
+                        assert!(at.is_none() && old.len() == MAX_PADS);
+                        fulls += 1;
+                    }
+                    Err(SaveError::NoRoom) => {
+                        new = old.clone();
+                        no_rooms += 1;
+                    }
+                    _ => {}
+                }
+            } else {
+                let a = pad(n, 0).addr;
+                let _ = s.forget(a);
+                new.retain(|q| q.addr != a);
+            }
+            drop(s);
+            let cut = f.dead;
+            f.revive();
+            let label = format!("history {history} step {step}");
+            let (got, _) = attach_untouched(&mut f, &label)
+                .unwrap_or_else(|e| panic!("{label}: attach refused: {e:?}"));
+            assert_eq!(got, read_only(&f).0, "{label}");
+            assert_eq!(got, open_copy(&f), "{label}");
+            if cut {
+                assert!(got == old || got == new, "{label}: neither old nor new");
+            } else {
+                assert!(got == new, "{label}: not what the model says");
+            }
+            assert!(got.len() <= MAX_PADS);
+            model = got;
+        }
+        assert_eq!(f.erases(), 0, "history {history}: an erase");
+        outside_untouched(&f);
+    }
+    assert!(fulls > 50 && no_rooms > 0, "{fulls} {no_rooms}");
+}
+
+/// The new reports and errors carry no address and no key, and each
+/// error has its own word.
+#[test]
+fn attach_and_save_new_outputs_show_no_secret() {
+    let f = attached_with(&[pad(9, 1)]);
+    let mut g = f.clone();
+    let (s, rep) = attach(&mut g);
+    drop(s);
+    let errs = [
+        format!("{:?}", SaveError::<FakeError>::Full),
+        format!("{:?}", SaveError::<FakeError>::NoRoom),
+        format!("{:?}", AttachError::<FakeError>::TooMany),
+        format!("{rep:?}"),
+    ];
+    let key_hex: String = pad(9, 1).key.iter().map(|b| format!("{b:02x}")).collect();
+    for t in &errs {
+        assert!(!t.contains(&key_hex[..8]) && !t.contains("16, 32, 48"));
+    }
+    let words = [
+        SaveError::<()>::Full.word(),
+        SaveError::<()>::NoRoom.word(),
+        SaveError::<()>::Flash(()).word(),
+        SaveError::<()>::OutOfBounds.word(),
+        SaveError::<()>::Verify.word(),
+    ];
+    for (i, w) in words.iter().enumerate() {
+        assert!(!words[i + 1..].contains(w), "{w}");
+    }
+    let words = [
+        AttachError::<()>::Flash(()).word(),
+        AttachError::<()>::OutOfBounds.word(),
+        AttachError::<()>::Foreign.word(),
+        AttachError::<()>::TooMany.word(),
+    ];
+    for (i, w) in words.iter().enumerate() {
+        assert!(!words[i + 1..].contains(w), "{w}");
+    }
 }

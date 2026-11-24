@@ -17,13 +17,13 @@
 //!   5 s when it changed);
 //! - plays an injected pad for testing (debug link kind 0x08,
 //!   `boardctl pad`): pad-host's own decoder, wake rule and press latch
-//!   run as for the real pad, nothing goes over the radio.
+//!   run as for the real pad, nothing goes over the radio;
+//! - with feature `pair`, also serves UI-driven pairing and forgetting
+//!   (`serve_pairing` in `pair.rs`) through the gated pairing window.
 //!
-//! What it never does: search for devices, become discoverable, start a
-//! connection, pair, or write a key. Every packet to the controller
-//! passes the gate (`hci_rules::Gate`, src/hci.rs), which knows the saved
-//! pads' addresses (read once at start, read only: src/pairing.rs) and
-//! lets an accept or a key reply go only to one of them.
+//! Without `pair`, it never searches, never becomes discoverable, never
+//! starts a connection, and never writes a key. Every packet to the
+//! controller passes the gate (`hci_rules::Gate`, src/hci.rs).
 //!
 //! # Where the host runs
 //!
@@ -44,6 +44,9 @@ use pad_host::{Mode, PadEvent, PadHost, Radio, TX_MAX, inject};
 
 use crate::board::CydPad;
 use crate::hci::{HciPort, SendError};
+
+#[cfg(feature = "pair")]
+mod pair;
 
 unsafe extern "C" {
     // In the controller library: the mode it runs in (1 Low Energy only,
@@ -222,6 +225,10 @@ pub struct PadRadio {
     /// The "pad" log line: when next, and a sum of the last one logged.
     next_line_us: u64,
     last_line: u32,
+    #[cfg(feature = "pair")]
+    pairing_area: crate::pairing::PairingArea,
+    #[cfg(feature = "pair")]
+    pair_window_open: bool,
 }
 
 /// The host's time: ms since start.
@@ -274,9 +281,18 @@ impl PadRadio {
             rps: 0,
             next_line_us: now + LINE_US,
             last_line: 0,
+            #[cfg(feature = "pair")]
+            pairing_area: crate::pairing::PairingArea::Unavailable,
+            #[cfg(feature = "pair")]
+            pair_window_open: false,
         };
         info!(
-            "pad: host starting: reconnect only, saved pads={} (gate allows {}), page scan only after the set-up",
+            "pad: host starting: {}, saved pads={} (gate allows {}), page scan only after the set-up",
+            if cfg!(feature = "pair") {
+                "reconnect only (pairing on request)"
+            } else {
+                "reconnect only"
+            },
             pads.saved_pads(),
             r.gate.saved()
         );
@@ -299,6 +315,8 @@ impl PadRadio {
         let Some(host) = pad.host.as_deref_mut() else {
             return;
         };
+        #[cfg(feature = "pair")]
+        let found_before = host.pair_found_count();
         self.queue
             .drain(&mut self.port, &self.gate, &mut self.counters);
         let mut busy = false;
@@ -320,7 +338,10 @@ impl PadRadio {
                 // The gate notes a saved pad's link that comes up or ends
                 // (its handle: the only one a supervision timeout may go
                 // to), before the host answers.
+                #[cfg(not(feature = "pair"))]
                 self.gate.observe(&buf[..len]);
+                #[cfg(feature = "pair")]
+                self.gate.observe_at(&buf[..len], ms(now));
                 let mut out = Out {
                     port: &mut self.port,
                     gate: &self.gate,
@@ -363,6 +384,8 @@ impl PadRadio {
             busy = true;
         }
         if busy || now >= self.next_tick_us {
+            #[cfg(feature = "pair")]
+            self.gate.expire(ms(now));
             let mut out = Out {
                 port: &mut self.port,
                 gate: &self.gate,
@@ -373,8 +396,12 @@ impl PadRadio {
                 pad.wake = true;
                 self.counters.wakes += 1;
             }
+            #[cfg(feature = "pair")]
+            let window_busy = host.pair_phase() != pad_host::PairPhase::Off;
+            #[cfg(not(feature = "pair"))]
+            let window_busy = false;
             self.next_tick_us = now
-                + if host.waiting() {
+                + if host.waiting() && !window_busy {
                     TICK_IDLE_US
                 } else {
                     TICK_BUSY_US
@@ -412,6 +439,10 @@ impl PadRadio {
                     if b.charging { " charging" } else { "" }
                 ),
             }
+        }
+        #[cfg(feature = "pair")]
+        if host.pair_found_count() != found_before {
+            pad.wake = true;
         }
         // Reports a second.
         let reports = host.counters().reports;

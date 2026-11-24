@@ -23,6 +23,10 @@ pub enum Hints {
     None,
     /// "<> MOVE   A START".
     Games,
+    /// "<> MOVE   A OPEN": the SETTINGS tile is chosen (feature
+    /// `settings`, placement A).
+    #[cfg(feature = "settings")]
+    Open,
 }
 
 /// What the bar shows.
@@ -81,6 +85,10 @@ pub fn draw(status: &Status, f: &mut Frame) {
     // Hints, left of the gear.
     if status.hints == Hints::Games {
         gfx::text_right(f, HINTS_END, text_y, "<> MOVE  A START", MUTE);
+    }
+    #[cfg(feature = "settings")]
+    if status.hints == Hints::Open {
+        gfx::text_right(f, HINTS_END, text_y, "<> MOVE  A OPEN", MUTE);
     }
 
     // The gear, at the right end.

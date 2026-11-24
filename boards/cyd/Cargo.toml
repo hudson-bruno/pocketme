@@ -132,6 +132,19 @@ boot-gather = ["console-core/boot-gather"]
 # the owner's builds since 2026-11-23 (the owner's decision).
 game-flash = []
 
+# Settings screen and on-console classic Bluetooth gamepad pairing
+# (placement E: GAMEPADS and SETTINGS tiles on Home plus quick-menu
+# shortcuts). Appends 32-byte records to 0x9000..0xB000 only when the
+# user pairs or forgets (wiping older records for the same address);
+# never erases flash.
+pair = [
+  "pad",
+  "store",
+  "console-core/settings",
+  "hci-rules/pair",
+  "pad-host/pair",
+]
+
 [dependencies]
 # The project's own crates.
 board-api     = { path = "../../crates/board-api" }

@@ -11,6 +11,10 @@
 //! [`Store::load`](crate::Store::load), in the same order (the tests
 //! check this against random histories). What `open` would repair or
 //! clean up is left as it is and only counted.
+//!
+//! [`Store::attach`](crate::Store::attach) reads the same way and finds
+//! the same pads, but hands back a `Store` that can write later (when
+//! the user pairs or forgets a pad).
 
 use core::fmt;
 

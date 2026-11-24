@@ -11,8 +11,9 @@
 //! (plain `core`, no dependencies of its own), so the very same file
 //! builds for the ESP32 and for the PC.
 //!
-//! Starting games ([`Board::start_game`]), pad motion ([`Pad::motion`])
-//! and lent RAM ([`Board::parts_and_lent`], see [`lent`]) were added
+//! Starting games ([`Board::start_game`]), pad motion ([`Pad::motion`]),
+//! lent RAM ([`Board::parts_and_lent`], see [`lent`]) and pairing a pad
+//! from the console ([`Pad::pair_request`], see [`pair`]) were added
 //! later, as methods with default bodies: a board written before them
 //! compiles unchanged.
 //!
@@ -30,11 +31,14 @@ pub mod input;
 pub mod lent;
 pub mod link;
 pub mod optional;
+pub mod pair;
 pub mod screen;
 pub mod time;
 
 #[cfg(feature = "testing")]
 pub mod fake;
+#[cfg(feature = "testing")]
+mod fake_radio;
 
 pub use absent::Absent;
 pub use files::{DirEntry, Files, FsError};
@@ -50,6 +54,7 @@ pub use optional::Beacon;
 pub use optional::Gps;
 #[cfg(feature = "bt-classic")]
 pub use optional::Hci;
+pub use pair::{FoundPad, PAD_NAME_MAX, PAIR_HOLD_MS, PairFail, PairReq, PairState, SavedPad};
 pub use screen::{ByteOrder, Dir, Indexed, PixelSource, Screen, SendReport};
 pub use time::{Clock, Wake};
 

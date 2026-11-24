@@ -11,6 +11,8 @@
 //! * [`link`]: the debug link over TCP.
 //! * [`picture`]: PNG files and fingerprints, no outside library.
 //! * [`settings`]: the brightness kept in the store across restarts.
+//! * [`fake_radio`]: the pairing radio's stand-in (board-api's scripted
+//!   fake, shared by path).
 //! * `window` (feature `window`): the SDL3 window.
 
 pub mod board;
@@ -24,6 +26,21 @@ pub mod script;
 pub mod settings;
 #[cfg(feature = "window")]
 pub mod window;
+
+/// The pad's pairing radio: board-api's scripted fake radio
+/// (`crates/board-api/src/fake_radio.rs`), compiled here from its source.
+/// board-api exports it only with its `testing` feature, which is for
+/// tests only, so the simulator takes the same file by path instead of
+/// keeping a copy that could drift. The file names its types through
+/// `crate::pair`, hence the small module below.
+#[path = "../../../crates/board-api/src/fake_radio.rs"]
+#[allow(rustdoc::broken_intra_doc_links)]
+pub mod fake_radio;
+
+/// What `fake_radio` reaches as `crate::pair`: board-api's pairing types.
+mod pair {
+    pub use board_api::pair::{FoundPad, PairFail, PairReq, PairState, SavedPad};
+}
 
 /// The sample card folder that comes with the simulator: one folder for
 /// each linked game (see `games`), with its tile picture. See the README.

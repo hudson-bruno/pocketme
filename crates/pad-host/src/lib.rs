@@ -12,6 +12,14 @@
 //! pad-proto's `Config::reconnect_only`). Every failure ends the link and
 //! comes back to "waiting".
 //!
+//! With the crate feature `pair` the board may also open a pairing window
+//! when the user asks for one ([`PadHost::pair_begin`]): the host searches,
+//! lists the gamepads heard, pairs only the one the user picks, and hands
+//! its new key to the board once ([`PadHost::take_pending_save`]); the
+//! board writes the flash. A saved pad can be forgotten
+//! ([`PadHost::forget`]). Outside a window everything is as above. See
+//! the `pairing` module.
+//!
 //! # How the board uses it
 //!
 //! The board only moves bytes. Once:
@@ -53,6 +61,8 @@
 mod decoder;
 pub mod inject;
 pub mod map;
+#[cfg(feature = "pair")]
+mod pairing;
 
 use core::fmt::{self, Write as _};
 
@@ -66,6 +76,10 @@ use pad_view::startup::{Channel, SWITCH_PACKET_LEN};
 
 pub use decoder::Mode;
 pub use map::Battery;
+#[cfg(feature = "pair")]
+pub use pad_proto::{PAIR_WINDOW_MAX, PairEnd, PairError};
+#[cfg(feature = "pair")]
+pub use pairing::{FOUND_MAX, PadAddr, PairPhase, PairRefused, PendingSave};
 
 /// The longest packet [`PadHost::packet`] needs to take: an ACL packet
 /// with the ESP32 controller's 1021 data bytes, its 4 header bytes and
@@ -252,6 +266,10 @@ struct State {
     /// pad-proto's host said the link ended (counted in `follow`).
     link_ended: bool,
     counters: Counters,
+    /// The pairing window's side (found pads, the new key, the link's
+    /// address).
+    #[cfg(feature = "pair")]
+    pair: pairing::PairSide,
 }
 
 impl Default for PadHost {
@@ -308,6 +326,8 @@ impl PadHost {
                     events_lost: 0,
                     silent: 0,
                 },
+                #[cfg(feature = "pair")]
+                pair: pairing::PairSide::NONE,
             },
         }
     }
@@ -372,6 +392,10 @@ impl PadHost {
     pub fn packet(&mut self, now_ms: u64, bytes: &[u8], radio: &mut impl Radio) {
         self.st.set_time(now_ms);
         self.st.peek(bytes, self.host.linked());
+        #[cfg(feature = "pair")]
+        {
+            self.st.pair.target = self.host.pair_target();
+        }
         let mut io = Glue {
             radio,
             st: &mut self.st,
@@ -544,6 +568,10 @@ impl PadHost {
         if self.host.linked() || self.host.phase_name() == "accepting" {
             return false;
         }
+        #[cfg(feature = "pair")]
+        if self.window_busy() {
+            return false;
+        }
         if self.st.injecting {
             self.inject_end(now_ms, 0x13, radio);
         }
@@ -632,10 +660,17 @@ impl PadHost {
     }
 
     /// After every call into pad-proto's host: a real pad's call ends an
-    /// injection, and each call's furthest stage is counted.
+    /// injection, and each call's furthest stage is counted. A pairing
+    /// window's search, call and pairing are not a call: they count as
+    /// no stage (a pad that paired counts from the moment it is saved).
     fn follow(&mut self, radio: &mut impl Radio) {
+        #[cfg(feature = "pair")]
+        let in_window = self.sync_pair();
+        #[cfg(not(feature = "pair"))]
+        let in_window = false;
         let phase = self.host.phase_name();
         let stage = match phase {
+            _ if in_window => None,
             "init" | "waiting" | "pause" => None,
             "accepting" | "paging" | "cancelling" | "inquiry" => Some(STAGE_ACCEPT),
             "opening" => Some(STAGE_OPEN),
@@ -730,10 +765,19 @@ impl State {
         }
         match hci::parse_event(&p[1..]) {
             Some(hci::Event::ConnectionComplete {
-                status: 0, handle, ..
+                status: 0,
+                handle,
+                addr,
+                ..
             }) if !linked => {
                 self.link_handle = Some(handle);
                 self.reason = None;
+                #[cfg(feature = "pair")]
+                {
+                    self.pair.link_addr = Some(addr);
+                }
+                #[cfg(not(feature = "pair"))]
+                let _ = addr;
             }
             Some(hci::Event::DisconnectionComplete {
                 status: 0,
@@ -944,6 +988,19 @@ impl<R: Radio> Io for Glue<'_, R> {
             UiEvent::Report(r) => self.st.on_report(r, self.radio),
             UiEvent::Control(m) => self.st.on_control(m, self.radio),
             UiEvent::Disconnected => self.st.on_gone(self.radio),
+            // A gamepad heard in a pairing window: listed, name not logged
+            // (pad-proto logs the rest).
+            #[cfg(feature = "pair")]
+            UiEvent::Found { addr, name, .. } => {
+                if self.st.pair.note_found(addr, name) {
+                    self.st.wake = true;
+                }
+            }
+            // Another crate in the same build may turn on pad-proto's
+            // `pair` without this crate's: its events are ignored then.
+            #[cfg(not(feature = "pair"))]
+            #[allow(unreachable_patterns)]
+            _ => {}
         }
     }
 
@@ -952,6 +1009,30 @@ impl<R: Radio> Io for Glue<'_, R> {
     }
 
     fn key_change(&mut self, change: KeyChange) {
+        // A pairing window's new key: taken only while the window pairs,
+        // only for the pad picked, only of a "just works" type. Held for
+        // the board, which writes the flash.
+        #[cfg(feature = "pair")]
+        if let KeyChange::Save {
+            addr,
+            key,
+            key_type,
+        } = change
+            && self.st.pair.target == Some(addr)
+            && matches!(key_type, 0x04 | 0x07)
+        {
+            self.st.pair.hold(addr, key, key_type);
+            self.st.wake = true;
+            self.radio.log(
+                "PAD-HOST",
+                format_args!(
+                    "new pairing held for the store addr={} key_type={:#04x} (key never printed)",
+                    PadAddr(addr),
+                    key_type
+                ),
+            );
+            return;
+        }
         // Reconnect-only never changes keys; if it ever did, nothing is
         // stored, and the log says so without the key or the address.
         let what = match change {

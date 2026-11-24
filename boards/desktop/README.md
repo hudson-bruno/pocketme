@@ -215,6 +215,33 @@ without the feature: the plain boot screen, no BOOT ANIM line, and
 not in the default set, but it is in the owner's builds since the
 owner approved the animation on the board (2026-11-19).
 
+## The settings app
+
+The simulator is built with console-core's feature `settings` (on in
+the default features). Placement E puts a `GAMEPADS` tile before the
+games and a `SETTINGS` tile after them (plus shortcuts in the quick
+menu): `SETTINGS` holds brightness, the boot animation (with
+`boot-gather`), and About; `GAMEPADS` shows Player 1 (and up to four
+entries when flash holds older pads), `+ PAIR PLAYER 1`, and forgetting.
+Selecting `+ PAIR PLAYER 1` or confirming `FORGET` acts directly from
+the UI (auto-search without a BOOT hold) to open the search with pads
+found, confirm `CALL IT AND PAIR?`, pair, or forget.
+Without `--settings-entry` the console is as without the app.
+
+| Option | Does |
+|---|---|
+| `--settings-entry tiles\|on\|off` | where the app is opened from: `GAMEPADS` and `SETTINGS` tiles in the home row plus quick-menu shortcuts (`tiles`/`on`), or nowhere (default `off`) |
+| `--pair WHAT` | what the stand-in pairing radio does: `found` (default: finds pad A after 3 s, pairs it 2 s after YES), `two` (pads A and B), `none` (nothing in 60 s), `old-pin`, `lost`, `refused`, `store` (the call ends with that failure), `linked`, `damaged`, `not-held`, `busy` (refused at once), `off` (a board that cannot pair) |
+| `--pair-saved N` | pads already saved, 0 to 4 (default 1, shown as connected) |
+| `--pair-slots N` | free records in the pad memory, 0 to 255 (default: not known) |
+
+There is no radio on the PC: the stand-in is board-api's scripted fake
+radio (`crates/board-api/src/fake_radio.rs`, compiled into the simulator
+by path because board-api exports it only with its dev-only `testing`
+feature). The names and tails it shows are made up. Built with
+`--no-default-features` (or without `settings`), these options are
+refused.
+
 ## Keys in the window
 
 The same table drives the window, `--help` and this list (a test

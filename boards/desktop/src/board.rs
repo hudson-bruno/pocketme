@@ -18,12 +18,13 @@ use board_api::Absent;
 use board_api::game::{GameCallbacks, StartError};
 use board_api::link::{LOG_LINE_MAX, SECTOR};
 use board_api::{
-    Board, ByteOrder, Clock, Dir, DirEntry, Files, FsError, Keys, LogOut, Motion, Pad, PadState,
-    Parts, PixelSource, Rect, Screen, SendReport, Store, StoreError, Touch, TouchPoint,
-    files::PATH_MAX,
+    Board, ByteOrder, Clock, Dir, DirEntry, Files, FoundPad, FsError, Keys, LogOut, Motion, Pad,
+    PadState, PairReq, PairState, Parts, PixelSource, Rect, SavedPad, Screen, SendReport, Store,
+    StoreError, Touch, TouchPoint, files::PATH_MAX,
 };
 use game_api::LinkedGame;
 
+use crate::fake_radio::FakeRadio;
 use crate::link::SimLink;
 
 /// The panel: the CYD's 320 x 240.
@@ -242,6 +243,12 @@ pub struct PadSlot<'a> {
 /// The four gamepads: the keyboard's (and the number pad's), or a
 /// script's. Pad 0 (player 1) is the fields here, pads 1 to 3 are
 /// `others`.
+///
+/// Pairing (`pair_*`, `saved_pad`) is played by `radio`, board-api's
+/// scripted fake radio: no real radio, one turn of its script each time
+/// the console reads the pairing state. Its saved pads are its own list
+/// and have nothing to do with the pads above. By default it cannot
+/// pair, like a board without the radio (`--pair` sets it up).
 #[derive(Default)]
 pub struct SimPad {
     pub state: PadState,
@@ -253,6 +260,8 @@ pub struct SimPad {
     pub pressed: u32,
     /// Pads 1 to 3 (players 2 to 4).
     pub others: [OtherPad; 3],
+    /// The pairing radio's stand-in.
+    pub radio: FakeRadio,
 }
 
 impl SimPad {
@@ -300,6 +309,30 @@ impl Pad for SimPad {
         let slot = self.slot(usize::from(index));
         let p = core::mem::take(slot.pressed);
         if slot.state.connected { p } else { 0 }
+    }
+
+    fn pairing(&self) -> bool {
+        self.radio.pairing
+    }
+
+    fn pair_slots(&self) -> Option<u8> {
+        self.radio.slots
+    }
+
+    fn saved_pad(&self, place: u8) -> Option<SavedPad> {
+        self.radio.saved_pad(place)
+    }
+
+    fn pair_request(&mut self, req: PairReq) {
+        self.radio.request(req);
+    }
+
+    fn pair_state(&mut self) -> PairState {
+        self.radio.read_state()
+    }
+
+    fn pair_found(&self, i: u8) -> Option<FoundPad> {
+        self.radio.found(i)
     }
 }
 

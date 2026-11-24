@@ -84,6 +84,10 @@ pub mod lent;
 pub mod notify;
 mod out;
 pub mod pause;
+// The settings app: brightness, boot animation, gamepads (pairing
+// through the board's `Pad` requests), about.
+#[cfg(feature = "settings")]
+pub mod settings;
 pub mod theme;
 
 pub use board_api;
@@ -178,6 +182,9 @@ pub struct Console {
     /// The last step drew and sent nothing: home is being read again
     /// after a game (see [`Console::home_pending`]).
     home_pending: bool,
+    /// The settings app (feature `settings`).
+    #[cfg(feature = "settings")]
+    settings: settings::App,
 }
 
 impl Console {
@@ -207,6 +214,8 @@ impl Console {
             menu: false,
             menu_sel: 0,
             home_pending: false,
+            #[cfg(feature = "settings")]
+            settings: settings::App::new(),
         }
     }
 
@@ -358,9 +367,32 @@ impl Console {
                     Some(CardChange::Ready(_)) => self.notices.push(msg::CARD_IN, Tone::Good),
                     None => true,
                 };
-                let home_input = self.home_menu(&input, p.log);
+                #[cfg(not(feature = "settings"))]
+                let (home_input, _) = self.home_menu(&input, p.log);
+                #[cfg(feature = "settings")]
+                let home_input = match self.settings_home(&input, now, p.pad, p.log) {
+                    Some(left) => left,
+                    None => {
+                        let (left, choice) = self.home_menu(&input, p.log);
+                        match choice {
+                            pause::Choice::Gamepads => self.open_gamepads(p.pad, p.log),
+                            pause::Choice::Settings => self.open_settings(p.log),
+                            _ => {}
+                        }
+                        left
+                    }
+                };
                 if let HomeAction::Launch(i) = self.home.update(&home_input) {
-                    launch = self.home.game(lent.as_deref(), i).map(|g| g.folder);
+                    match self.home.slot(i) {
+                        #[cfg(feature = "settings")]
+                        home::Slot::System(0) => self.open_gamepads(p.pad, p.log),
+                        #[cfg(feature = "settings")]
+                        home::Slot::System(1) => self.open_settings(p.log),
+                        home::Slot::Game(g) => {
+                            launch = self.home.game(lent.as_deref(), g).map(|g| g.folder);
+                        }
+                        home::Slot::System(_) | home::Slot::Empty => {}
+                    }
                 }
                 // The tile pictures, only once the row is still (and not
                 // in the step that read the list again).
@@ -463,30 +495,42 @@ impl Console {
 
         // Draw the whole picture (a game draws its own). The renderer
         // finds what changed, so this costs only CPU work, not the wire.
+        let hints = self.home_hints();
+        #[cfg(feature = "settings")]
+        let (app_ctx, menu_kind) = (self.settings_ctx(now), self.home_kind());
         let frame = self.video.frame_mut();
         match self.page {
             _ if back_home => {}
             Page::Boot => self.boot.draw(now, frame),
+            #[cfg(feature = "settings")]
+            Page::Home if self.settings.is_open() => {
+                self.settings.draw(frame, &app_ctx, &*p.pad);
+                self.notices.draw(now, frame);
+            }
             Page::Home => {
                 self.home.draw(frame, lent.as_deref());
                 let status = bar::Status {
                     uptime_us: now - self.start_us,
                     pad_connected: self.pads & 1 != 0,
                     battery: None,
-                    hints: if self.home.count() > 0 {
-                        bar::Hints::Games
-                    } else {
-                        bar::Hints::None
-                    },
+                    hints,
                     menu: self.menu,
                 };
                 bar::draw(&status, frame);
                 if self.menu {
                     let step = BRIGHT_STEPS - 1 - self.dim;
-                    #[cfg(not(feature = "boot-gather"))]
+                    #[cfg(all(not(feature = "boot-gather"), not(feature = "settings")))]
                     pause::draw(frame, pause::Kind::Home, self.menu_sel, step);
-                    #[cfg(feature = "boot-gather")]
+                    #[cfg(all(feature = "boot-gather", not(feature = "settings")))]
                     pause::draw_home(frame, self.menu_sel, step, self.boot.anim());
+                    #[cfg(feature = "settings")]
+                    {
+                        #[cfg(feature = "boot-gather")]
+                        let words = pause::boot_text(self.boot.anim());
+                        #[cfg(not(feature = "boot-gather"))]
+                        let words = "";
+                        pause::draw_home_kind(frame, menu_kind, self.menu_sel, step, words);
+                    }
                 }
                 self.notices.draw(now, frame);
             }
@@ -604,6 +648,7 @@ impl Console {
                     || self.home.check_waiting()
                     || self.notices.moving(now)
                     || self.input.live(now)
+                    || self.settings_moving()
             }
             // The menu over a game follows a finger on its bars.
             Page::Game => {
@@ -717,8 +762,13 @@ impl Console {
     }
 
     /// Whether the console menu is open on the home screen (over a game,
-    /// see [`game::Run::paused`]).
+    /// see [`game::Run::paused`]). With the feature `settings`, the open
+    /// settings app counts as a menu too (a board that waits for the menu
+    /// to close before saving settings then waits for the app).
     pub fn menu_open(&self) -> bool {
+        #[cfg(feature = "settings")]
+        return self.menu || self.settings.is_open();
+        #[cfg(not(feature = "settings"))]
         self.menu
     }
 
@@ -768,21 +818,22 @@ impl Console {
 
     /// The home screen's menu: opens it (Home, or a tap on the gear),
     /// runs it while open, closes it. Returns the input left for the home
-    /// screen: none while the menu is open, so the row keeps still and
-    /// nothing starts.
-    fn home_menu<L: LogOut>(&mut self, input: &Input, log: &mut L) -> Input {
+    /// screen (none while the menu is open, so the row keeps still and
+    /// nothing starts) and the item chosen when closing it.
+    fn home_menu<L: LogOut>(&mut self, input: &Input, log: &mut L) -> (Input, pause::Choice) {
         let quiet = Input {
             pad: input.pad,
             ..Input::default()
         };
         if self.menu {
             let mut step = self.brightness();
-            let choice = pause::update(pause::Kind::Home, &mut self.menu_sel, &mut step, input);
+            let kind = self.home_kind();
+            let choice = pause::update(kind, &mut self.menu_sel, &mut step, input);
             self.player_set_brightness(step, log);
             #[cfg(feature = "boot-gather")]
             {
                 let anim = self.boot.anim();
-                let new = pause::update_boot(pause::Kind::Home, self.menu_sel, anim, input);
+                let new = pause::update_boot(kind, self.menu_sel, anim, input);
                 self.player_set_boot_anim(new, log);
             }
             let gear = input.down.is_some_and(|(x, y)| on_gear(x, y));
@@ -793,7 +844,7 @@ impl Console {
                 self.input.cancel_touch();
                 log.line("console: menu closed");
             }
-            return quiet;
+            return (quiet, choice);
         }
         let gear = input.tap.is_some_and(|(x, y)| on_gear(x, y));
         if input.acts & act::HOME != 0 || gear {
@@ -801,9 +852,134 @@ impl Console {
             self.menu_sel = 0;
             self.input.cancel_touch();
             log.line("console: menu");
-            return quiet;
+            return (quiet, pause::Choice::Stay);
         }
-        *input
+        (*input, pause::Choice::Stay)
+    }
+
+    /// The menu on the home screen: with `settings` and placement E it
+    /// has GAMEPADS and SETTINGS shortcuts.
+    fn home_kind(&self) -> pause::Kind {
+        #[cfg(feature = "settings")]
+        if self.settings.entry() == settings::Entry::Tiles {
+            return pause::Kind::HomeSettings;
+        }
+        pause::Kind::Home
+    }
+
+    /// The bar's hints on the home screen.
+    fn home_hints(&self) -> bar::Hints {
+        #[cfg(feature = "settings")]
+        if self.home.on_system().is_some() {
+            return bar::Hints::Open;
+        }
+        if self.home.count() > 0 {
+            bar::Hints::Games
+        } else {
+            bar::Hints::None
+        }
+    }
+
+    /// Whether the settings app needs a frame every frame.
+    fn settings_moving(&self) -> bool {
+        #[cfg(feature = "settings")]
+        return self.settings.moving();
+        #[cfg(not(feature = "settings"))]
+        false
+    }
+
+    /// Opens the settings app on its SETTINGS page (feature `settings`).
+    #[cfg(feature = "settings")]
+    fn open_settings<L: LogOut>(&mut self, log: &mut L) {
+        self.menu = false;
+        self.settings.open();
+        self.input.cancel_touch();
+        log.line("console: settings");
+    }
+
+    /// Opens the settings app on its GAMEPADS page (feature `settings`).
+    #[cfg(feature = "settings")]
+    fn open_gamepads<P: board_api::Pad + ?Sized, L: LogOut>(&mut self, pad: &P, log: &mut L) {
+        self.menu = false;
+        self.settings.open_gamepads(pad);
+        self.input.cancel_touch();
+        log.line("console: settings, gamepads");
+    }
+
+    /// What the settings app shows of the console.
+    #[cfg(feature = "settings")]
+    fn settings_ctx(&self, now: u64) -> settings::Ctx {
+        #[cfg(feature = "boot-gather")]
+        let anim = self.boot.anim().byte();
+        #[cfg(not(feature = "boot-gather"))]
+        let anim = 0;
+        settings::Ctx {
+            now_us: now,
+            step: self.brightness(),
+            anim,
+        }
+    }
+
+    /// Handles input while the settings app is open (feature `settings`).
+    /// Returns `Some(quiet)` when the app owns the input, else `None`
+    /// so the home menu and row handle it.
+    #[cfg(feature = "settings")]
+    fn settings_home<P: board_api::Pad + ?Sized, L: LogOut>(
+        &mut self,
+        input: &Input,
+        now: u64,
+        pad: &mut P,
+        log: &mut L,
+    ) -> Option<Input> {
+        if !self.settings.is_open() {
+            return None;
+        }
+        let quiet = Input {
+            pad: input.pad,
+            ..Input::default()
+        };
+        let ctx = self.settings_ctx(now);
+        let out = self.settings.update(input, &ctx, pad);
+        if let Some(step) = out.bright {
+            self.player_set_brightness(step, log);
+        }
+        #[cfg(feature = "boot-gather")]
+        if let Some(a) = out.anim {
+            self.player_set_boot_anim(boot::Anim::from_byte(a), log);
+        }
+        if out.turned {
+            self.input.cancel_touch();
+            if !self.settings.is_open() {
+                log.line("console: settings closed");
+            }
+        }
+        Some(quiet)
+    }
+
+    /// Where the settings app is opened from (feature `settings`).
+    /// For a board at start.
+    #[cfg(feature = "settings")]
+    pub fn set_settings_entry(&mut self, entry: settings::Entry) {
+        self.settings.set_entry(entry);
+        self.home.set_system_tiles(entry == settings::Entry::Tiles);
+    }
+
+    /// The settings app is open on a page of a pairing or forgetting
+    /// session (a hold page, an open window or an ending; see
+    /// [`settings::App::pairing_page`]). A board that serves pairing
+    /// requests ends its session when this turns false. Always false
+    /// without the feature `settings`.
+    pub fn pairing_page(&self) -> bool {
+        #[cfg(feature = "settings")]
+        return self.settings.pairing_page();
+        #[cfg(not(feature = "settings"))]
+        false
+    }
+
+    /// The settings app (feature `settings`), for tests and tools.
+    #[cfg(feature = "settings")]
+    pub fn settings(&self) -> &settings::App {
+        &self.settings
     }
 
     /// What the board reported for the last frame (all zeros when nothing

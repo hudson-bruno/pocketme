@@ -38,6 +38,7 @@ PARTS="bt-classic,passby,gps,sound"
 CRATES="$CRATES crates/game-loader"; SHARED="$SHARED crates/game-loader" # game loader (step 3); its tests load the chip game files below
 CRATES="$CRATES crates/settings-store"; SHARED="$SHARED crates/settings-store" # settings in flash (round 5); its tests cut the power at every byte
 CRATES="$CRATES crates/touch-filter"; SHARED="$SHARED crates/touch-filter" # the CYD's touch filter (round 5), tested on the PC
+CRATES="$CRATES crates/pad-store crates/pad-proto"; SHARED="$SHARED crates/pad-store crates/pad-proto"
 CRATES="$CRATES crates/pad-host"; SHARED="$SHARED crates/pad-host" # the gamepad host (round 6): scripted-controller and fuzz tests on the PC
 
 echo "== games for the chip"
@@ -74,9 +75,11 @@ for pair in "esp xtensa-esp32-none-elf" "nightly x86_64-unknown-none"; do
         # pictures swap roles; see crates/console-video/README.md), and
         # console-core with `boot-gather` (the GATHER boot animation).
         case $c in
-            *game-api|*game-kit|*game-3d|*touch-filter) all="" ;;
+            *game-api|*game-kit|*game-3d|*touch-filter|*pad-store) all="" ;;
             *console-video) all="--features swap" ;;
-            *console-core) all="--features $PARTS,swap,boot-gather" ;;
+            *console-core) all="--features $PARTS,swap,boot-gather,settings" ;;
+            *pad-proto) all="--features pair" ;;
+            *pad-host) all="--features $PARTS,pair" ;;
             *) all="--features $PARTS" ;;
         esac
         for f in "" ${all:+"$all"}; do

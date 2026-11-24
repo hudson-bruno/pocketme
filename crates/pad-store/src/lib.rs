@@ -35,6 +35,17 @@
 //! It never erases then. Erasing happens only in [`Store::open`], at
 //! start-up, before the radio is switched on. See `store.rs` for the
 //! power-loss reasoning.
+//!
+//! # Three ways in
+//!
+//! - [`Store::open`] (the test firmware): writes at every start, and may
+//!   erase, repair, clean up and drop pads. With [`Store::save`], a fifth
+//!   pad pushes the oldest out.
+//! - [`Store::attach`] (the console, which writes only when the user
+//!   pairs or forgets): reads only, refuses what it cannot append to
+//!   safely, never repairs. With [`Store::save_new`], a fifth pad is
+//!   refused ([`SaveError::Full`]) and nothing is ever erased.
+//! - [`read_pairings`]: reads through a trait that has no write at all.
 
 #![cfg_attr(not(test), no_std)]
 
@@ -48,11 +59,12 @@ mod fake;
 #[cfg(test)]
 mod tests;
 
+pub use read::{ReadFlash, ReadReport, read_pairings};
 pub use region::{
     Entry, FIRST_FREE, FindError, MAX_ENTRIES, Region, RegionError, SECTOR, Span, USED,
     check_region, find_nvs, label,
 };
-pub use read::{ReadFlash, ReadReport, read_pairings};
 pub use store::{
-    AREA, COMPACT_BELOW, Error, Flash, MAX_PADS, Opened, Pairing, RECORD, SLOTS, Saved, Store,
+    AREA, AttachError, Attached, COMPACT_BELOW, Error, Flash, MAX_PADS, Opened, Pairing, RECORD,
+    SLOTS, SaveError, Saved, Store,
 };

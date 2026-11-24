@@ -7,3 +7,8 @@ license = "MIT"
 publish     = false
 
 [dependencies]
+
+[features]
+# The run-time pairing window of `Host` (open_pairing, pair_with, ...).
+# Off: the crate is the reconnect-only host it was, byte for byte.
+pair = []

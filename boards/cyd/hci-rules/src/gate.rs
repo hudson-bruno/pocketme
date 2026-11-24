@@ -8,10 +8,10 @@
 //! its own parameter length, and nothing more:
 //!
 //! - set-up: Reset, Read Local Version / Supported Features / Buffer
-//!   Size / BD_ADDR, Set Event Mask, Write Simple Pairing Mode, Write
-//!   Default Link Policy, Write Local Name, Write Class of Device, Write
-//!   Inquiry Mode (a setting only: no inquiry is ever started), Write
-//!   Page Timeout;
+//!   Size / BD_ADDR, Set Event Mask (its length only), Write Simple
+//!   Pairing Mode, Write Default Link Policy, Write Local Name, Write
+//!   Class of Device, Write Inquiry Mode (a setting only: it starts no
+//!   inquiry), Write Page Timeout;
 //! - Write Scan Enable with page scan only or off: never inquiry scan,
 //!   so the console is never discoverable;
 //! - a call: Accept Connection Request and Link Key Request Reply ONLY
@@ -33,8 +33,19 @@
 //! "yes" of pairing (PIN Code Reply, IO Capability Reply, User
 //! Confirmation Reply), inquiry scan, anything Low Energy, any command
 //! not named above.
+//!
+//! With the crate feature `pair` the gate also has a pairing window
+//! (module `pair`): [`Gate::check_at`] and [`Gate::observe_at`] take the
+//! time and let a short list of pairing commands out while a window,
+//! opened from outside with [`Gate::arm`], is open. [`Gate::check`] and
+//! [`Gate::observe`] stay the rules above, window or not.
 
 use crate::{Event, SCAN_OFF, SCAN_PAGE_ONLY, kind, op, packet_len, parse_event};
+
+#[cfg(feature = "pair")]
+mod pair;
+#[cfg(feature = "pair")]
+pub use pair::{FOUND_MAX, INQUIRY_UNITS_MAX, PAIR_WINDOW_MAX_MS, PairPhase, PairRefusal};
 
 /// The shortest supervision timeout the gate lets through: 0x0640 slots
 /// of 0.625 ms = 1 s (pad-proto's `LSTO_MIN`).
@@ -55,29 +66,66 @@ pub enum Refusal {
     /// code): an accept, a key reply, a name request; or a link that is
     /// not a saved pad's (a supervision timeout).
     NotSaved(u16),
+    /// A command the pairing window lets out only for the pad it is
+    /// bound to, naming another device (its code).
+    #[cfg(feature = "pair")]
+    NotBound(u16),
 }
 
 /// Saved pads the gate knows at most (pad-proto keeps four).
 pub const SAVED: usize = 4;
+
+/// What the gate notes of a link that is up: its handle.
+#[cfg(not(feature = "pair"))]
+type Link = u16;
+
+/// What the gate notes of a link that is up: the device's address (so
+/// [`Gate::forget`] can drop it) and its handle.
+#[cfg(feature = "pair")]
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct Link {
+    addr: [u8; 6],
+    handle: u16,
+}
+
+#[cfg(not(feature = "pair"))]
+fn handle_of(l: &Link) -> u16 {
+    *l
+}
+
+#[cfg(feature = "pair")]
+fn handle_of(l: &Link) -> u16 {
+    l.handle
+}
 
 /// The gate, with the saved pads' addresses (given once at start, from
 /// the pairings read only).
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Gate {
     saved: [Option<[u8; 6]>; SAVED],
-    /// Handles of the links to saved pads that are up now.
-    links: [Option<u16>; SAVED],
+    /// The links to saved pads that are up now (with `pair`, also the
+    /// link to the pad a pairing window is bound to).
+    links: [Option<Link>; SAVED],
+    /// The pairing window: closed unless armed.
+    #[cfg(feature = "pair")]
+    window: pair::Window,
 }
 
-/// Addresses are personal: only how many.
+/// Addresses are personal: only how many (and, with `pair`, the
+/// window's phase as a word while one is open).
 impl core::fmt::Debug for Gate {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "Gate({} saved, {} linked)",
+            "Gate({} saved, {} linked",
             self.saved.iter().flatten().count(),
             self.links.iter().flatten().count()
-        )
+        )?;
+        #[cfg(feature = "pair")]
+        if self.phase() != PairPhase::Off {
+            write!(f, ", {}", self.phase())?;
+        }
+        write!(f, ")")
     }
 }
 
@@ -93,6 +141,8 @@ impl Gate {
         Gate {
             saved: [None; SAVED],
             links: [None; SAVED],
+            #[cfg(feature = "pair")]
+            window: pair::Window::Off,
         }
     }
 
@@ -109,31 +159,48 @@ impl Gate {
                 addr,
                 link_type: 1,
             }) if self.is_saved(addr.bytes()) => {
-                let handle = handle & 0x0FFF;
-                if self.is_linked(handle) {
-                    return;
-                }
-                // Full (ends the gate never saw): the oldest noted goes,
-                // so the newest link is always known. Each entry was a
-                // saved pad's link.
-                if let Some(slot) = self.links.iter_mut().find(|s| s.is_none()) {
-                    *slot = Some(handle);
-                } else {
-                    self.links.rotate_left(1);
-                    self.links[SAVED - 1] = Some(handle);
-                }
+                self.note_link(*addr.bytes(), handle & 0x0FFF);
             }
             Some(Event::DisconnectionComplete {
                 status: 0, handle, ..
             }) => {
                 let handle = handle & 0x0FFF;
                 for s in self.links.iter_mut() {
-                    if *s == Some(handle) {
+                    if s.as_ref().map(handle_of) == Some(handle) {
                         *s = None;
                     }
                 }
             }
             _ => {}
+        }
+    }
+
+    /// Notes a link that came up (its handle without the flag bits).
+    #[cfg_attr(not(feature = "pair"), allow(unused_variables))]
+    fn note_link(&mut self, addr: [u8; 6], handle: u16) {
+        #[cfg(not(feature = "pair"))]
+        let link: Link = handle;
+        #[cfg(feature = "pair")]
+        let link = Link { addr, handle };
+        if let Some(s) = self
+            .links
+            .iter_mut()
+            .flatten()
+            .find(|l| handle_of(l) == handle)
+        {
+            // Noted already. With `pair` the address is updated, in case
+            // the handle came back for another device after an end the
+            // gate never saw.
+            *s = link;
+            return;
+        }
+        // Full (ends the gate never saw): the oldest noted goes, so the
+        // newest link is always known.
+        if let Some(slot) = self.links.iter_mut().find(|s| s.is_none()) {
+            *slot = Some(link);
+        } else {
+            self.links.rotate_left(1);
+            self.links[SAVED - 1] = Some(link);
         }
     }
 
@@ -143,18 +210,24 @@ impl Gate {
     }
 
     fn is_linked(&self, handle: u16) -> bool {
-        self.links.iter().flatten().any(|h| *h == handle)
+        self.links.iter().flatten().any(|l| handle_of(l) == handle)
     }
 
     /// A saved pad's address (as HCI sends it, low byte first): it may be
-    /// accepted and given its key. False when the gate is full.
+    /// accepted and given its key. False when the gate is full. With
+    /// `pair`, allowing the address a window has just paired closes that
+    /// window (its key is saved: the normal rules now cover the pad).
     pub fn allow(&mut self, addr: [u8; 6]) -> bool {
         if self.is_saved(&addr) {
+            #[cfg(feature = "pair")]
+            self.paired_saved(addr);
             return true;
         }
         match self.saved.iter_mut().find(|s| s.is_none()) {
             Some(slot) => {
                 *slot = Some(addr);
+                #[cfg(feature = "pair")]
+                self.paired_saved(addr);
                 true
             }
             None => false,

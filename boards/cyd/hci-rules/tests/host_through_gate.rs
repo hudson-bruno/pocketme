@@ -230,3 +230,202 @@ fn a_pad_switched_off_and_on_passes_the_gate() {
     let w = op::WRITE_LINK_SUPERVISION_TIMEOUT;
     assert_eq!(stopped, vec![(w, Refusal::NotSaved(w)); 3]);
 }
+
+#[cfg(feature = "pair")]
+mod pair_through_gate {
+    use super::*;
+    use hci_rules::op;
+    use pad_host::PairEnd;
+    use pad_proto::hci::BdAddr;
+
+    const NEW: BdAddr = BdAddr([0x16, 0x25, 0x34, 0x43, 0x52, 0x61]);
+    const NEW_KEY: [u8; 16] = [
+        0xC3, 0x1F, 0x86, 0x4A, 0xE9, 0x27, 0x5D, 0xB0, 0x73, 0x0E, 0xA8, 0x64, 0x3B, 0xF2, 0x99,
+        0x15,
+    ];
+
+    struct TimedGate {
+        gate: Gate,
+        seen: usize,
+        checked: usize,
+        observed: usize,
+    }
+
+    impl TimedGate {
+        fn new(s: &Sim) -> Self {
+            Self {
+                gate: gate_for_saved(s),
+                seen: s.wire.len(),
+                checked: 0,
+                observed: 0,
+            }
+        }
+
+        fn sync(&mut self, s: &Sim) {
+            while self.seen < s.wire.len() {
+                let (out, p) = &s.wire[self.seen];
+                self.seen += 1;
+                if *out {
+                    assert_eq!(
+                        self.gate.check_at(p, s.now),
+                        Ok(()),
+                        "packet {} at {} ms: {:02x?}",
+                        self.checked,
+                        s.now,
+                        &p[..p.len().min(8)]
+                    );
+                    self.checked += 1;
+                } else {
+                    self.gate.observe_at(p, s.now);
+                    self.observed += 1;
+                }
+            }
+        }
+
+        fn feed(&mut self, s: &mut Sim, p: &[u8]) {
+            s.feed(p);
+            self.sync(s);
+        }
+
+        fn tick(&mut self, s: &mut Sim) {
+            s.tick();
+            self.sync(s);
+        }
+
+        fn advance(&mut self, s: &mut Sim, ms: u64) {
+            let end = s.now + ms;
+            while s.now < end {
+                s.now = (s.now + 10).min(end);
+                self.tick(s);
+            }
+        }
+    }
+
+    #[test]
+    fn happy_pairing_passes_gate_with_zero_refusals() {
+        let mut s = Sim::new(&[]);
+        s.until_waiting();
+        let mut tg = TimedGate::new(&s);
+        tg.gate.arm(s.now, 66_000).unwrap();
+        s.host.pair_begin(s.now, 60_000, &mut s.radio).unwrap();
+        tg.sync(&s);
+        tg.advance(&mut s, 100);
+
+        tg.feed(&mut s, &ev_ext_inquiry(NEW, PAD_COD, b"Test Gamepad"));
+        tg.tick(&mut s);
+        let tail = s.host.pair_found(0).expect("found pad").tail;
+        let addr = s.host.pair_target(0, tail).expect("target");
+        tg.gate.bind(addr.whole_address(), s.now, 36_000).unwrap();
+        s.host.pair_choose(0, s.now, 30_000, &mut s.radio).unwrap();
+        tg.sync(&s);
+        tg.advance(&mut s, 50);
+
+        tg.feed(&mut s, &ev_conn_complete(0, H, NEW));
+        tg.advance(&mut s, 20);
+        tg.feed(&mut s, &ev_addr(0x17, NEW));
+        tg.feed(&mut s, &ev_addr(0x31, NEW));
+        tg.feed(&mut s, &ev_io_cap_response(NEW));
+        tg.feed(&mut s, &ev_user_confirmation(NEW));
+        tg.feed(&mut s, &ev_ssp_complete(NEW));
+        tg.feed(&mut s, &ev_link_key(NEW, NEW_KEY));
+        tg.feed(&mut s, &ev_auth(0, H));
+        tg.feed(&mut s, &ev_encrypted(H));
+        tg.advance(&mut s, 50);
+
+        assert_eq!(s.host.pair_outcome(), Some(PairEnd::Saved));
+        let pending = s.host.take_pending_save().expect("pending save");
+        assert!(tg.gate.allow(pending.addr().whole_address()));
+        assert!(tg.checked > 5 && tg.observed > 5);
+    }
+
+    #[test]
+    fn user_cancel_passes_gate_with_zero_refusals() {
+        let mut s = Sim::new(&[]);
+        s.until_waiting();
+        let mut tg = TimedGate::new(&s);
+        tg.gate.arm(s.now, 66_000).unwrap();
+        s.host.pair_begin(s.now, 60_000, &mut s.radio).unwrap();
+        tg.sync(&s);
+        tg.advance(&mut s, 200);
+
+        assert!(s.host.pair_cancel(s.now, &mut s.radio));
+        tg.gate.disarm();
+        tg.sync(&s);
+        tg.advance(&mut s, 100);
+        assert_eq!(s.host.pair_outcome(), Some(PairEnd::Cancelled));
+    }
+
+    #[test]
+    fn search_timeout_within_gate_margin_passes_with_zero_refusals() {
+        let mut s = Sim::new(&[]);
+        s.until_waiting();
+        let mut tg = TimedGate::new(&s);
+        tg.gate.arm(s.now, 66_000).unwrap();
+        s.host.pair_begin(s.now, 60_000, &mut s.radio).unwrap();
+        tg.sync(&s);
+        tg.advance(&mut s, 60_500);
+        assert_eq!(s.host.pair_outcome(), Some(PairEnd::Timeout));
+        tg.gate.disarm();
+    }
+
+    #[test]
+    fn old_pin_request_passes_gate_with_zero_refusals() {
+        let mut s = Sim::new(&[]);
+        s.until_waiting();
+        let mut tg = TimedGate::new(&s);
+        tg.gate.arm(s.now, 66_000).unwrap();
+        s.host.pair_begin(s.now, 60_000, &mut s.radio).unwrap();
+        tg.sync(&s);
+        tg.advance(&mut s, 50);
+
+        tg.feed(&mut s, &ev_ext_inquiry(NEW, PAD_COD, b"Old PIN Pad"));
+        tg.tick(&mut s);
+        let tail = s.host.pair_found(0).expect("found").tail;
+        let addr = s.host.pair_target(0, tail).unwrap();
+        tg.gate.bind(addr.whole_address(), s.now, 36_000).unwrap();
+        s.host.pair_choose(0, s.now, 30_000, &mut s.radio).unwrap();
+        tg.sync(&s);
+        tg.advance(&mut s, 50);
+
+        tg.feed(&mut s, &ev_conn_complete(0, H, NEW));
+        tg.advance(&mut s, 20);
+        tg.feed(&mut s, &ev_addr(0x17, NEW));
+        tg.feed(&mut s, &ev_addr(0x16, NEW));
+        tg.advance(&mut s, 100);
+        assert_eq!(s.host.pair_outcome(), Some(PairEnd::OldPin));
+    }
+
+    #[test]
+    fn forget_removes_pad_from_gate() {
+        let mut s = Sim::new(&[(PAD, KEY)]);
+        s.until_waiting();
+        let mut tg = TimedGate::new(&s);
+        assert_eq!(tg.gate.saved(), 1);
+        let addr = s.host.forget(0, s.now, &mut s.radio).expect("forgot");
+        assert!(tg.gate.forget(addr.whole_address()));
+        tg.sync(&s);
+        tg.advance(&mut s, 100);
+        assert_eq!(tg.gate.saved(), 0);
+
+        // Accept and Link Key Reply for the forgotten pad are refused again.
+        let mut accept = vec![0x01];
+        accept.extend_from_slice(&op::ACCEPT_CONNECTION_REQUEST.to_le_bytes());
+        accept.push(7);
+        accept.extend_from_slice(&PAD.0);
+        accept.push(0x01);
+        assert_eq!(
+            tg.gate.check_at(&accept, s.now),
+            Err(Refusal::NotSaved(op::ACCEPT_CONNECTION_REQUEST))
+        );
+
+        let mut reply = vec![0x01];
+        reply.extend_from_slice(&op::LINK_KEY_REQUEST_REPLY.to_le_bytes());
+        reply.push(22);
+        reply.extend_from_slice(&PAD.0);
+        reply.extend_from_slice(&KEY);
+        assert_eq!(
+            tg.gate.check_at(&reply, s.now),
+            Err(Refusal::NotSaved(op::LINK_KEY_REQUEST_REPLY))
+        );
+    }
+}

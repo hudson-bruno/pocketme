@@ -15,8 +15,14 @@ use crate::{
     geom::Rect,
     input::{Keys, Motion, Pad, PadState, Touch, TouchPoint},
     link::{LOG_LINE_MAX, Link, LogOut, SECTOR, Store, StoreError},
+    pair::{FoundPad, PairReq, PairState, SavedPad},
     screen::{ByteOrder, Dir, PixelSource, Screen, SendReport},
     time::Clock,
+};
+
+pub use crate::fake_radio::{
+    FAKE_CALL_TURNS, FAKE_FOUND_MAX, FAKE_NAME_A, FAKE_NAME_B, FAKE_PLACES, FAKE_SAVED_TAILS,
+    FAKE_SEARCH_TURNS, FAKE_START_TURNS, FAKE_TAIL_A, FAKE_TAIL_B, FakeRadio, PairScript,
 };
 
 /// The fake panel's size: the CYD's.
@@ -261,6 +267,10 @@ impl Keys for FakeKeys {
 /// taken by `take_pressed`). Pads 1 to 3 are the same, in `others[0..3]`
 /// (or [`FakePad::other`]); they start absent. Any higher index has no
 /// pad.
+///
+/// Pairing (`pair_*`, `saved_pad`) is played by `radio`, a scripted fake
+/// radio ([`FakeRadio`]). By default it cannot pair, like a board that
+/// keeps the trait's default bodies.
 #[derive(Default)]
 pub struct FakePad {
     pub state: PadState,
@@ -268,6 +278,8 @@ pub struct FakePad {
     pub pressed: u32,
     /// Pads 1, 2 and 3.
     pub others: [OnePad; 3],
+    /// The pairing side: saved pads, requests, states, found pads.
+    pub radio: FakeRadio,
 }
 
 /// One more fake gamepad: see [`FakePad`].
@@ -322,6 +334,30 @@ impl Pad for FakePad {
             Some((state, motion, _)) if state.connected => motion,
             _ => None,
         }
+    }
+
+    fn pairing(&self) -> bool {
+        self.radio.pairing
+    }
+
+    fn pair_slots(&self) -> Option<u8> {
+        self.radio.slots
+    }
+
+    fn saved_pad(&self, place: u8) -> Option<SavedPad> {
+        self.radio.saved_pad(place)
+    }
+
+    fn pair_request(&mut self, req: PairReq) {
+        self.radio.request(req);
+    }
+
+    fn pair_state(&mut self) -> PairState {
+        self.radio.read_state()
+    }
+
+    fn pair_found(&self, i: u8) -> Option<FoundPad> {
+        self.radio.found(i)
     }
 }
 

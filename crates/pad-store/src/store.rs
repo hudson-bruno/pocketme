@@ -18,14 +18,38 @@
 //! - A partition that holds somebody else's data is never touched: if
 //!   neither area has our header, both must be blank (or area 0 must hold
 //!   nothing but the start of our own first header, cut by a power loss).
+//!
+//! # Two ways in: `open` (tidies) and `attach` (never tidies)
+//!
+//! [`Store::open`] is the test firmware's way in: it writes at every
+//! start and may erase, repair, compact and wipe pads dropped for room.
+//! [`Store::attach`] is the console's way in, for the rule "the pairing
+//! area is written only by pair and forget": it only reads. It refuses
+//! (with [`AttachError`]) what cannot be appended to safely, and leaves
+//! everything else exactly as it is, only reporting it ([`Attached`]):
+//!
+//! | The area holds | `attach` |
+//! |---|---|
+//! | both sectors blank (a board flashed from zero) | takes it, `fresh`; the first [`Store::save_new`] writes the header, then the record |
+//! | area 0: only part of our first header (a cut first pair or first `open`), area 1 blank | takes it, `fresh` and `cut_header`; the first save writes the whole header over the part (same bytes, bits only go 1 to 0), reads it back, then the record |
+//! | anything else without a valid header | refuses: `Foreign` (nothing written, ever) |
+//! | a valid header, damaged records (a cut write or wipe) | takes it; they are ignored and counted, new records go after the last used slot, as with `open` |
+//! | a valid header, the other area not blank (a clean-up cut by a power loss, or other bytes) | takes it, `spare_dirty`; the other area is never written or erased |
+//! | a valid header, no free slot | takes it (load and forget work); `save_new` says `NoRoom` |
+//! | a valid header, a pad that `open` would wipe because more than [`MAX_PADS`] were saved (a cut while `save` pushed one out) | refuses: `TooMany`, since the hidden pad would come back after the next forget; `open` (test firmware) clears it |
+//!
+//! [`Store::save_new`] never drops a pad, never erases and never
+//! compacts: a fifth address is [`SaveError::Full`], no free slot is
+//! [`SaveError::NoRoom`], both before anything is written.
 
 use core::fmt;
 
 use crate::crc::crc32;
 use crate::region::{Region, SECTOR, USED};
 
-/// The most gamepads kept. Saving one more drops the one saved longest
-/// ago. The GuliKit pad uses three addresses for its four modes.
+/// The most gamepads kept. [`Store::save`] of one more drops the one
+/// saved longest ago; [`Store::save_new`] refuses it instead. The
+/// GuliKit pad uses three addresses for its four modes.
 pub const MAX_PADS: usize = 4;
 /// One area: one flash sector.
 pub const AREA: u32 = SECTOR;
@@ -132,6 +156,104 @@ pub enum Saved {
     Replaced,
     /// The very same pairing was saved already: nothing written.
     Unchanged,
+}
+
+/// Why [`Store::attach`] refused. Nothing was written or erased.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AttachError<E> {
+    /// The flash itself said no to a read.
+    Flash(E),
+    /// A read would have gone outside the two sectors.
+    OutOfBounds,
+    /// The partition holds data that is not ours (no valid header, and
+    /// neither blank nor the start of our own first header).
+    Foreign,
+    /// More than [`MAX_PADS`] pads are saved: an older one, left out
+    /// today, would come back after the next forget. Only
+    /// [`Store::open`] clears this (it wipes that pad).
+    TooMany,
+}
+
+impl<E> AttachError<E> {
+    /// A short word for the log and the screen.
+    pub fn word(&self) -> &'static str {
+        match self {
+            AttachError::Flash(_) => "flash-error",
+            AttachError::OutOfBounds => "out-of-bounds",
+            AttachError::Foreign => "partition-holds-other-data",
+            AttachError::TooMany => "more-pads-than-the-limit",
+        }
+    }
+}
+
+/// Every error of a read is a flash error or out of bounds.
+fn read_err<E>(e: Error<E>) -> AttachError<E> {
+    match e {
+        Error::Flash(e) => AttachError::Flash(e),
+        _ => AttachError::OutOfBounds,
+    }
+}
+
+/// Why [`Store::save_new`] did not save.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SaveError<E> {
+    /// A new address while [`MAX_PADS`] pads are saved. Nothing written:
+    /// one must be forgotten first.
+    Full,
+    /// No free record slot left. Nothing written. (Only a clean-up,
+    /// which erases, makes room; the console never runs one.)
+    NoRoom,
+    /// The flash itself said no.
+    Flash(E),
+    /// A write would have gone outside the two sectors.
+    OutOfBounds,
+    /// What was written did not read back the same, several times.
+    Verify,
+}
+
+impl<E> SaveError<E> {
+    /// A short word for the log and the screen.
+    pub fn word(&self) -> &'static str {
+        match self {
+            SaveError::Full => "four-pads-saved",
+            SaveError::NoRoom => "no-free-slot",
+            SaveError::Flash(_) => "flash-error",
+            SaveError::OutOfBounds => "out-of-bounds",
+            SaveError::Verify => "read-back-differs",
+        }
+    }
+}
+
+impl<E> From<Error<E>> for SaveError<E> {
+    fn from(e: Error<E>) -> Self {
+        match e {
+            Error::Flash(e) => SaveError::Flash(e),
+            // Only `append` says Full: no slot left.
+            Error::Full => SaveError::NoRoom,
+            Error::Verify => SaveError::Verify,
+            // `Foreign` comes only from `open`; a save never makes it.
+            Error::OutOfBounds | Error::Foreign => SaveError::OutOfBounds,
+        }
+    }
+}
+
+/// What [`Store::attach`] found. It wrote nothing and erased nothing.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Attached {
+    /// No header yet (both sectors blank, or `cut_header`): the first
+    /// save writes the header, then the record.
+    pub fresh: bool,
+    /// Area 0 holds only the start of our first header (a power cut
+    /// during the very first save). The first save writes the whole
+    /// header over it; `open` would erase and set it up again.
+    pub cut_header: bool,
+    /// The other area is not blank (a clean-up cut by a power loss, or
+    /// other bytes). Left alone; `open` would erase it.
+    pub spare_dirty: bool,
+    /// Records ignored because their check sum did not match.
+    pub damaged: u32,
+    /// The active area's generation (1 when `fresh`).
+    pub generation: u32,
 }
 
 /// What [`Store::open`] found and did.
@@ -320,6 +442,17 @@ pub struct Store<F> {
     /// Saved gamepads, the one saved longest ago first.
     live: [Live; MAX_PADS],
     n: usize,
+    /// No header in flash yet (only from `attach`): the first append
+    /// writes it first.
+    fresh: bool,
+}
+
+/// What a read-only scan of the active area found.
+struct Scanned {
+    damaged: u32,
+    dropped: u32,
+    /// The first [`MAX_PADS`] addresses dropped for room.
+    dropped_addrs: [Option<[u8; 6]>; MAX_PADS],
 }
 
 impl<F: Flash> Store<F> {
@@ -363,6 +496,7 @@ impl<F: Flash> Store<F> {
             next: 1,
             live: [NO_LIVE; MAX_PADS],
             n: 0,
+            fresh: false,
         };
         s.scan(&mut rep)?;
         let spare = 1 - s.active;
@@ -381,6 +515,123 @@ impl<F: Flash> Store<F> {
         }
         rep.generation = s.generation;
         Ok((s, rep))
+    }
+
+    /// Takes the store as it is, for a firmware that may write only when
+    /// the user pairs or forgets a pad. Only reads: no header rewrite, no
+    /// repair, no clean-up, no wipe of pads dropped for room, no erase.
+    /// Every later write comes from [`Store::save_new`], [`Store::forget`]
+    /// (or the other writing calls the caller makes).
+    ///
+    /// Refuses, with nothing written, when the partition is not ours
+    /// ([`AttachError::Foreign`]) or a pad left out for room would come
+    /// back after a forget ([`AttachError::TooMany`]). A blank partition,
+    /// or one holding only the start of our first header, is taken as
+    /// `fresh`: the first save writes the header, then the record. The
+    /// module text of `store.rs` has the table of every case.
+    ///
+    /// About 260 reads of 32 bytes; finds the same pads, in the same
+    /// order, as [`read_pairings`](crate::read_pairings).
+    pub fn attach(flash: F, region: Region) -> Result<(Self, Attached), AttachError<F::Error>> {
+        let mut b = Bounded::new(flash, region);
+        let mut rep = Attached::default();
+        let g0 = read_block(&mut b, at(0, 0)).map_err(read_err)?.generation();
+        let g1 = read_block(&mut b, at(1, 0)).map_err(read_err)?.generation();
+        let (active, generation) = match (g0, g1) {
+            (Some(a), Some(c)) if c > a => (1, c),
+            (Some(a), _) => (0, a),
+            (None, Some(c)) => (1, c),
+            (None, None) => {
+                // The same test as `open`, but nothing is repaired here.
+                if !area_blank(&mut b, 1).map_err(read_err)? {
+                    return Err(AttachError::Foreign);
+                }
+                if !area_blank(&mut b, 0).map_err(read_err)? {
+                    if !cut_first_header(&mut b).map_err(read_err)? {
+                        return Err(AttachError::Foreign);
+                    }
+                    rep.cut_header = true;
+                }
+                rep.fresh = true;
+                (0, 1)
+            }
+        };
+        let mut s = Store {
+            b,
+            active,
+            generation,
+            next: 1,
+            live: [NO_LIVE; MAX_PADS],
+            n: 0,
+            fresh: rep.fresh,
+        };
+        if !s.fresh {
+            let sc = s.read_live().map_err(read_err)?;
+            rep.damaged = sc.damaged;
+            if sc.dropped as usize > MAX_PADS {
+                // More dropped than listed: cannot check them all.
+                return Err(AttachError::TooMany);
+            }
+            for d in sc.dropped_addrs.into_iter().flatten() {
+                if s.find(d).is_none() && s.alive_without_limit(d).map_err(read_err)? {
+                    return Err(AttachError::TooMany);
+                }
+            }
+            rep.spare_dirty = !area_blank(&mut s.b, 1 - s.active).map_err(read_err)?;
+        }
+        rep.generation = s.generation;
+        Ok((s, rep))
+    }
+
+    /// Saves a pairing without ever pushing another pad out, erasing or
+    /// cleaning up.
+    ///
+    /// - The same pairing (address, key and key type) saved already:
+    ///   [`Saved::Unchanged`], nothing written.
+    /// - A new key for a saved address: the new record is written and
+    ///   read back, then the old one is zeroed ([`Saved::Replaced`], two
+    ///   writes). Allowed with [`MAX_PADS`] saved: it adds no pad.
+    /// - A new address: [`SaveError::Full`] when [`MAX_PADS`] are saved,
+    ///   else one record ([`Saved::New`] with `evicted: None`, always).
+    /// - No free slot: [`SaveError::NoRoom`]. Both refusals come before
+    ///   any write.
+    /// - On a `fresh` store the header is written (and read back) first.
+    ///
+    /// A power cut at any moment leaves the old state or the new one,
+    /// and never touches another pad.
+    pub fn save_new(
+        &mut self,
+        addr: [u8; 6],
+        key: [u8; 16],
+        key_type: u8,
+    ) -> Result<Saved, SaveError<F::Error>> {
+        let known = self.find(addr);
+        if let Some(i) = known {
+            let slot = self.live[i].slot;
+            if let Some(Rec::Key(old)) = read_block(&mut self.b, at(self.active, slot))?.parse()
+                && old.key == key
+                && old.key_type == key_type
+            {
+                return Ok(Saved::Unchanged);
+            }
+        } else if self.n >= MAX_PADS {
+            return Err(SaveError::Full);
+        }
+        if self.free_slots() == 0 {
+            return Err(SaveError::NoRoom);
+        }
+        let slot = self.append(&Block::record(KIND_KEY, key_type, addr, key))?;
+        if let Some(i) = known {
+            self.remove_at(i);
+        }
+        self.live[self.n] = Live { addr, slot };
+        self.n += 1;
+        // The new record is safe in flash: now the old one may go.
+        self.wipe(Some(addr), slot)?;
+        Ok(match known {
+            Some(_) => Saved::Replaced,
+            None => Saved::New { evicted: None },
+        })
     }
 
     /// How many gamepads are saved.
@@ -511,7 +762,24 @@ impl<F: Flash> Store<F> {
 
     /// Writes `blk` into the next free slot and reads it back. On a
     /// mismatch the next slot is tried (a few times).
+    /// On a `fresh` store (only `attach` makes one) the header is written
+    /// and read back first. Over a cut first header this writes the same
+    /// bytes again: every 0 bit already there is a 0 bit of the header
+    /// (`cut_first_header` checked it), so the result is the header. A
+    /// cut here leaves a cut first header again: nothing saved, nothing
+    /// lost.
     fn append(&mut self, blk: &Block) -> Result<u32, Error<F::Error>> {
+        if self.next > SLOTS {
+            return Err(Error::Full);
+        }
+        if self.fresh {
+            write_verified(
+                &mut self.b,
+                at(self.active, 0),
+                &Block::header(self.generation),
+            )?;
+            self.fresh = false;
+        }
         let mut tries = 0;
         while self.next <= SLOTS {
             let slot = self.next;
@@ -535,8 +803,28 @@ impl<F: Flash> Store<F> {
     /// Reads the active area: which gamepads are saved, and where the
     /// free slots start.
     fn scan(&mut self, rep: &mut Opened) -> Result<(), Error<F::Error>> {
+        let sc = self.read_live()?;
+        rep.damaged += sc.damaged;
+        rep.dropped += sc.dropped;
+        // A gamepad dropped for room must not come back later (when a
+        // newer one is forgotten): wipe its records now. Start-up only.
+        for d in sc.dropped_addrs.into_iter().flatten() {
+            if self.find(d).is_none() {
+                self.wipe(Some(d), self.next)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// The reading part of `scan`: fills `live`, `n` and `next`. Never
+    /// writes.
+    fn read_live(&mut self) -> Result<Scanned, Error<F::Error>> {
+        let mut sc = Scanned {
+            damaged: 0,
+            dropped: 0,
+            dropped_addrs: [None; MAX_PADS],
+        };
         let mut last_used = 0;
-        let mut dropped: [Option<[u8; 6]>; MAX_PADS] = [None; MAX_PADS];
         for slot in 1..=SLOTS {
             let blk = read_block(&mut self.b, at(self.active, slot))?;
             if blk.is_blank() {
@@ -551,8 +839,8 @@ impl<F: Flash> Store<F> {
                     if self.n == MAX_PADS {
                         let old = self.live[0].addr;
                         self.remove_at(0);
-                        rep.dropped += 1;
-                        if let Some(d) = dropped.iter_mut().find(|d| d.is_none()) {
+                        sc.dropped += 1;
+                        if let Some(d) = sc.dropped_addrs.iter_mut().find(|d| d.is_none()) {
                             *d = Some(old);
                         }
                     }
@@ -566,18 +854,27 @@ impl<F: Flash> Store<F> {
                 }
                 Some(Rec::ForgetAll) => self.n = 0,
                 None if blk.is_zero() => {}
-                None => rep.damaged += 1,
+                None => sc.damaged += 1,
             }
         }
         self.next = last_used + 1;
-        // A gamepad dropped for room must not come back later (when a
-        // newer one is forgotten): wipe its records now. Start-up only.
-        for d in dropped.into_iter().flatten() {
-            if self.find(d).is_none() {
-                self.wipe(Some(d), self.next)?;
+        Ok(sc)
+    }
+
+    /// Whether `addr` would be saved if there were no limit of
+    /// [`MAX_PADS`]: its last key record is not followed by a forget of
+    /// it or a forget-all. Only reads.
+    fn alive_without_limit(&mut self, addr: [u8; 6]) -> Result<bool, Error<F::Error>> {
+        let mut alive = false;
+        for slot in 1..=SLOTS {
+            match read_block(&mut self.b, at(self.active, slot))?.parse() {
+                Some(Rec::Key(p)) if p.addr == addr => alive = true,
+                Some(Rec::Forget(a)) if a == addr => alive = false,
+                Some(Rec::ForgetAll) => alive = false,
+                _ => {}
             }
         }
-        Ok(())
+        Ok(alive)
     }
 
     /// Copies the live records into the spare area, writes its header

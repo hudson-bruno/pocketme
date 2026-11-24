@@ -50,6 +50,24 @@ BOTH
                    the console menu changes it too). Builds without the
                    `boot-gather` feature have only the plain boot screen
   --link ADDR      the debug link on a local TCP address, e.g. 127.0.0.1:7000
+  --settings-entry tiles|on|off
+                   builds with the `settings` feature only: where the
+                   settings app is opened from (default off: the console
+                   as without the app). tiles or on: GAMEPADS and
+                   SETTINGS tiles in the home row (before and after the
+                   games) plus quick-menu shortcuts
+  --pair WHAT      settings app: what the stand-in pairing radio does
+                   (there is no real radio on the PC). found (default):
+                   finds pad A after 3 s, pairs it 2 s after YES; two:
+                   finds pads A and B; none: finds nothing in 60 s;
+                   old-pin, lost, refused, store: finds pad A, then the
+                   call ends with that failure; linked, damaged, not-held,
+                   busy: the board refuses at once; off: a board that
+                   cannot pair
+  --pair-saved N   settings app: pads already saved, 0 to 4 (default 1;
+                   the first one shows as connected)
+  --pair-slots N   settings app: free records in the pad memory, 0 to 255
+                   (default: not known)
   --quiet          do not print the console's log lines
   --help           this text
 
@@ -110,6 +128,12 @@ struct Options {
     boot: Option<Boot>,
     link: Option<String>,
     quiet: bool,
+    /// The settings app (feature `settings`): the way in and the
+    /// stand-in pairing radio. Checked in `settings_app`.
+    settings_entry: Option<String>,
+    pair: Option<String>,
+    pair_saved: Option<u8>,
+    pair_slots: Option<u8>,
 }
 
 fn parse_args(args: &[String]) -> Result<Option<Options>, String> {
@@ -131,6 +155,10 @@ fn parse_args(args: &[String]) -> Result<Option<Options>, String> {
         boot: None,
         link: None,
         quiet: false,
+        settings_entry: None,
+        pair: None,
+        pair_saved: None,
+        pair_slots: None,
     };
     let mut it = args.iter();
     while let Some(arg) = it.next() {
@@ -194,6 +222,20 @@ fn parse_args(args: &[String]) -> Result<Option<Options>, String> {
             }
             "--link" => o.link = Some(value()?.to_string()),
             "--quiet" => o.quiet = true,
+            "--settings-entry" => o.settings_entry = Some(value()?.to_string()),
+            "--pair" => o.pair = Some(value()?.to_string()),
+            "--pair-saved" => {
+                o.pair_saved = match whole(value()?)? {
+                    n @ 0..=4 => Some(n as u8),
+                    n => return Err(format!("--pair-saved must be 0 to 4, not {n}")),
+                }
+            }
+            "--pair-slots" => {
+                o.pair_slots = match whole(value()?)? {
+                    n @ 0..=255 => Some(n as u8),
+                    n => return Err(format!("--pair-slots must be 0 to 255, not {n}")),
+                }
+            }
             other => return Err(format!("unknown option `{other}` (try --help)")),
         }
     }
@@ -215,6 +257,7 @@ fn run_main() -> Result<(), String> {
     // About 200 KB together: on the heap, not the stack.
     let mut console = Box::new(Console::new());
     let mut board = Box::new(DesktopBoard::new(o.card.as_deref()));
+    settings_app(&o, &mut console, &mut board)?;
     board.log.echo = !o.quiet;
     if let Some(path) = &o.store {
         board.store = FileStore::open(path)?;
@@ -228,6 +271,103 @@ fn run_main() -> Result<(), String> {
         return run_window(&o, &mut console, &mut board);
     }
     run_headless(&o, &mut console, &mut board)
+}
+
+/// The settings app's options (feature `settings`).
+#[cfg(feature = "settings")]
+fn settings_app(
+    o: &Options,
+    console: &mut Console,
+    board: &mut DesktopBoard,
+) -> Result<(), String> {
+    use console_core::settings::Entry;
+    let entry = match &o.settings_entry {
+        None => Entry::Off,
+        Some(v) => Entry::parse(v).ok_or(format!(
+            "--settings-entry must be tiles, on or off, not `{v}`"
+        ))?,
+    };
+    let what = o.pair.as_deref().unwrap_or("found");
+    let radio = pair_radio(what, o.pair_saved.unwrap_or(1), o.pair_slots).ok_or(format!(
+        "--pair must be found, two, none, old-pin, lost, refused, store, linked, \
+         damaged, not-held, busy or off, not `{what}`"
+    ))?;
+    if what == "off" && (o.pair_saved.is_some() || o.pair_slots.is_some()) {
+        return Err(
+            "--pair-saved and --pair-slots need a radio that can pair (not --pair off)".into(),
+        );
+    }
+    console.set_settings_entry(entry);
+    board.pad.radio = radio;
+    Ok(())
+}
+
+/// The stand-in pairing radio for `--pair`: `saved` pads already saved
+/// (the first connected), `slots` free records if known. `None` for a
+/// name it does not know.
+#[cfg(feature = "settings")]
+fn pair_radio(
+    what: &str,
+    saved: u8,
+    slots: Option<u8>,
+) -> Option<desktop_board::fake_radio::FakeRadio> {
+    use board_api::PairFail;
+    use desktop_board::fake_radio::{FAKE_SAVED_TAILS, FakeRadio, PairScript};
+    // In console steps (30 a second while a pairing page is open): pad A
+    // is found 3 s into the search, pad B 5 s in, a call takes 2 s, a
+    // search 60 s.
+    const FIND: u16 = 90;
+    const FIND_B: u16 = 150;
+    const CALL: u16 = 60;
+    const SEARCH: u16 = 1800;
+    let found = PairScript::found_and_saved(FIND, CALL).searching(SEARCH);
+    let script = match what {
+        "off" => return Some(FakeRadio::default()),
+        "found" => found,
+        "two" => PairScript::two_found(FIND, FIND_B)
+            .calling(CALL)
+            .searching(SEARCH),
+        "none" => PairScript::nothing_found(SEARCH),
+        "old-pin" => found.call_fails(PairFail::OldPin),
+        "lost" => found.call_fails(PairFail::Lost),
+        "refused" => found.call_fails(PairFail::Refused),
+        "store" => found
+            .call_fails(PairFail::Store)
+            .forget_fails(PairFail::Store),
+        "linked" => found.begin_fails(PairFail::Linked),
+        "damaged" => found
+            .begin_fails(PairFail::Damaged)
+            .forget_fails(PairFail::Damaged),
+        "not-held" => PairScript::not_held(),
+        "busy" => found
+            .begin_fails(PairFail::Busy)
+            .forget_fails(PairFail::Busy),
+        _ => return None,
+    };
+    let mut radio = FakeRadio::new(script);
+    for place in 0..saved.min(4) {
+        radio = radio.with_saved(place, FAKE_SAVED_TAILS[usize::from(place)], place == 0);
+    }
+    if let Some(n) = slots {
+        radio = radio.with_slots(n);
+    }
+    Some(radio)
+}
+
+#[cfg(not(feature = "settings"))]
+fn settings_app(o: &Options, _: &mut Console, _: &mut DesktopBoard) -> Result<(), String> {
+    if o.settings_entry.is_some()
+        || o.pair.is_some()
+        || o.pair_saved.is_some()
+        || o.pair_slots.is_some()
+    {
+        return Err(
+            "--settings-entry, --pair, --pair-saved and --pair-slots need a build \
+             with the `settings` feature"
+                .into(),
+        );
+    }
+    Ok(())
 }
 
 fn run_headless(

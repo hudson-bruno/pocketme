@@ -90,6 +90,8 @@ use crate::gfx::{self, CARD_ICON, CX, Text};
 use crate::input::{Input, act};
 use crate::lent;
 pub use crate::lent::LENT_BYTES;
+#[cfg(feature = "settings")]
+use crate::settings::SystemTile;
 use crate::theme::{
     self, ART_SLOTS, DOTS_Y, FLICK_MAX, FLICK_MIN, FLICK_US, FRAME_GAP, FRAME_W, GOLD, INK, LINE,
     MUTE, NAME, NAME_Y, PAPER, TAG_Y, TILE, TILE_FIRST, TILE_GAP, TILE_LEFT, TILE_MARGIN, TILE_Y,
@@ -217,6 +219,24 @@ pub struct Home {
     /// are read in the next step, and home is drawn only then (see
     /// `Console::step`).
     fresh: bool,
+    /// Placement E, "tiles" (feature `settings`): 1, the GAMEPADS tile
+    /// before the games (and the SETTINGS tile after them); 0
+    /// otherwise. Place 0 is GAMEPADS, place `lead + i` is game `i`,
+    /// the last place SETTINGS. Set by the board at start.
+    #[cfg(feature = "settings")]
+    lead: u8,
+}
+
+/// What stands at a place of the home row.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Slot {
+    /// Game `i` of the list.
+    Game(usize),
+    /// Placement E's system tile number `n` (0 GAMEPADS, 1 SETTINGS).
+    System(u8),
+    /// Placement E with no games: the games' place between GAMEPADS and
+    /// SETTINGS, empty (it says what is missing). It cannot be chosen.
+    Empty,
 }
 
 impl Default for Home {
@@ -248,6 +268,85 @@ impl Home {
             list_ok: false,
             stamp: 0,
             fresh: false,
+            #[cfg(feature = "settings")]
+            lead: 0,
+        }
+    }
+
+    /// Tiles in the row: the games, and with the feature `settings`
+    /// active (`Entry::Tiles`), GAMEPADS before them and SETTINGS after
+    /// them (the games then start at index 1). The two system tiles stay
+    /// with no games too, with an empty place between them.
+    pub fn slots(&self) -> usize {
+        #[cfg(feature = "settings")]
+        if self.lead() > 0 {
+            return self.lead() + self.count.max(1) + 1;
+        }
+        self.count
+    }
+
+    /// Tiles before the games (placement E: GAMEPADS; else 0).
+    pub fn lead(&self) -> usize {
+        #[cfg(feature = "settings")]
+        return usize::from(self.lead);
+        #[cfg(not(feature = "settings"))]
+        0
+    }
+
+    /// What stands at place `i` of the row (a place past the row reads
+    /// as a game, which [`Home::game`] then does not find).
+    pub fn slot(&self, i: usize) -> Slot {
+        #[cfg(feature = "settings")]
+        if self.lead() > 0 {
+            let last = self.slots() - 1;
+            return match i {
+                0 => Slot::System(0),
+                _ if i == last => Slot::System(1),
+                _ if self.count == 0 => Slot::Empty,
+                _ => Slot::Game(i - 1),
+            };
+        }
+        Slot::Game(i)
+    }
+
+    /// Placement E (feature `settings`): GAMEPADS before the games and
+    /// SETTINGS after them (`on`), starting the cursor on slot 0
+    /// (GAMEPADS when on).
+    #[cfg(feature = "settings")]
+    pub fn set_system_tiles(&mut self, on: bool) {
+        self.lead = u8::from(on);
+        self.selected = 0;
+        self.keep_selection(false);
+        self.scroll = self.target_scroll();
+    }
+
+    /// Keeps the selection on a tile that is there: the last one (in
+    /// placement E the last game, or SETTINGS when `on_settings`: it was
+    /// on SETTINGS before the list changed; GAMEPADS with no games), and
+    /// never on E's empty place.
+    fn keep_selection(&mut self, on_settings: bool) {
+        #[cfg(feature = "settings")]
+        if self.lead() > 0 {
+            let last = self.slots() - 1;
+            if on_settings {
+                self.selected = last;
+            } else if self.selected >= last || self.slot(self.selected) == Slot::Empty {
+                self.selected = if self.count > 0 { self.count } else { 0 };
+            }
+            return;
+        }
+        let _ = on_settings;
+        if self.selected >= self.slots() {
+            self.selected = self.slots().saturating_sub(1);
+        }
+    }
+
+    /// Placement E: the chosen tile is system tile number `n` (0
+    /// GAMEPADS, 1 SETTINGS).
+    pub fn on_system(&self) -> Option<u8> {
+        match self.slot(self.selected) {
+            Slot::System(n) => Some(n),
+            _ => None,
         }
     }
 
@@ -338,6 +437,7 @@ impl Home {
         self.art.forget();
         self.list_ok = true;
         self.fresh = false;
+        let on_settings = self.on_system() == Some(1);
         let kept = match ram.filter(|r| r.len() >= LENT_BYTES) {
             Some(ram) => self.read_list(files, ram),
             None => {
@@ -349,7 +449,7 @@ impl Home {
         if kept > 0 {
             self.card = Card::Games;
         }
-        self.selected = self.selected.min(kept.saturating_sub(1));
+        self.keep_selection(on_settings);
         self.settling = false;
         self.follow = false;
         self.stopped = false;
@@ -535,14 +635,18 @@ impl Home {
         };
         for pass in 0..2 {
             let margin = if pass == 0 { 0 } else { STRIDE };
-            for d in 0..self.count {
-                for i in [self.selected + d, self.selected.wrapping_sub(d)] {
-                    let new = i < self.count
-                        && on_screen(i, margin)
-                        && (pass == 0 || !on_screen(i, 0))
-                        && !out[..n].contains(&i);
+            for d in 0..self.slots() {
+                // Places in the row; game `g` is at place `lead + g`.
+                for s in [self.selected + d, self.selected.wrapping_sub(d)] {
+                    let Some(g) = s.checked_sub(self.lead()) else {
+                        continue;
+                    };
+                    let new = g < self.count
+                        && on_screen(s, margin)
+                        && (pass == 0 || !on_screen(s, 0))
+                        && !out[..n].contains(&g);
                     if new && n < ART_SLOTS {
-                        out[n] = i;
+                        out[n] = g;
                         n += 1;
                     }
                 }
@@ -668,15 +772,15 @@ impl Home {
     /// The far end of the row: the scroll that shows the last tile at the
     /// right margin (0 when every tile fits).
     pub fn max_scroll(&self) -> i16 {
-        if self.count == 0 {
+        if self.slots() == 0 {
             return 0;
         }
-        let x = Self::tile_x(self.count - 1, 0);
+        let x = Self::tile_x(self.slots() - 1, 0);
         (x + TILE as i16 + TILE_MARGIN - W as i16).max(0)
     }
 
     /// Whether a picture row `y` is on the tiles' band (with the frame).
-    fn on_row(y: u16) -> bool {
+    pub fn on_row(y: u16) -> bool {
         let (y, pad) = (y as i16, (FRAME_GAP + FRAME_W) as i16);
         y >= TILE_Y - pad && y < TILE_Y + TILE as i16 + pad
     }
@@ -685,7 +789,7 @@ impl Home {
     /// the row at `scroll`.
     fn tile_at(&self, x: u16, scroll: i16) -> Option<usize> {
         let (x, pad) = (x as i16, (FRAME_GAP + FRAME_W) as i16);
-        (0..self.count).find(|&i| {
+        (0..self.slots()).find(|&i| {
             let left = Self::tile_x(i, scroll);
             x >= left - pad && x < left + TILE as i16 + pad
         })
@@ -704,12 +808,12 @@ impl Home {
     /// tiles fully on screen are exactly those inside the margins, so
     /// the buttons then find the row as they would have left it.
     fn pull_selection_into_view(&mut self) {
-        if self.count == 0 || Self::shown(self.selected, self.scroll) {
+        if self.slots() == 0 || Self::shown(self.selected, self.scroll) {
             return;
         }
         let sel = self.selected;
-        if let Some(i) = (0..self.count)
-            .filter(|&i| Self::shown(i, self.scroll))
+        if let Some(i) = (0..self.slots())
+            .filter(|&i| Self::shown(i, self.scroll) && self.slot(i) != Slot::Empty)
             .min_by_key(|&i| i.abs_diff(sel))
         {
             self.selected = i;
@@ -762,12 +866,12 @@ impl Home {
     pub fn update(&mut self, input: &Input) -> HomeAction {
         let mut action = HomeAction::None;
         if let Some((_, y)) = input.down {
-            self.down_on_row = self.count > 0 && Self::on_row(y);
+            self.down_on_row = self.slots() > 0 && Self::on_row(y);
             self.down_sel = self.selected;
             self.down_scroll = self.scroll;
             self.drag_off = false;
             // A finger on the row stops a glide where it is.
-            self.stopped = self.count > 0 && Self::on_row(y) && self.gliding();
+            self.stopped = self.slots() > 0 && Self::on_row(y) && self.gliding();
             if self.stopped {
                 self.settling = false;
                 self.follow = false;
@@ -779,8 +883,8 @@ impl Home {
         let mut drag = input
             .drag
             .filter(|d| Self::on_row(d.from.1) && !self.drag_off);
-        if self.count > 0 {
-            let last = self.count - 1;
+        if self.slots() > 0 {
+            let last = self.slots() - 1;
             // The finger that held the row was taken away with no lift (the
             // console menu opened over it): settle from here, as after a
             // drag let go at rest. (In a grace frame `drag` is still there.)
@@ -793,10 +897,40 @@ impl Home {
             // one, even if a button moved the choice in this same frame.
             let was = self.selected;
             if input.acts & act::LEFT != 0 {
-                self.selected = self.selected.saturating_sub(1);
+                if self.lead() > 0 {
+                    self.selected = if self.selected == 0 {
+                        last
+                    } else {
+                        self.selected - 1
+                    };
+                    if self.slot(self.selected) == Slot::Empty {
+                        self.selected = if self.selected == 0 {
+                            last
+                        } else {
+                            self.selected - 1
+                        };
+                    }
+                } else {
+                    self.selected = self.selected.saturating_sub(1);
+                }
             }
             if input.acts & act::RIGHT != 0 {
-                self.selected = (self.selected + 1).min(last);
+                if self.lead() > 0 {
+                    self.selected = if self.selected >= last {
+                        0
+                    } else {
+                        self.selected + 1
+                    };
+                    if self.slot(self.selected) == Slot::Empty {
+                        self.selected = if self.selected >= last {
+                            0
+                        } else {
+                            self.selected + 1
+                        };
+                    }
+                } else {
+                    self.selected = (self.selected + 1).min(last);
+                }
             }
             // (Home opens the console menu; the console takes it before
             // this, see `Console::step`.)
@@ -828,6 +962,7 @@ impl Home {
                 && !stopped
                 && Self::on_row(ty)
                 && let Some(i) = self.tile_at(tx, self.down_scroll)
+                && self.slot(i) != Slot::Empty
             {
                 if i == was && i == self.down_sel {
                     action = HomeAction::Launch(i);
@@ -892,6 +1027,12 @@ impl Home {
         f.clear(INK);
         gfx::stars(f);
         f.text(TITLE_X, TOP_Y, NAME, MUTE);
+        // Placement E: the system tiles are there with no games too.
+        #[cfg(feature = "settings")]
+        if self.lead() > 0 && self.card != Card::Games {
+            self.draw_system_only(f);
+            return;
+        }
         match self.card {
             Card::Games => {
                 if let Some(ram) = ram.filter(|_| self.valid(ram)) {
@@ -920,34 +1061,46 @@ impl Home {
         let label = count_text(self.count, &mut buf);
         gfx::text_right(f, 154, TOP_Y, label, MUTE);
 
-        for i in 0..self.count {
+        for i in 0..self.slots() {
             let x = Self::tile_x(i, self.scroll);
             if x + (TILE as i16) + 4 <= 0 || x - 4 >= W as i16 {
                 continue;
             }
-            let kept = (self.art.slot(i)).and_then(|k| Some((k, lent::picture(ram, k)?)));
+            let g = match self.slot(i) {
+                Slot::Game(g) => g,
+                // Placement E's system tiles (GAMEPADS and SETTINGS).
+                other => {
+                    #[cfg(feature = "settings")]
+                    Self::draw_system_tile_slot(f, other, x);
+                    let _ = other;
+                    if i == self.selected {
+                        Self::draw_frame(f, x, GOLD);
+                    }
+                    continue;
+                }
+            };
+            let kept = (self.art.slot(g)).and_then(|k| Some((k, lent::picture(ram, k)?)));
             match kept {
                 Some((k, stored)) => art::draw(f, k, stored, x, TILE_Y),
                 None => {
-                    let g = lent::game(ram, i);
-                    draw_tile(f, x, TILE_Y, &g, TILE_FIRST + i as u8);
+                    let game = lent::game(ram, g);
+                    draw_tile(f, x, TILE_Y, &game, TILE_FIRST + g as u8);
                 }
             }
             if i == self.selected {
-                let gap = FRAME_GAP as i16;
-                gfx::ring(
-                    f,
-                    x - gap,
-                    TILE_Y - gap,
-                    TILE + 2 * FRAME_GAP,
-                    TILE + 2 * FRAME_GAP,
-                    FRAME_W,
-                    GOLD,
-                );
+                Self::draw_frame(f, x, GOLD);
             }
         }
 
-        let g = lent::game(ram, self.selected);
+        // Placement E: a system tile is chosen; its words go where a
+        // game's go.
+        #[cfg(feature = "settings")]
+        if let Some(which) = self.on_system().and_then(|n| SystemTile::at(n.into())) {
+            crate::settings::draw_system_words(f, which);
+            self.draw_dots(f);
+            return;
+        }
+        let g = lent::game(ram, self.selected - self.lead());
         let name = g.name.as_str();
         if gfx::width(name, 2) <= W as i16 - 8 {
             gfx::text_centred(f, CX, NAME_Y, name, PAPER, 2);
@@ -955,18 +1108,115 @@ impl Home {
             gfx::text_centred(f, CX, NAME_Y + 3, name, PAPER, 1);
         }
         gfx::text_centred(f, CX, TAG_Y, g.tag.as_str(), MUTE, 1);
+        self.draw_dots(f);
+    }
 
-        // One small dot per game, the selected one gold (when they fit).
-        let n = self.count as i16;
-        if n > 1 && n * 6 <= W as i16 - 16 {
-            let x0 = CX - n * 3;
+    /// Draws one of placement E's system tiles at `x`.
+    #[cfg(feature = "settings")]
+    fn draw_system_tile_slot(f: &mut Frame, slot: Slot, x: i16) {
+        if let Slot::System(n) = slot
+            && let Some(which) = SystemTile::at(n.into())
+        {
+            crate::settings::draw_system_tile(f, x, TILE_Y, which);
+        }
+    }
+
+    /// Placement E with no games (no card, or a card with none):
+    /// GAMEPADS, then the games' place, empty, saying what is missing as
+    /// today's home screen does (the card, or the "?"), then SETTINGS.
+    /// The chosen tile's words go where a game's go; the card's line goes
+    /// under them, where the dots are, and the top line says NO CARD or
+    /// NO GAMES where it counts the games.
+    #[cfg(feature = "settings")]
+    fn draw_system_only(&self, f: &mut Frame) {
+        let mut top = "NO CARD";
+        let mut line = "INSERT A CARD TO SEE GAMES";
+        for i in 0..self.slots() {
+            let x = Self::tile_x(i, self.scroll);
+            match self.slot(i) {
+                Slot::System(n) => {
+                    if let Some(which) = SystemTile::at(n.into()) {
+                        crate::settings::draw_system_tile(f, x, TILE_Y, which);
+                    }
+                }
+                _ => {
+                    f.outline(x, TILE_Y, TILE, TILE, LINE);
+                    if self.card == Card::Empty {
+                        gfx::text_centred(f, x + TILE as i16 / 2, TILE_Y + 11, "?", LINE, 3);
+                        top = "NO GAMES";
+                        line = "PUT GAMES IN /CONSOLE/GAMES";
+                    } else {
+                        let (w, h) = (CARD_ICON.w * 2, CARD_ICON.h * 2);
+                        let (cx, cy) = (x + (TILE - w) as i16 / 2, TILE_Y + (TILE - h) as i16 / 2);
+                        CARD_ICON.draw(f, cx, cy, 2, CARD_ICON.h, MUTE);
+                    }
+                }
+            }
+            if i == self.selected {
+                Self::draw_frame(f, x, GOLD);
+            }
+        }
+        gfx::text_right(f, 154, TOP_Y, top, MUTE);
+        if let Some(which) = self.on_system().and_then(|n| SystemTile::at(n.into())) {
+            crate::settings::draw_system_words(f, which);
+        }
+        gfx::text_centred(f, CX, SYSTEM_ONLY_LINE_Y, line, MUTE, 1);
+    }
+
+    /// The selection frame round the tile at `x`.
+    fn draw_frame(f: &mut Frame, x: i16, c: u8) {
+        let gap = FRAME_GAP as i16;
+        gfx::ring(
+            f,
+            x - gap,
+            TILE_Y - gap,
+            TILE + 2 * FRAME_GAP,
+            TILE + 2 * FRAME_GAP,
+            FRAME_W,
+            c,
+        );
+    }
+
+    /// One small dot per game, the selected one gold (when they fit).
+    /// Placement E's GAMEPADS and SETTINGS tiles each get a hollow
+    /// square after a gap, so the dots still count only games.
+    fn draw_dots(&self, f: &mut Frame) {
+        let n = self.slots() as i16;
+        let lead = self.lead() as i16;
+        let gap = if lead > 0 { 2 } else { 0 };
+        let dots_y = DOTS_Y;
+        if n > 1 && n * 6 + gap <= W as i16 - 16 {
+            let x0 = CX - n * 3 - gap / 2;
+            if lead > 0 {
+                let c = if self.selected == 0 { GOLD } else { MUTE };
+                f.outline(x0, dots_y - 1, 5, 5, c);
+            }
+            let g0 = x0 + lead * (6 + gap);
             for i in 0..self.count {
-                let c = if i == self.selected { GOLD } else { LINE };
-                f.rect(x0 + i as i16 * 6 + 1, DOTS_Y, 3, 3, c);
+                let c = if self.lead() + i == self.selected {
+                    GOLD
+                } else {
+                    LINE
+                };
+                f.rect(g0 + i as i16 * 6 + 1, dots_y, 3, 3, c);
+            }
+            #[cfg(feature = "settings")]
+            if lead > 0 {
+                let c = if self.on_system() == Some(1) {
+                    GOLD
+                } else {
+                    MUTE
+                };
+                f.outline(g0 + self.count as i16 * 6 + 3, dots_y - 1, 5, 5, c);
             }
         }
     }
 }
+
+/// Placement E with no games: the card's line, under the chosen system
+/// tile's words (where the dots are).
+#[cfg(feature = "settings")]
+pub const SYSTEM_ONLY_LINE_Y: i16 = DOTS_Y + 2;
 
 /// A placeholder tile: the tile colour, a thin dark edge, and the game's
 /// first letter, big, with a shadow.

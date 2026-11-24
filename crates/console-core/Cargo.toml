@@ -25,6 +25,15 @@ swap       = ["console-video/swap"]
 # BOOT setting (FULL, SHORT, OFF) in the home screen's menu. Off by
 # default: without it the boot screen is today's, unchanged.
 boot-gather = []
+# The settings app (src/settings.rs): brightness, the boot animation
+# (with boot-gather), the saved gamepads, pairing and forgetting a pad
+# through the board's `Pad` pairing requests, and a page about the
+# console; with four ways to open it (a tile after the games, the gear in
+# the corner, a line in the home menu, a row of round icons under the
+# games), chosen by the board with `Console::set_settings_entry`. Off by
+# default: without it nothing changes, and with it nothing changes until
+# the board chooses a way in.
+settings = []
 
 [dependencies]
 board-api     = { path = "../board-api" }

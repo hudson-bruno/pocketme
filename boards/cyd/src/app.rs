@@ -860,6 +860,15 @@ impl App {
                 r.poll(now_us(), &mut self.board.pad);
             }
             self.look_and_step(force);
+            #[cfg(feature = "pair")]
+            if let Some(r) = &mut self.radio {
+                r.serve_pairing(
+                    now_us(),
+                    self.console.pairing_page(),
+                    &mut self.board.pad,
+                    &mut self.board.store,
+                );
+            }
             #[cfg(feature = "store")]
             self.keep_settings();
             crate::logbuf::drain(&mut self.uart);

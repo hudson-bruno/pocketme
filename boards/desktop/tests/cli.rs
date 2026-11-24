@@ -53,6 +53,10 @@ fn help_lists_the_options_and_every_key() {
         "--close-after",
         "--card",
         "--boot",
+        "--settings-entry",
+        "--pair",
+        "--pair-saved",
+        "--pair-slots",
     ] {
         assert!(text.contains(word), "{word} missing from --help");
     }
@@ -277,4 +281,50 @@ fn the_boot_option_picks_how_the_boot_plays() {
     let (out, _, err) = sim_as_is(&dir, &["--boot", "long"]);
     assert!(!out.status.success());
     assert!(err.contains("--boot must be full, short or off"), "{err}");
+}
+
+/// The settings app's options: without `--settings-entry` the console is
+/// as without the app; `tiles` / `on` puts GAMEPADS and SETTINGS tiles in
+/// the home row; wrong values are refused. Without the feature every one
+/// of them is refused.
+#[test]
+fn the_settings_options_are_checked() {
+    let dir = folder("settings");
+    let last = |args: &[&str]| -> String {
+        let (out, text, err) = sim(&dir, &[args, &["--frames", "20"]].concat());
+        assert!(out.status.success(), "{args:?}: {err}");
+        text.split("fingerprint ")
+            .last()
+            .unwrap()
+            .trim()
+            .to_string()
+    };
+    if !cfg!(feature = "settings") {
+        for args in [&["--settings-entry", "tiles"][..], &["--pair", "two"][..]] {
+            let (out, _, err) = sim(&dir, args);
+            assert!(!out.status.success(), "{args:?}");
+            assert!(err.contains("`settings` feature"), "{args:?}: {err}");
+        }
+        return;
+    }
+    let plain = last(&[]);
+    assert_eq!(plain, last(&["--settings-entry", "off"]));
+    assert_eq!(plain, last(&["--pair", "two", "--pair-saved", "3"]));
+    let tiles = last(&["--settings-entry", "tiles"]);
+    assert_ne!(plain, tiles);
+    assert_eq!(tiles, last(&["--settings-entry", "on"]));
+    for (args, says) in [
+        (&["--settings-entry", "door"][..], "tiles, on or off"),
+        (&["--pair", "maybe"][..], "--pair must be"),
+        (&["--pair-saved", "5"][..], "0 to 4"),
+        (&["--pair-slots", "300"][..], "0 to 255"),
+        (
+            &["--pair", "off", "--pair-saved", "1"][..],
+            "not --pair off",
+        ),
+    ] {
+        let (out, _, err) = sim(&dir, args);
+        assert!(!out.status.success(), "{args:?}");
+        assert!(err.contains(says), "{args:?}: {err}");
+    }
 }

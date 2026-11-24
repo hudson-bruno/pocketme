@@ -45,6 +45,7 @@ fn main() {
         "xip-probe",
         "boot-gather",
         "game-flash",
+        "pair",
     ]
     .into_iter()
     .filter(|f| feature(f))

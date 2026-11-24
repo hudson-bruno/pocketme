@@ -174,6 +174,13 @@ async fn main(spawner: Spawner) -> ! {
         let gate = crate::pairing::load(&mut fs, pads, &mut pad_radio::LogOnly);
         (pads, gate)
     };
+    #[cfg(feature = "pair")]
+    let (pairing_area, pairing_ok, pair_slots) = {
+        let mut fs = esp_storage::FlashStorage::new(flash.reborrow());
+        let area = crate::pairing::attach_meta(&mut fs);
+        let (ok, slots) = area.status();
+        (area, ok, slots)
+    };
     #[cfg(not(feature = "pad"))]
     let flash = peripherals.FLASH;
 
@@ -194,7 +201,10 @@ async fn main(spawner: Spawner) -> ! {
     // set-up commands go out now; the rest runs from the console's loop.
     #[cfg(feature = "pad")]
     let radio = {
-        let radio = pad_radio::PadRadio::start(peripherals.BT, gate, pads);
+        #[allow(unused_mut)]
+        let mut radio = pad_radio::PadRadio::start(peripherals.BT, gate, pads);
+        #[cfg(feature = "pair")]
+        radio.set_pairing_area(pairing_area);
         mem::report("radio");
         crate::logbuf::flush(&mut uart);
         radio
@@ -354,6 +364,10 @@ async fn main(spawner: Spawner) -> ! {
         pad: board::CydPad {
             #[cfg(feature = "pad")]
             host: Some(pads),
+            #[cfg(feature = "pair")]
+            pairing_ok,
+            #[cfg(feature = "pair")]
+            pair_slots,
             ..Default::default()
         },
         clock: CydClock,
@@ -376,6 +390,8 @@ async fn main(spawner: Spawner) -> ! {
         console.set_boot_anim(anim);
         info!("settings: boot anim {}", anim.word());
     }
+    #[cfg(feature = "pair")]
+    console.set_settings_entry(console_core::settings::Entry::Tiles);
     info!(
         "console: {} bytes in a static at {:#x}",
         core::mem::size_of::<Console>(),

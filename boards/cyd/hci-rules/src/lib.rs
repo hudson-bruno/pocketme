@@ -1,24 +1,43 @@
 //! The CYD's rules for the gamepad radio's HCI bytes (feature `pad` of
 //! boards/cyd), as plain logic: no radio, no pins. The firmware's byte
-//! path (boards/cyd/src/hci.rs) and its small host for this round
-//! (boards/cyd/src/pad_radio.rs) use it; the PC tests (tests/rules.rs)
-//! test it.
+//! path (boards/cyd/src/hci.rs, boards/cyd/src/pad_radio.rs) puts every
+//! packet for the controller through [`Gate`]; the PC tests (tests/)
+//! test it, also against the real gamepad host (crates/pad-host).
 //!
 //! HCI packets here are whole packets with their one-byte kind first
 //! (the "H4" form: 0x01 command, 0x02 ACL data, 0x03 SCO data, 0x04
 //! event), exactly the bytes that go to or come from the controller.
+//!
+//! The promise: the console is reconnect-only. It is never discoverable,
+//! never searches, never calls a device, and never says yes to pairing;
+//! only a saved pad may connect, and only a saved pad is given its key.
+//! The gate holds that promise on its own, whatever the host above it
+//! asks for (pad-proto's `Config::reconnect_only` holds it one layer up).
+//!
+//! The one exception is the pairing window of the crate feature `pair`
+//! (off by default; without it none of it is compiled in): opened from
+//! outside ([`Gate::arm`], which the firmware calls only after the BOOT
+//! button was held), it lets the console search for pads, call the one
+//! pad the user chose ([`Gate::bind`]) and pair it with "just works"
+//! Secure Simple Pairing, and it closes by itself at its deadline (at
+//! most two minutes), on any failure, and once the pad's key is saved.
+//! Even then the console is never discoverable and never answers a PIN.
+//! The gate never reads or keeps a link key.
 //!
 //! - [`packet_len`]: how long a packet is, from its header.
 //! - [`Gate`]: the only packets the firmware may send to the controller
 //!   (the reconnect-only gamepad host's commands, an accept or a key only
 //!   to a saved pad, ACL data). Everything else is refused before it
 //!   reaches the radio.
-//! - [`Cmd`] and its builders: the commands the firmware sends.
-//! - [`Event`] and [`parse_event`]: the events the firmware reads.
-//! - [`Setup`]: the start-up sequence (reset, read local version, read
-//!   buffer size, set event mask, page scan on), one command at a time.
+//! - [`Event`] and [`parse_event`]: the events the gate reads.
 //! - [`BdAddr`]: a device address that only ever prints its last two
 //!   bytes (device addresses are personal).
+//! - [`Cmd`] and its builders, [`answer_connection_request`], [`Setup`]
+//!   and [`EVENT_MASK`]: a small start-up sequence and its commands, kept
+//!   and tested here but not used by the firmware, whose commands all
+//!   come from pad-proto (crates/pad-proto). In particular the firmware
+//!   sends pad-proto's event mask, not [`EVENT_MASK`], and the gate
+//!   checks only that a Set Event Mask is 8 bytes long.
 //!
 //! No std, no heap, no unsafe.
 
@@ -30,6 +49,8 @@ mod gate;
 mod setup;
 
 pub use event::{BdAddr, Event, parse_event};
+#[cfg(feature = "pair")]
+pub use gate::{FOUND_MAX, INQUIRY_UNITS_MAX, PAIR_WINDOW_MAX_MS, PairPhase, PairRefusal};
 pub use gate::{Gate, LSTO_MIN, Refusal, SAVED, gate};
 pub use setup::{Setup, Step};
 
@@ -42,21 +63,29 @@ pub mod kind {
 }
 
 /// The command codes ("opcodes") the firmware uses (the same numbers as
-/// pad-proto's `hci::op`), and the ones the gate always refuses.
+/// pad-proto's `hci::op`), and the ones the gate refuses outside a
+/// pairing window (feature `pair`) or always.
 pub mod op {
     // Link control (OGF 0x01).
-    /// Inquiry: a search for devices. Never allowed.
+    /// Inquiry: a search for devices. Only in a pairing window's search.
     pub const INQUIRY: u16 = 0x0401;
-    /// Create Connection: calling a device. Never allowed.
+    /// Inquiry Cancel: stops a search ([`crate::Gate::check_at`] lets it
+    /// out at any time; [`crate::Gate::check`] never).
+    pub const INQUIRY_CANCEL: u16 = 0x0402;
+    /// Create Connection: calling a device. Only to the pad a pairing
+    /// window is bound to.
     pub const CREATE_CONNECTION: u16 = 0x0405;
     pub const DISCONNECT: u16 = 0x0406;
+    /// Create Connection Cancel: stops a call ([`crate::Gate::check_at`]
+    /// lets it out at any time; [`crate::Gate::check`] never).
+    pub const CREATE_CONNECTION_CANCEL: u16 = 0x0408;
     pub const ACCEPT_CONNECTION_REQUEST: u16 = 0x0409;
     /// Reject Connection Request (link control 0x000A): the answer to a
     /// device that asks to connect.
     pub const REJECT_CONNECTION_REQUEST: u16 = 0x040A;
     pub const LINK_KEY_REQUEST_REPLY: u16 = 0x040B;
     pub const LINK_KEY_REQUEST_NEGATIVE_REPLY: u16 = 0x040C;
-    /// PIN Code Request Reply: pairing. Never allowed.
+    /// PIN Code Request Reply: old PIN pairing. Never allowed.
     pub const PIN_CODE_REQUEST_REPLY: u16 = 0x040D;
     pub const PIN_CODE_REQUEST_NEGATIVE_REPLY: u16 = 0x040E;
     pub const AUTHENTICATION_REQUESTED: u16 = 0x0411;
@@ -65,9 +94,11 @@ pub mod op {
     pub const READ_REMOTE_SUPPORTED_FEATURES: u16 = 0x041B;
     pub const READ_REMOTE_EXTENDED_FEATURES: u16 = 0x041C;
     pub const READ_REMOTE_VERSION_INFORMATION: u16 = 0x041D;
-    /// IO Capability Request Reply: pairing. Never allowed.
+    /// IO Capability Request Reply: pairing. Only to the pad a pairing
+    /// window is bound to.
     pub const IO_CAPABILITY_REQUEST_REPLY: u16 = 0x042B;
-    /// User Confirmation Request Reply: pairing. Never allowed.
+    /// User Confirmation Request Reply: pairing. Only to the pad a
+    /// pairing window is bound to.
     pub const USER_CONFIRMATION_REQUEST_REPLY: u16 = 0x042C;
     pub const USER_CONFIRMATION_REQUEST_NEGATIVE_REPLY: u16 = 0x042D;
     pub const USER_PASSKEY_REQUEST_NEGATIVE_REPLY: u16 = 0x042F;
@@ -121,10 +152,11 @@ pub const SCAN_PAGE_ONLY: u8 = 0x02;
 /// "Connection Rejected due to Unacceptable BD_ADDR".
 pub const REJECT_UNACCEPTABLE_ADDR: u8 = 0x0F;
 
-/// The events the firmware asks for: the standard default set (bits 0 to
-/// 44) without the three that only come after a search for devices
-/// (Inquiry Complete, Inquiry Result, Inquiry Result with RSSI), as the
-/// firmware never searches.
+/// An event mask for [`Setup`]: the standard default set (bits 0 to 44)
+/// without the three that only come after a search for devices (Inquiry
+/// Complete, Inquiry Result, Inquiry Result with RSSI). The firmware does
+/// not send it: it sends pad-proto's mask, which has the search and
+/// pairing events on, and the gate checks only a Set Event Mask's length.
 pub const EVENT_MASK: u64 = 0x0000_1FFF_FFFF_FFFF & !(1 | (1 << 1) | (1 << 33));
 
 /// The longest packet the controller can hand over: an ACL packet of

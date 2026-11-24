@@ -7,10 +7,14 @@ license = "MIT"
 publish     = false
 
 [features]
-# The host has no optional parts of its own. These only turn on the same
-# parts of the board layer, so that boards/desktop/check.sh can build
-# every shared crate with all parts on (it passes these four names to all
-# of them). They change nothing in this crate.
+# The pairing window (src/pairing.rs): search, list the gamepads heard,
+# pair the one the user picks, hand its new key to the board once, forget
+# a saved pad. Off: reconnect-only and nothing else, as before.
+pair = ["pad-proto/pair"]
+# These only turn on the same parts of the board layer, so that
+# boards/desktop/check.sh can build every shared crate with all parts on
+# (it passes these four names to all of them). They change nothing in
+# this crate.
 bt-classic = ["board-api/bt-classic"]
 passby     = ["board-api/passby"]
 gps        = ["board-api/gps"]

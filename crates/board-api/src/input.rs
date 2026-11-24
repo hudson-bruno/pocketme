@@ -27,6 +27,8 @@
 //! the board loop says), so a press is never counted twice: once in the
 //! note and again as a new "held".
 
+use crate::pair::{FoundPad, PairReq, PairState, SavedPad};
+
 /// A point on the panel, in panel pixels (0..320, 0..240 on the CYD).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TouchPoint {
@@ -199,5 +201,68 @@ pub trait Pad {
     fn take_pressed(&mut self, index: u8) -> u32 {
         let _ = index;
         0
+    }
+
+    // Pairing (see `crate::pair`). The console only leaves requests and
+    // reads states; the board does the radio, pin and flash work after
+    // the step. The defaults are a board that cannot pair: no saved pads
+    // shown, every request dropped, always `Off`.
+
+    /// This board can pair and forget pads from the console. When false
+    /// the console offers no pairing pages.
+    ///
+    /// Default: false.
+    fn pairing(&self) -> bool {
+        false
+    }
+
+    /// How many records the pairing area in flash still has room for, if
+    /// the board knows. Each pairing uses at least one, and the console
+    /// never frees them; the GAMEPADS page shows the number.
+    ///
+    /// Default: `None` (not known).
+    fn pair_slots(&self) -> Option<u8> {
+        None
+    }
+
+    /// The saved pad at `place` (0 is the first). `None` for an empty
+    /// place and for every place past the board's last; the console asks
+    /// from 0 upwards and shows what it gets.
+    ///
+    /// Default: `None` (no saved pads shown).
+    fn saved_pad(&self, place: u8) -> Option<SavedPad> {
+        let _ = place;
+        None
+    }
+
+    /// Leaves a request for the board to serve after this step. One box:
+    /// a newer request replaces one not served yet, but a waiting
+    /// [`PairReq::Cancel`] beats every other. The outcome, refusals
+    /// included, comes back through [`Pad::pair_state`].
+    ///
+    /// Default: the request is dropped.
+    fn pair_request(&mut self, req: PairReq) {
+        let _ = req;
+    }
+
+    /// How far pairing is now. The console reads it in every step while a
+    /// pairing page is open. Endings ([`PairState::Saved`],
+    /// [`PairState::Forgotten`], [`PairState::Failed`]) stay until
+    /// [`PairReq::Ack`] or the next [`PairReq::Begin`].
+    ///
+    /// Default: [`PairState::Off`].
+    fn pair_state(&mut self) -> PairState {
+        PairState::Off
+    }
+
+    /// Gamepad number `i` (0 is the first) the current search found, or
+    /// `None` past the last. During one search the list only grows: a
+    /// number, once given, keeps naming the same pad. Emptied at the next
+    /// [`PairReq::Begin`].
+    ///
+    /// Default: `None` (nothing found).
+    fn pair_found(&self, i: u8) -> Option<FoundPad> {
+        let _ = i;
+        None
     }
 }

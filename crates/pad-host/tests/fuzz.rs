@@ -833,3 +833,590 @@ fn undamaged_recordings_connect() {
         assert!(run.host.waiting());
     }
 }
+
+// ------------------------------------------------------ pairing windows
+
+/// Pairing windows opened, picked, cancelled and left to their deadline
+/// at random, between random packets, with a pad that sometimes pairs
+/// properly. A test-side oracle keeps what must hold (window open, the
+/// pad picked, the deadline, the saved pads, the new pairing not taken
+/// yet) and checks every packet sent and every state after each call.
+#[cfg(feature = "pair")]
+mod window {
+    use super::*;
+    use pad_host::{PAIR_WINDOW_MAX, PairEnd, PairPhase, PairRefused};
+    use pad_proto::hci::BdAddr;
+
+    /// Made-up pads: one new, one more for the list.
+    const NEW: BdAddr = BdAddr([0x16, 0x25, 0x34, 0x43, 0x52, 0x61]);
+    const OTHER: BdAddr = BdAddr([0x1E, 0x2E, 0x3E, 0x4E, 0x5E, 0x6E]);
+    const POOL: [BdAddr; 4] = [PAD, NEW, STRANGER, OTHER];
+    /// The key a proper pairing gives here (made up).
+    const FUZZ_KEY: [u8; 16] = [
+        0xC3, 0x1F, 0x86, 0x4A, 0xE9, 0x27, 0x5D, 0xB0, 0x73, 0x0E, 0xA8, 0x64, 0x3B, 0xF2, 0x99,
+        0x15,
+    ];
+    /// Names heard: never in a log line.
+    const NAMES: [&[u8]; 3] = [
+        b"Quokka Gamepad",
+        b"",
+        b"Numbat Controller with a long name",
+    ];
+
+    /// The log, checked line by line: no key, no name, no ignored key
+    /// change; the lines that say a new pairing was held are counted.
+    #[derive(Default)]
+    struct WOut {
+        sent: Vec<Vec<u8>>,
+        logs: usize,
+        held: u32,
+        last_logs: Vec<String>,
+    }
+
+    impl Radio for WOut {
+        fn send(&mut self, p: &[u8]) {
+            self.sent.push(p.to_vec());
+        }
+        fn log(&mut self, tag: &'static str, args: fmt::Arguments<'_>) {
+            let line = format!("{tag} {args}");
+            assert_no_key(&line);
+            let low = line.to_lowercase();
+            let k: String = FUZZ_KEY.iter().map(|b| format!("{b:02x}")).collect();
+            assert!(
+                !low.contains(&k[..8]) && !low.contains(&k[24..]),
+                "key in: {line}"
+            );
+            assert!(
+                !line.contains("Quokka") && !line.contains("Numbat"),
+                "name in: {line}"
+            );
+            assert!(!line.contains("key change '"), "{line}");
+            if line.contains("new pairing held for the store") {
+                self.held += 1;
+            }
+            self.logs += 1;
+            if self.last_logs.len() >= 60 {
+                self.last_logs.remove(0);
+            }
+            self.last_logs.push(line);
+        }
+    }
+
+    /// What must hold, kept by the test alone.
+    #[derive(Default)]
+    struct Oracle {
+        open: bool,
+        opened: u64,
+        target: Option<[u8; 6]>,
+        deadline: u64,
+        /// The saved pads as the flash (and so the host) should have them.
+        saved: Vec<[u8; 6]>,
+        /// A new pairing the host must hand over once.
+        pending: Option<[u8; 6]>,
+        /// "Held" log lines when this window opened.
+        held_at_open: u32,
+    }
+
+    #[derive(Default)]
+    struct Tally {
+        windows: u64,
+        saved: u64,
+        takes: u64,
+        ends: [u64; 6],
+        packets: u64,
+    }
+
+    struct WRun {
+        host: PadHost,
+        out: WOut,
+        now: u64,
+        o: Oracle,
+        handles: BTreeSet<u16>,
+        /// The next step of the picked pad's proper pairing.
+        step: usize,
+        key_type: u8,
+        confirm_disconnect: bool,
+        rng: Rng,
+    }
+
+    impl WRun {
+        fn new(seed: u64) -> Self {
+            let ram = Ram::with(&[(PAD, KEY)]);
+            let mut r = WRun {
+                host: PadHost::new(),
+                out: WOut::default(),
+                now: 1_000,
+                o: Oracle {
+                    saved: vec![PAD.0],
+                    ..Oracle::default()
+                },
+                handles: BTreeSet::new(),
+                step: 0,
+                key_type: 0x04,
+                confirm_disconnect: true,
+                rng: Rng(seed),
+            };
+            let mut view = ReadOnly {
+                ram: &ram,
+                reads: 0,
+            };
+            r.host
+                .load_pairings(&mut view, region(), &mut r.out)
+                .unwrap();
+            let (was_open, was_target) = r.before();
+            r.host.start(r.now, &mut r.out);
+            r.after(was_open, was_target, false);
+            r
+        }
+
+        fn context(&self) -> String {
+            self.out.last_logs.join("\n")
+        }
+
+        fn before(&self) -> (bool, Option<[u8; 6]>) {
+            (self.o.open, self.o.target)
+        }
+
+        /// Checks after one call: every packet sent, then the window.
+        fn after(&mut self, was_open: bool, was_target: Option<[u8; 6]>, ticked: bool) {
+            let sent = std::mem::take(&mut self.out.sent);
+            let logs = std::mem::take(&mut self.out.logs);
+            assert!(sent.len() <= MAX_SENT_PER_CALL, "{}", self.context());
+            assert!(logs <= MAX_LOGS_PER_CALL, "{}", self.context());
+            let open_now = self.host.pair_phase() != PairPhase::Off;
+            for p in &sent {
+                self.check_packet(p, was_open, was_target, open_now);
+            }
+            self.follow_window(open_now, ticked);
+            // The answers of a controller that answers everything.
+            for p in &sent {
+                if p[0] == 0x01 {
+                    let opcode = u16::from_le_bytes([p[1], p[2]]);
+                    for a in self.answers(opcode, &p[4..]) {
+                        self.packet(&a);
+                    }
+                }
+            }
+        }
+
+        fn check_packet(
+            &self,
+            p: &[u8],
+            was_open: bool,
+            was_target: Option<[u8; 6]>,
+            open_now: bool,
+        ) {
+            if !was_open && !open_now {
+                // Outside a window: the reconnect-only rules, as always
+                // (accept and key only for a saved pad).
+                check_sent_saved(p, &self.o.saved);
+                return;
+            }
+            assert!(!p.is_empty() && p.len() <= TX_MAX);
+            if p[0] != 0x01 {
+                return;
+            }
+            let opcode = u16::from_le_bytes([p[1], p[2]]);
+            let a = p.get(4..10);
+            let target_now = self.o.target;
+            let is_target = |a: Option<&[u8]>| {
+                a.is_some()
+                    && (a == was_target.as_ref().map(|t| &t[..])
+                        || a == target_now.as_ref().map(|t| &t[..]))
+            };
+            match opcode {
+                op::PIN_CODE_REQUEST_REPLY => panic!("PIN reply\n{}", self.context()),
+                op::INQUIRY => assert!(
+                    (was_open && was_target.is_none()) || (open_now && target_now.is_none()),
+                    "a search outside a searching window\n{}",
+                    self.context()
+                ),
+                op::CREATE_CONNECTION
+                | op::IO_CAPABILITY_REQUEST_REPLY
+                | op::USER_CONFIRMATION_REQUEST_REPLY => assert!(
+                    is_target(a),
+                    "{} for a pad not picked\n{}",
+                    op::name(opcode),
+                    self.context()
+                ),
+                op::ACCEPT_CONNECTION_REQUEST => assert!(
+                    !(was_open && open_now)
+                        && a.is_some_and(|a| self.o.saved.iter().any(|s| s == a)),
+                    "a call taken during a window\n{}",
+                    self.context()
+                ),
+                op::LINK_KEY_REQUEST_REPLY => {
+                    // The pad being paired may be asked again for the key
+                    // this window made (the controller does so), never for
+                    // an older one.
+                    if (was_open || open_now) && is_target(a) {
+                        assert_eq!(
+                            p.get(10..26),
+                            Some(&FUZZ_KEY[..]),
+                            "an old key offered to the pad being paired\n{}",
+                            self.context()
+                        );
+                        return;
+                    }
+                    assert!(a.is_some_and(|a| self.o.saved.iter().any(|s| s == a)));
+                }
+                op::WRITE_SCAN_ENABLE => assert_eq!(p[4] & 1, 0, "inquiry scan on"),
+                _ => {}
+            }
+        }
+
+        /// The window's state against the oracle.
+        fn follow_window(&mut self, open_now: bool, ticked: bool) {
+            if self.o.open && !open_now {
+                let end = self
+                    .host
+                    .pair_outcome()
+                    .expect("an ended window has an outcome");
+                let held = self.out.held - self.o.held_at_open;
+                if end == PairEnd::Saved {
+                    let t = self.o.target.expect("saved only after a pick");
+                    assert_eq!(held, 1, "one new pairing per saved window");
+                    assert!(self.o.pending.is_none());
+                    self.o.pending = Some(t);
+                    if !self.o.saved.contains(&t) {
+                        self.o.saved.push(t);
+                    }
+                } else {
+                    assert_eq!(held, 0, "no new pairing from a window that ended {end:?}");
+                    assert!(self.host.take_pending_save().is_none());
+                }
+                self.o.open = false;
+                self.o.target = None;
+                self.step = 0;
+            }
+            if open_now {
+                assert!(self.o.open, "a window nobody opened\n{}", self.context());
+                if let Some(d) = self.host.pair_deadline() {
+                    assert!(
+                        d <= self.o.deadline,
+                        "deadline {d} after {}",
+                        self.o.deadline
+                    );
+                }
+                if ticked {
+                    assert!(
+                        self.now < self.o.deadline,
+                        "open after its deadline\n{}",
+                        self.context()
+                    );
+                }
+            } else {
+                // The table as the flash has it.
+                let mut have: Vec<[u8; 6]> =
+                    (0..4).filter_map(|i| self.host.saved_address(i)).collect();
+                let mut want = self.o.saved.clone();
+                have.sort();
+                want.sort();
+                assert_eq!(have, want, "saved pads\n{}", self.context());
+            }
+        }
+
+        fn answers(&mut self, opcode: u16, params: &[u8]) -> Vec<Vec<u8>> {
+            let o = opcode.to_le_bytes();
+            let mut v = Vec::new();
+            match opcode {
+                op::INQUIRY | op::CREATE_CONNECTION => v.push(evt(0x0F, &[0, 1, o[0], o[1]])),
+                _ => v.push(answer(opcode, params)),
+            }
+            if opcode == op::DISCONNECT && self.confirm_disconnect && params.len() >= 2 {
+                let h = u16::from_le_bytes([params[0], params[1]]);
+                v.push(ev_disconnected(h, 0x16));
+            }
+            v
+        }
+
+        fn note_handles(&mut self, p: &[u8]) {
+            if p.first() == Some(&0x04)
+                && let Some(hci::Event::ConnectionComplete { handle, .. }) =
+                    hci::parse_event(&p[1..])
+            {
+                self.handles.insert(handle);
+            }
+        }
+
+        fn packet(&mut self, p: &[u8]) {
+            let (wo, wt) = self.before();
+            self.note_handles(p);
+            let attempts = self.host.counters().attempts;
+            self.host.packet(self.now, p, &mut self.out);
+            if wo && self.host.pair_phase() != PairPhase::Off {
+                assert_eq!(
+                    self.host.counters().attempts,
+                    attempts,
+                    "a window counted as a call"
+                );
+            }
+            self.after(wo, wt, false);
+        }
+
+        fn tick(&mut self) {
+            let (wo, wt) = self.before();
+            let _ = self.host.tick(self.now, &mut self.out);
+            self.after(wo, wt, true);
+            while self.host.take_event().is_some() {}
+        }
+
+        fn until(&mut self, t: u64) {
+            while self.now + 10 <= t {
+                self.now += 10;
+                self.tick();
+            }
+            self.now = self.now.max(t);
+        }
+
+        fn begin(&mut self) {
+            let for_ms = pick!(self.rng, 2_000, 10_000, 60_000, 200_000);
+            let (wo, wt) = self.before();
+            let held = self.out.held;
+            let r = self.host.pair_begin(self.now, for_ms, &mut self.out);
+            match r {
+                Ok(()) => {
+                    assert!(!wo, "a second window opened");
+                    assert!(self.o.pending.is_none(), "opened over a pairing not taken");
+                    self.o = Oracle {
+                        open: true,
+                        opened: self.now,
+                        target: None,
+                        deadline: self.now + for_ms.min(PAIR_WINDOW_MAX),
+                        saved: std::mem::take(&mut self.o.saved),
+                        pending: None,
+                        held_at_open: held,
+                    };
+                    self.step = 0;
+                }
+                Err(PairRefused::SaveWaiting) => assert!(self.o.pending.is_some()),
+                Err(_) => {}
+            }
+            self.after(wo, wt, false);
+        }
+
+        fn choose(&mut self) {
+            let n = self.host.pair_found_count();
+            let i = self.rng.below(n + 1);
+            let seen = self.host.pair_found(i).map(|f| f.tail);
+            let tail = if self.rng.chance(90) {
+                seen.unwrap_or([0; 2])
+            } else {
+                [self.rng.byte(), self.rng.byte()]
+            };
+            let Some(a) = self.host.pair_target(i, tail) else {
+                assert!(
+                    seen != Some(tail) || self.host.pair_phase() != PairPhase::Searching,
+                    "the right tail refused"
+                );
+                return;
+            };
+            assert_eq!(Some(a.tail()), seen);
+            let for_ms = pick!(self.rng, 1_000, 5_000, 30_000, 200_000);
+            let (wo, wt) = self.before();
+            if self
+                .host
+                .pair_choose(i, self.now, for_ms, &mut self.out)
+                .is_ok()
+            {
+                self.o.target = Some(a.whole_address());
+                self.o.deadline = (self.now + for_ms).min(self.o.opened + PAIR_WINDOW_MAX);
+                self.step = 0;
+                self.key_type = pick!(self.rng, 0x04, 0x04, 0x04, 0x07, 0x03, 0x05);
+                assert_eq!(self.host.pair_phase(), PairPhase::Pairing);
+            }
+            self.after(wo, wt, false);
+        }
+
+        fn cancel(&mut self) {
+            let (wo, wt) = self.before();
+            if let Some(a) = self.o.pending.take() {
+                self.o.saved.retain(|s| *s != a);
+            }
+            self.host.pair_cancel(self.now, &mut self.out);
+            assert_eq!(self.host.pair_phase(), PairPhase::Off);
+            assert!(self.host.take_pending_save().is_none());
+            self.after(wo, wt, false);
+        }
+
+        fn take(&mut self) {
+            let got = self.host.take_pending_save();
+            assert_eq!(
+                got.as_ref().map(|p| p.addr().whole_address()),
+                self.o.pending.take(),
+                "the new pairing, once"
+            );
+            if let Some(p) = got {
+                assert!(matches!(p.key_type(), 0x04 | 0x07));
+                assert_no_key(&format!("{p:?}"));
+                TAKES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            }
+        }
+
+        fn forget(&mut self) {
+            let place = self.rng.below(5);
+            let a = self.host.saved_address(place);
+            let (wo, wt) = self.before();
+            let got = self.host.forget(place, self.now, &mut self.out);
+            assert_eq!(got.map(|g| g.whole_address()), a);
+            if let Some(a) = a {
+                self.o.saved.retain(|s| *s != a);
+                if self.o.pending == Some(a) {
+                    self.o.pending = None;
+                }
+            }
+            self.after(wo, wt, false);
+        }
+
+        /// The picked pad's next step of a proper pairing.
+        fn pad_step(&mut self) {
+            let Some(t) = self.o.target else { return };
+            let t = BdAddr(t);
+            let p = match self.step {
+                0 => ev_conn_complete(0, H, t),
+                1 => ev_addr(0x17, t),
+                2 => ev_addr(0x31, t),
+                3 => ev_io_cap_response(t),
+                4 => ev_user_confirmation(t),
+                5 => ev_ssp_complete(t),
+                6 => ev_link_key_typed(t, FUZZ_KEY, self.key_type),
+                7 => ev_auth(0, H),
+                8 => ev_encrypted(H),
+                _ => return,
+            };
+            self.step += 1;
+            self.packet(&p);
+        }
+
+        fn finish(&mut self) {
+            self.cancel();
+            self.take();
+            self.confirm_disconnect = true;
+            for h in self.handles.clone() {
+                self.packet(&ev_disconnected(h, 0x13));
+            }
+            let end = self.now + 130_000;
+            self.until(end);
+            assert!(
+                self.host.waiting(),
+                "phase {}\n{}",
+                self.host.phase(),
+                self.context()
+            );
+            assert_eq!(self.host.read(), PadState::NONE);
+        }
+    }
+
+    /// `check_sent` with the saved pads of this run in place of PAD alone.
+    fn check_sent_saved(p: &[u8], saved: &[[u8; 6]]) {
+        if p.first() == Some(&0x01) && p.len() >= 10 {
+            let opcode = u16::from_le_bytes([p[1], p[2]]);
+            if matches!(
+                opcode,
+                op::ACCEPT_CONNECTION_REQUEST | op::LINK_KEY_REQUEST_REPLY
+            ) {
+                assert!(
+                    saved.iter().any(|s| s[..] == p[4..10]),
+                    "{} for another address",
+                    op::name(opcode)
+                );
+                let mut q = p.to_vec();
+                q[4..10].copy_from_slice(&PAD.0);
+                check_sent(&q);
+                return;
+            }
+        }
+        check_sent(p);
+    }
+
+    static TAKES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+    #[test]
+    fn pairing_windows_call_only_the_target_and_save_once() {
+        let mut r = Rng(seed() ^ 0xA11CE);
+        let cases = 60 * scale();
+        let mut t = Tally::default();
+        for _ in 0..cases {
+            let mut run = WRun::new(r.next());
+            run.confirm_disconnect = r.chance(85);
+            run.until(run.now + 1_000);
+            let held_before = run.out.held;
+            for _ in 0..300 {
+                let was_open = run.o.open;
+                // A picked pad mostly goes on with its pairing, so that
+                // many windows get as far as a new key.
+                let roll = if run.o.target.is_some() && run.rng.chance(50) {
+                    30
+                } else {
+                    run.rng.below(100)
+                };
+                match roll {
+                    0..=7 => run.begin(),
+                    8..=15 => {
+                        let a = run.rng.pick(&POOL);
+                        let cod = pick!(run.rng, PAD_COD, PAD_COD, 0x5A020C);
+                        // Outside a window pad-proto's own log line for an
+                        // unasked search result carries the name (not this
+                        // crate's to change), so names are heard only in one.
+                        let name = if run.o.open {
+                            run.rng.pick(&NAMES)
+                        } else {
+                            &b""[..]
+                        };
+                        run.packet(&ev_ext_inquiry(a, cod, name));
+                    }
+                    16..=23 => run.choose(),
+                    24..=49 => run.pad_step(),
+                    50..=52 => run.cancel(),
+                    53..=57 => run.take(),
+                    58 => run.forget(),
+                    59..=61 => run.packet(&ev_conn_request(PAD, PAD_COD)),
+                    62..=64 => {
+                        // The pad being paired asks for a PIN, fails, or drops.
+                        let p = match run.rng.below(3) {
+                            0 => ev_addr(0x16, BdAddr(run.o.target.unwrap_or(NEW.0))),
+                            1 => ev_auth(5, H),
+                            _ => ev_disconnected(H, 0x13),
+                        };
+                        run.packet(&p);
+                    }
+                    65..=79 => {
+                        let p = match run.rng.below(10) {
+                            0..=3 => rand_event(&mut run.rng),
+                            _ => rand_acl(&mut run.rng),
+                        };
+                        run.packet(&p);
+                        t.packets += 1;
+                    }
+                    _ => {
+                        let step = pick!(run.rng, 1, 10, 10, 100, 1_000, 5_000, 31_000);
+                        run.until(run.now + step);
+                    }
+                }
+                if was_open && !run.o.open {
+                    t.windows += 1;
+                    if let Some(e) = run.host.pair_outcome() {
+                        let k = match e {
+                            PairEnd::Saved => 0,
+                            PairEnd::Timeout => 1,
+                            PairEnd::OldPin => 2,
+                            PairEnd::Refused => 3,
+                            PairEnd::Lost => 4,
+                            PairEnd::Cancelled => 5,
+                        };
+                        t.ends[k] += 1;
+                    }
+                }
+            }
+            run.finish();
+            t.saved += u64::from(run.out.held - held_before);
+        }
+        t.takes = TAKES.load(std::sync::atomic::Ordering::Relaxed);
+        println!(
+            "windows: cases={cases} windows={} ends(saved,timeout,old-pin,refused,lost,cancelled)={:?} held={} taken={} noise_packets={}",
+            t.windows, t.ends, t.saved, t.takes, t.packets
+        );
+        assert!(t.ends[0] > 0, "some windows pair");
+        assert!(t.takes <= t.saved);
+    }
+}

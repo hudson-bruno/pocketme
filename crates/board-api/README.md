@@ -8,7 +8,7 @@ Each kind of part has its own small trait. One `Board` trait gathers them.
 | `Screen` | the panel | ST7789 over SPI with DMA | a 320x240 picture in memory |
 | `Touch` | the touch screen | resistive touch (chip not checked yet) | the mouse, or a script |
 | `Keys` | the board's own buttons | BOOT | a key |
-| `Pad` | gamepads | Bluetooth | the keyboard |
+| `Pad` | gamepads, and pairing them | Bluetooth | the keyboard |
 | `Clock` | time in microseconds | the chip's timer | moved by the loop or the test |
 | `Files` | the SD card | FAT card on SPI3 | a folder |
 | `Link` | the debug cable | UART0 | a TCP address (`--link`) |
@@ -223,6 +223,69 @@ rubbish and is filled with other rubbish at every `start_game` and
 data shows wrong names in a test instead of the right ones by luck.
 `lent.loaded` is true while a game runs (nothing is lent then); a test
 may set it to act like a board that lends nothing.
+
+## Pairing a pad (added for the settings window)
+
+The console may pair a new Bluetooth pad and forget a saved one. Its
+step may not touch the radio, the BOOT pin or the flash, and may not
+wait, so the `Pad` methods for this are **requests, not answers**: the
+console leaves a request, the board serves it after the step, and the
+outcome comes back through `pair_state` in a later step. The types are
+in `src/pair.rs`.
+
+| Method | What it says or does | Default |
+|---|---|---|
+| `pairing(&self) -> bool` | this board can pair from the console | `false` |
+| `pair_slots(&self) -> Option<u8>` | free records left in the pairing area | `None` |
+| `saved_pad(&self, place) -> Option<SavedPad>` | the saved pad at a place (`None` when empty or past the last) | `None` |
+| `pair_request(&mut self, PairReq)` | leaves one request | dropped |
+| `pair_state(&mut self) -> PairState` | how far it is now | `Off` |
+| `pair_found(&self, i) -> Option<FoundPad>` | pad `i` the search found | `None` |
+
+- `PairReq`: `Begin` (start search; triggered directly from UI on CYD, or
+  after `PAIR_HOLD_MS` on boards requiring a physical hold),
+  `Choose { i, tail }` (call found pad `i` after YES), `Cancel` (the
+  page was left: stop all, back to `Off`), `Forget { place, tail }`
+  (after confirming in UI, plus BOOT hold only on boards that check
+  it), `Ack` (an ending was shown). One box: a newer request replaces
+  one not served yet, but a waiting `Cancel` beats every other.
+- `PairState`: `Off`, `Starting`, `Searching`, `Calling`, and the
+  endings `Saved(place)`, `Forgotten(place)`, `Failed(PairFail)`. An
+  ending stays until `Ack` or the next `Begin`. `Off` is the zero
+  value (`repr(u8)`).
+- `PairFail`: `NotHeld`, `Linked`, `Full`, `NoRoom`, `Damaged`,
+  `Timeout`, `OldPin`, `Refused`, `Lost`, `Store`, `Busy`; each doc
+  comment says what the page tells the player.
+- A pad is named only by its **tail**, the last two bytes of its
+  address in written order (`..:AB:CD` is `[0xAB, 0xCD]`). `Choose` and
+  `Forget` carry the tail the player saw; the board refuses one that
+  does not match (`Failed(Busy)`), so a list that changed under the
+  press never hits another pad. The found list only grows during one
+  search and is emptied at the next `Begin`.
+- `SavedPad { tail, connected }`; `FoundPad { tail, name, name_len }`
+  (at most `PAD_NAME_MAX`, 24, bytes of the name the pad sent;
+  `FoundPad::new`, `FoundPad::name`). `FoundPad`'s `Debug` shows the
+  name's length, never the name.
+- How many pads a board keeps is not written here: `saved_pad` gives
+  `None` past the board's last place.
+
+The fake board: `FakePad.radio` (`FakeRadio`) plays a script the test
+chooses (`PairScript`), with no clock of its own: every `pair_state`
+call is one turn (or only `FakeRadio::turn`, with `manual`). A turn
+serves the waiting request, or else moves the script on by one.
+`FakeRadio::default()` cannot pair (the default bodies' answers), so
+older tests see the same console. `FakeRadio::new(script)` can;
+`FakeRadio::full(script)` has four saved pads; `with_saved`,
+`with_slots` set the rest. Ready scripts: `found_and_saved(n, m)`,
+`two_found(a, b)`, `nothing_found(turns)`, `old_pin`, `link_lost`,
+`store_fails`, `not_held()`; or build one with `PairScript::new()` and
+`find`, `begin_fails`, `starting`, `searching`, `calling`,
+`call_fails`, `forget_fails`. It hangs up a linked pad at `Begin`,
+refuses `Full` at `Choose` (a saved pad may be paired again), refuses
+`NoRoom` at `Begin` when `slots` is `Some(0)`, and refuses `Choose` and
+`Forget` with a wrong tail. Every tail and name in it is made up
+(`FAKE_TAIL_A`, `FAKE_NAME_A`, `FAKE_SAVED_TAILS`, ...). Its tests are
+`tests/fake_pairing.rs`.
 
 ## The fake board for tests
 

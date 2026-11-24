@@ -48,6 +48,10 @@ pub enum Kind {
     Game,
     /// On the home screen.
     Home,
+    /// On the home screen, with GAMEPADS and SETTINGS shortcuts
+    /// (feature `settings`).
+    #[cfg(feature = "settings")]
+    HomeSettings,
 }
 
 /// One line of a menu.
@@ -64,6 +68,12 @@ pub enum Item {
     /// The boot animation's setting (feature `boot-gather`).
     #[cfg(feature = "boot-gather")]
     Boot,
+    /// Opens the settings app on its GAMEPADS page (feature `settings`).
+    #[cfg(feature = "settings")]
+    Gamepads,
+    /// Opens the settings app (feature `settings`).
+    #[cfg(feature = "settings")]
+    Settings,
 }
 
 /// The items over a game, top to bottom.
@@ -74,12 +84,19 @@ pub const HOME_ITEMS: [Item; 2] = [Item::Bright, Item::Close];
 /// The items on the home screen, top to bottom.
 #[cfg(feature = "boot-gather")]
 pub const HOME_ITEMS: [Item; 3] = [Item::Bright, Item::Boot, Item::Close];
+/// The items on the home screen with GAMEPADS and SETTINGS shortcuts
+/// (feature `settings`), top to bottom.
+#[cfg(feature = "settings")]
+pub const HOME_SETTINGS_ITEMS: [Item; 4] =
+    [Item::Bright, Item::Gamepads, Item::Settings, Item::Close];
 
 impl Kind {
     pub const fn items(self) -> &'static [Item] {
         match self {
             Kind::Game => &GAME_ITEMS,
             Kind::Home => &HOME_ITEMS,
+            #[cfg(feature = "settings")]
+            Kind::HomeSettings => &HOME_SETTINGS_ITEMS,
         }
     }
 
@@ -99,6 +116,10 @@ impl Item {
             Item::Close => "CLOSE",
             #[cfg(feature = "boot-gather")]
             Item::Boot => "BOOT ANIM",
+            #[cfg(feature = "settings")]
+            Item::Gamepads => "GAMEPADS  >",
+            #[cfg(feature = "settings")]
+            Item::Settings => "SETTINGS  >",
         }
     }
 
@@ -120,6 +141,12 @@ pub enum Choice {
     Resume,
     /// End the game and go home.
     Home,
+    /// Open the settings app on GAMEPADS (feature `settings`).
+    #[cfg(feature = "settings")]
+    Gamepads,
+    /// Open the settings app (feature `settings`).
+    #[cfg(feature = "settings")]
+    Settings,
 }
 
 /// The menu box's height: its items and a margin above and below.
@@ -253,6 +280,10 @@ pub fn update(kind: Kind, sel: &mut u8, step: &mut u8, input: &Input) -> Choice 
     match items[usize::from(*sel)] {
         Item::Resume | Item::Close => Choice::Resume,
         Item::Quit => Choice::Home,
+        #[cfg(feature = "settings")]
+        Item::Gamepads => Choice::Gamepads,
+        #[cfg(feature = "settings")]
+        Item::Settings => Choice::Settings,
         // Its value changes in `update_boot`.
         #[cfg(feature = "boot-gather")]
         Item::Boot => Choice::Stay,
@@ -314,6 +345,14 @@ pub fn draw(f: &mut Frame, kind: Kind, sel: u8, step: u8) {
 #[cfg(feature = "boot-gather")]
 pub fn draw_home(f: &mut Frame, sel: u8, step: u8, anim: Anim) {
     draw_items(f, Kind::Home, sel, step, boot_text(anim));
+}
+
+/// The home screen's menu of kind `kind` (feature `settings`: plain
+/// or with the SETTINGS line), with the BOOT ANIM item's words `boot`
+/// (empty without `boot-gather`).
+#[cfg(feature = "settings")]
+pub fn draw_home_kind(f: &mut Frame, kind: Kind, sel: u8, step: u8, boot: &str) {
+    draw_items(f, kind, sel, step, boot);
 }
 
 /// [`draw`], with `_boot` the BOOT ANIM item's words.
@@ -510,7 +549,12 @@ mod tests {
 
     #[test]
     fn the_items_fit_the_box() {
-        for kind in [Kind::Game, Kind::Home] {
+        for kind in [
+            Kind::Game,
+            Kind::Home,
+            #[cfg(feature = "settings")]
+            Kind::HomeSettings,
+        ] {
             let n = kind.items().len();
             let bottom = item_y(kind, n - 1) + kind.items()[n - 1].h() as i16;
             assert_eq!(bottom, box_y(kind) + box_h(kind) as i16 - MENU_PAD as i16);

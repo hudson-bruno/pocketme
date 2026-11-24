@@ -15,6 +15,20 @@
 //! - [`host`]: the state machine tying it all together. It takes
 //!   (packet or tick, time) and gives (packets to send, events for the
 //!   screen, log lines), so tests can replay whole conversations.
+//!
+//! Crate feature `pair` (off by default): a run-time pairing window in
+//! `Host` for the console's everyday reconnect-only mode. The caller opens
+//! it (`Host::open_pairing`), the host searches and reports the gamepads it
+//! hears (`UiEvent::Found`, the name never logged), the user picks one
+//! (`Host::pair_with`), and the host calls and pairs that one address only
+//! (Secure Simple Pairing "just works", key types 0x04 and 0x07), then
+//! closes the window with exactly one outcome (`PairEnd`, read with
+//! `Host::pairing_outcome`). The new key is reported for saving only once
+//! encryption is on; it replaces the same address's key in place and never
+//! pushes another pad out. The feature also adds `Host::forget_key_of`
+//! (forget one pad). Every call is refused while a window is open. Without
+//! the feature none of this exists and the host behaves exactly as before.
+//! (Plain names, not links: they exist only with the feature.)
 
 #![cfg_attr(not(test), no_std)]
 
@@ -29,3 +43,5 @@ pub mod sdp;
 pub use host::{
     Config, DeviceInfo, ForgetReason, Host, Io, KeyChange, Purpose, Stats, Tag, UiEvent,
 };
+#[cfg(feature = "pair")]
+pub use host::{PAIR_WINDOW_MAX, PairEnd, PairError, Window};

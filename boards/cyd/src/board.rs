@@ -465,6 +465,14 @@ pub struct CydPad {
     /// step).
     #[cfg(feature = "pad")]
     pub wake: bool,
+    #[cfg(feature = "pair")]
+    pub pairing_ok: bool,
+    #[cfg(feature = "pair")]
+    pub pair_slots: Option<u8>,
+    #[cfg(feature = "pair")]
+    pub pair_state: board_api::PairState,
+    #[cfg(feature = "pair")]
+    pub pair_req: Option<board_api::PairReq>,
 }
 
 impl CydPad {
@@ -554,6 +562,43 @@ impl Pad for CydPad {
             }
         }
         cable
+    }
+
+    #[cfg(feature = "pair")]
+    fn pairing(&self) -> bool {
+        self.pairing_ok && self.host.is_some()
+    }
+
+    #[cfg(feature = "pair")]
+    fn pair_slots(&self) -> Option<u8> {
+        self.pair_slots
+    }
+
+    #[cfg(feature = "pair")]
+    fn saved_pad(&self, place: u8) -> Option<board_api::SavedPad> {
+        self.host
+            .as_deref()
+            .and_then(|h| h.saved_pad(usize::from(place)))
+    }
+
+    #[cfg(feature = "pair")]
+    fn pair_request(&mut self, req: board_api::PairReq) {
+        if !self.pairing() || self.pair_req == Some(board_api::PairReq::Cancel) {
+            return;
+        }
+        self.pair_req = Some(req);
+    }
+
+    #[cfg(feature = "pair")]
+    fn pair_state(&mut self) -> board_api::PairState {
+        self.pair_state
+    }
+
+    #[cfg(feature = "pair")]
+    fn pair_found(&self, i: u8) -> Option<board_api::FoundPad> {
+        self.host
+            .as_deref()
+            .and_then(|h| h.pair_found(usize::from(i)))
     }
 }
 

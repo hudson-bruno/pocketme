@@ -12,13 +12,14 @@
 //! one.
 //!
 //! Every packet to the controller passes the gate of hci-rules
-//! (`hci_rules::Gate`) first: only what the reconnect-only gamepad host
-//! needs, and an accept or a key only for a saved pad's address (the
-//! gate's list is filled once at start from the pairings read). No
-//! search, no inquiry scan, no call of our own, no "yes" to a pairing
-//! can reach the radio. [`HciPort::send`] never waits: when the
-//! controller cannot take a packet now it says [`SendError::Busy`] and
-//! nothing was sent.
+//! (`hci_rules::Gate`) first: normally only what the reconnect-only
+//! gamepad host needs, and an accept or a key only for a saved pad's
+//! address (the gate's list starts from the pairings read and updates
+//! on pair/forget with `pair`). With `pair`, `Gate::check_at` also
+//! allows the pairing-window commands while armed or bound to the
+//! chosen pad. No inquiry scan can reach the radio. [`HciPort::send`]
+//! never waits: when the controller cannot take a packet now it says
+//! [`SendError::Busy`] and nothing was sent.
 
 use core::future::Future;
 use core::pin::pin;
@@ -153,7 +154,11 @@ impl HciPort {
     /// Hands one whole packet (kind byte first) to the controller, if the
     /// gate allows it and the controller can take it now. Never waits.
     pub fn send(&mut self, gate: &Gate, packet: &[u8]) -> Result<(), SendError> {
-        if let Err(why) = gate.check(packet) {
+        #[cfg(not(feature = "pair"))]
+        let check = gate.check(packet);
+        #[cfg(feature = "pair")]
+        let check = gate.check_at(packet, crate::board::now_us() / 1000);
+        if let Err(why) = check {
             self.counters.out_refused += 1;
             return Err(SendError::Refused(why));
         }

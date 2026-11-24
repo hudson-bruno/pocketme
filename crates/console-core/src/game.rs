@@ -353,6 +353,9 @@ impl Run {
         if let Some(at) = self.paused_at {
             match pause::update(pause::Kind::Game, &mut self.sel, bright, input) {
                 Choice::Stay => return None,
+                // Not in the menu over a game.
+                #[cfg(feature = "settings")]
+                Choice::Gamepads | Choice::Settings => return None,
                 Choice::Home => {
                     log.line("console: back to home");
                     self.call_exit(exit_reason::PLAYER, video, log);

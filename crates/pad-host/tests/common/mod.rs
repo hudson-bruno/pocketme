@@ -830,6 +830,44 @@ pub fn ev_link_key(addr: BdAddr, key: [u8; 16]) -> Vec<u8> {
     evt(0x18, &cat(&[&addr.0, &key, &[0x04]]))
 }
 
+// ------------------------------------- what a pairing window hears (bytes)
+
+/// Link Key Notification with any key type.
+pub fn ev_link_key_typed(addr: BdAddr, key: [u8; 16], key_type: u8) -> Vec<u8> {
+    evt(0x18, &cat(&[&addr.0, &key, &[key_type]]))
+}
+
+/// Extended Inquiry Result: one device heard in a search, with its
+/// class, a clock offset of 0x1234, -60 dBm and its name in the EIR.
+pub fn ev_ext_inquiry(addr: BdAddr, cod: u32, name: &[u8]) -> Vec<u8> {
+    let mut e = vec![1];
+    e.extend_from_slice(&addr.0);
+    e.extend_from_slice(&[0x01, 0x00]);
+    e.extend_from_slice(&cod3(cod));
+    e.extend_from_slice(&0x1234_u16.to_le_bytes());
+    e.push(0xC4);
+    let mut eir = vec![(name.len() + 1) as u8, 0x09];
+    eir.extend_from_slice(name);
+    eir.resize(240, 0);
+    e.extend_from_slice(&eir);
+    evt(0x2F, &e)
+}
+
+/// IO Capability Response: the pad has no input and no output.
+pub fn ev_io_cap_response(addr: BdAddr) -> Vec<u8> {
+    evt(0x32, &cat(&[&addr.0, &[0x03, 0x00, 0x00]]))
+}
+
+/// User Confirmation Request (the number is never shown: just works).
+pub fn ev_user_confirmation(addr: BdAddr) -> Vec<u8> {
+    evt(0x33, &cat(&[&addr.0, &123_456_u32.to_le_bytes()]))
+}
+
+/// Simple Pairing Complete, status 0.
+pub fn ev_ssp_complete(addr: BdAddr) -> Vec<u8> {
+    evt(0x36, &cat(&[&[0], &addr.0]))
+}
+
 // ------------------------------------------------- a Switch-mode gamepad
 
 /// A Switch-mode pad that plays its part of the start-up talk from the

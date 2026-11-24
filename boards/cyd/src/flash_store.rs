@@ -8,13 +8,15 @@
 //! there a store at all. A board flashed with the old table has none, and
 //! keeps the brightness for the session only.
 //!
-//! Every read, write and erase goes through `AreaStore`, which refuses
-//! anything outside the area, and then through [`EspFlash`], which checks
-//! the chip address against [`BASE`] once more before the flash is
-//! called. Nothing else in this firmware writes flash.
+//! Every settings read, write and erase goes through `AreaStore` via
+//! `SettingsDoor`, which refuses anything outside the area, and then
+//! through [`EspFlash`], which checks the chip address against [`BASE`]
+//! once more before the flash is called. With feature `pair`, the flash
+//! handle is also lent via [`CydStore::with_flash`] solely to
+//! `src/pairing.rs`, which checks `0x9000..0xB000` and never erases.
 //!
-//! The pairing area is only ever read, at start: its CRC-32 goes to the
-//! log (never its bytes), so a log shows it never changed.
+//! Without `pair`, the pairing area is only ever read at start: its
+//! CRC-32 goes to the log (never its bytes).
 //!
 //! A flash write or erase runs with every interrupt off, and the loop
 //! stops for it; [`EspFlash`] times each one (`boardctl stats`, the
@@ -134,41 +136,60 @@ impl Flash for EspFlash {
     }
 }
 
-/// The board's store: the settings area, or none.
+/// Read/write/erase access to [`EspFlash`] for `settings-store`'s
+/// [`AreaStore`]; `EspFlash` still checks `inside(addr, len)` before
+/// touching the chip.
+struct SettingsDoor<'a>(&'a mut EspFlash);
+
+impl Flash for SettingsDoor<'_> {
+    fn read(&mut self, addr: u32, buf: &mut [u8]) -> Result<(), StoreError> {
+        self.0.read(addr, buf)
+    }
+
+    fn write(&mut self, addr: u32, data: &[u8]) -> Result<(), StoreError> {
+        self.0.write(addr, data)
+    }
+
+    fn erase_sector(&mut self, addr: u32) -> Result<(), StoreError> {
+        self.0.erase_sector(addr)
+    }
+}
+
+/// The board's store: the chip's flash and the settings area, or none.
 pub struct CydStore {
-    inner: Option<AreaStore<EspFlash>>,
+    flash: EspFlash,
+    area: Option<settings_store::area::Area>,
 }
 
 impl CydStore {
     pub fn flash(&self) -> Option<&EspFlash> {
-        self.inner.as_ref().map(|s| s.flash())
+        self.area.map(|_| &self.flash)
+    }
+
+    #[cfg(feature = "pair")]
+    pub fn with_flash<R>(&mut self, f: impl FnOnce(&mut FlashStorage<'static>) -> R) -> R {
+        f(&mut self.flash.fs)
     }
 }
 
 impl Store for CydStore {
     fn size(&self) -> u32 {
-        if self.inner.is_some() { AREA } else { 0 }
+        if self.area.is_some() { AREA } else { 0 }
     }
 
     fn read(&mut self, offset: u32, buf: &mut [u8]) -> Result<(), StoreError> {
-        self.inner
-            .as_mut()
-            .ok_or(StoreError::OutOfRange)?
-            .read(offset, buf)
+        let area = self.area.ok_or(StoreError::OutOfRange)?;
+        AreaStore::new(SettingsDoor(&mut self.flash), area).read(offset, buf)
     }
 
     fn write(&mut self, offset: u32, data: &[u8]) -> Result<(), StoreError> {
-        self.inner
-            .as_mut()
-            .ok_or(StoreError::OutOfRange)?
-            .write(offset, data)
+        let area = self.area.ok_or(StoreError::OutOfRange)?;
+        AreaStore::new(SettingsDoor(&mut self.flash), area).write(offset, data)
     }
 
     fn erase_sector(&mut self, offset: u32) -> Result<(), StoreError> {
-        self.inner
-            .as_mut()
-            .ok_or(StoreError::OutOfRange)?
-            .erase_sector(offset)
+        let area = self.area.ok_or(StoreError::OutOfRange)?;
+        AreaStore::new(SettingsDoor(&mut self.flash), area).erase_sector(offset)
     }
 }
 
@@ -313,20 +334,26 @@ pub fn start(flash: esp_hal::peripherals::FLASH<'static>) -> (CydStore, Saver) {
                 area.end()
             );
             CydStore {
-                inner: Some(AreaStore::new(
-                    EspFlash {
-                        fs,
-                        reads: Sum::default(),
-                        writes: Sum::default(),
-                        erases: Sum::default(),
-                    },
-                    area,
-                )),
+                flash: EspFlash {
+                    fs,
+                    reads: Sum::default(),
+                    writes: Sum::default(),
+                    erases: Sum::default(),
+                },
+                area: Some(area),
             }
         }
         Err(why) => {
             warn!("settings: no store ({why}): the brightness is kept until power off only");
-            CydStore { inner: None }
+            CydStore {
+                flash: EspFlash {
+                    fs,
+                    reads: Sum::default(),
+                    writes: Sum::default(),
+                    erases: Sum::default(),
+                },
+                area: None,
+            }
         }
     };
     let settings = saver.store.load(&mut store);
@@ -424,4 +451,18 @@ fn storage(flash: esp_hal::peripherals::FLASH<'static>) -> FlashStorage<'static>
 #[inline(always)]
 fn storage(flash: esp_hal::peripherals::FLASH<'static>) -> FlashStorage<'static> {
     FlashStorage::new(flash).multicore_auto_park()
+}
+
+/// Parks the second core in RAM (with `core2`) before accessing flash.
+#[cfg(all(feature = "pair", feature = "core2"))]
+pub(crate) fn park() -> Option<crate::core2::Held> {
+    crate::core2::Held::park()
+}
+
+#[cfg(all(feature = "pair", not(feature = "core2")))]
+pub(crate) struct PairUnheld;
+
+#[cfg(all(feature = "pair", not(feature = "core2")))]
+pub(crate) fn park() -> Option<PairUnheld> {
+    Some(PairUnheld)
 }

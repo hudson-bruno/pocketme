@@ -14,11 +14,12 @@
 # timed screen paths' hot block, see hot-block.list, and for the game
 # slots' start-up check in the firmware) and by xip-check.py --absent (no
 # trace of the flash code probe), the owner's builds with the gamepad and
-# the game flash parts (game-flash, two cores and one) checked the same
-# way and by game-flash-check.py (the windows and the parts in them; the
-# other sets by game-flash-check.py --absent), and the two-core one once
-# more with the measuring switch xip-probe, checked by hot-check.py and
-# xip-check.py (the probe block): 154 builds, about 22 minutes.
+# the game flash parts (game-flash, two cores and one, with and without
+# `pair`), checked the same way and by game-flash-check.py (the windows
+# and the parts in them; the other sets by game-flash-check.py --absent),
+# and the two-core one once more with the measuring switch xip-probe,
+# checked by hot-check.py and xip-check.py (the probe block):
+# 156 builds, about 22 minutes.
 # Never opens the serial port, never flashes. It refuses to run with the
 # measuring switches CYD_LAYOUT_PAD or CYD_DEMO_EXTRA set (build.rs reads
 # them; they would change every build and move the hot block).
@@ -61,7 +62,9 @@ echo "== hci-rules (the radio's HCI rules, on the PC)"
         exit 1
     }
     cargo "$tc" clippy --offline --quiet --manifest-path "$m" --all-targets -- -D warnings
+    cargo "$tc" clippy --offline --quiet --manifest-path "$m" --all-targets --features pair -- -D warnings
     cargo "$tc" test --offline --quiet --manifest-path "$m"
+    cargo "$tc" test --offline --quiet --manifest-path "$m" --features pair
 )
 
 echo "== send-plan (the screen's timing rules and their model, on the PC)"
@@ -109,6 +112,16 @@ if echo "$out" | grep '^rustfmt' | tr ' ' '\n' | grep '\.rs$' | grep -v "^$here/
     exit 1
 fi
 
+echo "== pairing flash safety guard"
+if grep -rnE 'Store::open|forget_all' "$here/src/"; then
+    echo "forbidden pad-store write path in boards/cyd/src/"
+    exit 1
+fi
+if grep -rnE '\.save\(' "$here/src/pairing.rs" "$here/src/pad_radio.rs" "$here/src/pad_radio/"; then
+    echo "forbidden pad-store .save() call in boards/cyd pairing modules"
+    exit 1
+fi
+
 echo "== clippy"
 # The default features have core2 (two cores); the one-core world gets
 # its own runs: the old default set (tour), and the owner's build with
@@ -127,7 +140,9 @@ done
 # Then the game flash parts (game-flash) on the owner's build with the
 # gamepad, and alone on one core.
 for joined in "core2" "demo-card,touch,link,store,core2" "demo-card,touch,link,store,pad,core2,send-ab" \
-    "core2,xip-probe" "demo-card,touch,link,store,pad,core2,boot-gather,game-flash" "game-flash"; do
+    "core2,xip-probe" "demo-card,touch,link,store,pad,core2,boot-gather,game-flash" \
+    "demo-card,touch,link,store,pad,core2,boot-gather,game-flash,pair" \
+    "demo-card,touch,link,store,pad,boot-gather,game-flash,pair" "game-flash"; do
     echo "-- clippy $joined"
     cargo clippy --release --offline --quiet --no-default-features --features "$joined" -- -D warnings
 done
@@ -229,6 +244,7 @@ echo "== the hot block (hot-check.py, xip-check.py)"
 for joined in "demo-card,touch,link,store,pad,core2,boot-gather" "demo-card,touch,link,store,pad,boot-gather" \
     "demo-card,touch,link,store,pad,core2" "demo-card,touch,link,store,pad" \
     "demo-card,touch,link,store,pad,core2,boot-gather,game-flash" "demo-card,touch,link,store,pad,boot-gather,game-flash" \
+    "demo-card,touch,link,store,pad,core2,boot-gather,game-flash,pair" "demo-card,touch,link,store,pad,boot-gather,game-flash,pair" \
     "demo-card,touch,link,store,pad,core2,boot-gather,xip-probe"; do
     case ",$joined," in *,core2,*) cores=two ;; *) cores=one ;; esac
     case ",$joined," in *,xip-probe,*) xip=() ;; *) xip=(--absent) ;; esac

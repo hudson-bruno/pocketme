@@ -41,7 +41,10 @@ mod tests {
     fn in_parts() {
         let d = b"123456789";
         for i in 0..=d.len() {
-            assert_eq!(super::crc32_more(super::crc32(&d[..i]), &d[i..]), 0xCBF4_3926);
+            assert_eq!(
+                super::crc32_more(super::crc32(&d[..i]), &d[i..]),
+                0xCBF4_3926
+            );
         }
     }
 }

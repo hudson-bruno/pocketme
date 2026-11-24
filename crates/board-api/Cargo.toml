@@ -29,3 +29,8 @@ game-api = { path = "../game-api" }
 [[test]]
 name = "fake_board"
 required-features = ["testing"]
+
+# The fake pad's scripted pairing radio.
+[[test]]
+name = "fake_pairing"
+required-features = ["testing"]

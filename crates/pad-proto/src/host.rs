@@ -29,6 +29,13 @@
 //!    sides opening at once is fine: the extra channel is closed.
 //! 7. Reports flow on the interrupt channel to the screen.
 //! 8. Link lost: back to 2.
+//!
+//! In reconnect-only mode ([`Config::reconnect_only`]) steps 2 and 4's
+//! pairing are off. With the crate feature `pair`, a pairing window
+//! (`Host::open_pairing`) turns a narrow part of them back on for a
+//! while: the search of step 2 without calling anyone, then pairing with
+//! the one address the user picked (`Host::pair_with`). Every other
+//! rule of reconnect-only mode stays; see the `pair` module.
 
 use core::fmt::{self, Write as _};
 
@@ -38,6 +45,9 @@ use crate::hci::{self, BdAddr, Event, Found, LinkKey, op, params};
 use crate::hid;
 use crate::l2cap::{self, Command, Signal, code, conf_result, conn_result, conn_status};
 use crate::sdp;
+
+#[cfg(feature = "pair")]
+pub use pair::{PAIR_WINDOW_MAX, PairEnd, PairError, Window};
 
 /// The largest L2CAP payload we accept (our "MTU"). The default value.
 pub const OUR_MTU: u16 = l2cap::MTU_DEFAULT;
@@ -270,6 +280,17 @@ pub enum UiEvent<'a> {
     Control(&'a [u8]),
     /// The link is gone.
     Disconnected,
+    /// A gamepad heard in a pairing window's search (feature `pair`):
+    /// once per address and window, gamepads only. `name` is the name
+    /// from its inquiry answer as sent (not checked as text, cut at the
+    /// first zero byte; empty when it sent none). The host never logs the
+    /// name, only its length; the receiver should not either.
+    #[cfg(feature = "pair")]
+    Found {
+        addr: BdAddr,
+        class_of_device: u32,
+        name: &'a [u8],
+    },
 }
 
 /// Why the host dropped a pairing.
@@ -335,6 +356,10 @@ macro_rules! log {
         $io.log(Tag::$tag, format_args!($($a)*))
     };
 }
+
+// After `log!`, so the window's code can use it.
+#[cfg(feature = "pair")]
+mod pair;
 
 /// Why a link is being made.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -638,6 +663,10 @@ pub struct Host {
     /// A role change for the call being accepted that came before its
     /// Connection Complete: (address, we are central).
     early_role: Option<(BdAddr, bool)>,
+    /// The pairing window, its found table, the key it holds and its
+    /// outcome (see the `pair` module).
+    #[cfg(feature = "pair")]
+    pair: pair::PairState,
 }
 
 impl Host {
@@ -671,6 +700,8 @@ impl Host {
             stats: Stats::ZERO,
             stale: None,
             early_role: None,
+            #[cfg(feature = "pair")]
+            pair: pair::PairState::NONE,
         }
     }
 
@@ -902,9 +933,15 @@ impl Host {
             self.cmd_credits = 1;
             self.on_command_failed(now, opcode, 0xFF, io);
         }
+        // The pairing window's deadline and its search rounds.
+        #[cfg(feature = "pair")]
+        self.window_tick(now, io);
         match self.phase {
             Phase::Pause { until }
-                if now >= until && self.link.is_none() && self.cfg.reconnect_only =>
+                if now >= until
+                    && self.link.is_none()
+                    && self.cfg.reconnect_only
+                    && !self.window_open() =>
             {
                 self.phase = Phase::Waiting;
                 self.status(io, format_args!("Waiting for a saved pad"));
@@ -1129,10 +1166,77 @@ impl Host {
         }));
     }
 
+    /// The address an open pairing window pairs with (after
+    /// [`Host::pair_with`]). Always None without the feature `pair`.
+    fn target(&self) -> Option<BdAddr> {
+        #[cfg(feature = "pair")]
+        {
+            self.pair.target()
+        }
+        #[cfg(not(feature = "pair"))]
+        {
+            None
+        }
+    }
+
+    /// A pairing window pairs with `addr` and its new key has not come
+    /// yet: the pairing "yes" answers may go to `addr`. Always false
+    /// without the feature `pair`.
+    fn window_pairs(&self, addr: BdAddr) -> bool {
+        self.target() == Some(addr) && !self.window_has_new_key(addr)
+    }
+
+    /// The window holds a new key for `addr` (it came, encryption has not
+    /// yet). Always false without the feature `pair`.
+    fn window_has_new_key(&self, addr: BdAddr) -> bool {
+        #[cfg(feature = "pair")]
+        {
+            self.pair.held.is_some_and(|h| h.addr == addr)
+        }
+        #[cfg(not(feature = "pair"))]
+        {
+            let _ = addr;
+            false
+        }
+    }
+
+    /// A pairing window is open. Always false without the feature `pair`.
+    fn window_open(&self) -> bool {
+        #[cfg(feature = "pair")]
+        {
+            self.pair.window.is_some()
+        }
+        #[cfg(not(feature = "pair"))]
+        {
+            false
+        }
+    }
+
+    /// An open pairing window lets this reconnect-only-forbidden command
+    /// out: Inquiry while it searches; Create Connection and the two
+    /// pairing "yes" answers for its one address. Never a PIN. Always
+    /// false without the feature `pair`.
+    fn window_allows(&self, opcode: u16, p: &[u8]) -> bool {
+        #[cfg(feature = "pair")]
+        {
+            self.pair.allows(opcode, p)
+        }
+        #[cfg(not(feature = "pair"))]
+        {
+            let _ = (opcode, p);
+            false
+        }
+    }
+
     fn cmd(&mut self, io: &mut impl Io, opcode: u16, p: &[u8]) {
         // The last gate of reconnect-only mode: whatever path led here, a
-        // search, a call of our own or a "yes" to pairing never leaves.
-        if self.cfg.reconnect_only && forbidden_when_reconnect_only(opcode) {
+        // search, a call of our own or a "yes" to pairing never leaves,
+        // except the few an open pairing window lets out (for its one
+        // address only; never a PIN).
+        if self.cfg.reconnect_only
+            && forbidden_when_reconnect_only(opcode)
+            && !self.window_allows(opcode, p)
+        {
             self.err(
                 io,
                 format_args!(
@@ -1168,6 +1272,22 @@ impl Host {
                     io,
                     State,
                     "supervision timeout not sent: its link ended while it waited"
+                );
+                continue;
+            }
+            // The window's rule again: a command it let in may have waited
+            // here while the window closed or moved on to one address.
+            #[cfg(feature = "pair")]
+            if self.cfg.reconnect_only
+                && forbidden_when_reconnect_only(opcode)
+                && !self.window_allows(opcode, &p.as_bytes()[4..])
+            {
+                self.err(
+                    io,
+                    format_args!(
+                        "queued command {} dropped: the pairing window no longer allows it",
+                        op::name(opcode)
+                    ),
                 );
                 continue;
             }
@@ -1290,9 +1410,21 @@ impl Host {
         self.phase = Phase::Pause {
             until: now + self.cfg.search_pause_ms,
         };
+        // The call to the chosen pad failed: the window ends.
+        #[cfg(feature = "pair")]
+        if self.target().is_some() {
+            self.end_window(now, PairEnd::Lost, io);
+        }
     }
 
     fn on_found(&mut self, now: u64, f: Found<'_>, io: &mut impl Io) {
+        // In a pairing window nobody is called on being heard; the
+        // window code lists gamepads for the user instead.
+        #[cfg(feature = "pair")]
+        if self.window_open() {
+            self.window_found(now, f, io);
+            return;
+        }
         let eir = hci::parse_eir(f.eir);
         let gamepad = hci::is_gamepad(f.cod, eir.name);
         let major = hci::cod_major(f.cod);
@@ -1369,7 +1501,12 @@ impl Host {
     }
 
     fn start_page(&mut self, now: u64, io: &mut impl Io) {
-        if self.cfg.reconnect_only {
+        // Reconnect-only calls nobody, except a pairing window's target.
+        if self.cfg.reconnect_only
+            && !self
+                .cand
+                .is_some_and(|c| Some(c.addr) == self.target() && c.purpose == Purpose::Gamepad)
+        {
             self.back_to_search(now, io);
             return;
         }
@@ -1855,11 +1992,23 @@ impl Host {
                     ),
                     _ => self.cmd(io, op::PIN_CODE_REQUEST_NEGATIVE_REPLY, &params::addr(addr)),
                 }
-                self.refuse_pairing(io, "PIN");
+                // The chosen pad wants old-style PIN pairing: never.
+                #[cfg(feature = "pair")]
+                self.window_old_pin(now, addr, "PIN", io);
+                self.refuse_pairing(io, "PIN", addr);
             }
             Event::LinkKeyRequest { addr } => {
                 let purpose = self.link.filter(|l| l.addr == addr).map(|l| l.purpose);
-                let key = self.key(addr);
+                // The pad a pairing window pairs with gets no saved key,
+                // even when one is saved: in pairing mode it has dropped
+                // its own, and the negative answer goes straight on to
+                // Secure Simple Pairing. Once the new key has come, a
+                // second request on that link gets the new key.
+                let key = if self.target() == Some(addr) && !self.window_has_new_key(addr) {
+                    None
+                } else {
+                    self.key(addr)
+                };
                 log!(
                     io,
                     Hci,
@@ -1888,6 +2037,15 @@ impl Host {
                 key_type,
             } => {
                 // The key itself is never printed.
+                #[cfg(feature = "pair")]
+                if self.target() == Some(addr)
+                    && self
+                        .link
+                        .is_some_and(|l| l.addr == addr && l.purpose == Purpose::Gamepad)
+                {
+                    self.window_new_key(now, addr, key, key_type, io);
+                    return;
+                }
                 let gamepad = self
                     .link
                     .is_some_and(|l| l.addr == addr && l.purpose == Purpose::Gamepad)
@@ -1909,13 +2067,15 @@ impl Host {
                 }
                 self.sec_event(now, Sec::Pairing);
                 // A new key means a new pairing: not in this mode.
-                self.refuse_pairing(io, "new link key");
+                self.refuse_pairing(io, "new link key", addr);
             }
             Event::IoCapabilityRequest { addr } => {
                 let purpose = self.link.filter(|l| l.addr == addr).map(|l| l.purpose);
                 log!(io, Hci, "io-capability-request addr={}", addr);
                 self.sec_event(now, Sec::Pairing);
-                if purpose == Some(Purpose::Gamepad) && !self.cfg.reconnect_only {
+                if purpose == Some(Purpose::Gamepad)
+                    && (!self.cfg.reconnect_only || self.window_pairs(addr))
+                {
                     self.cmd(
                         io,
                         op::IO_CAPABILITY_REQUEST_REPLY,
@@ -1933,7 +2093,7 @@ impl Host {
                         &params::addr_u8(addr, 0x18),
                     );
                 }
-                self.refuse_pairing(io, "secure simple pairing");
+                self.refuse_pairing(io, "secure simple pairing", addr);
             }
             Event::IoCapabilityResponse {
                 addr,
@@ -1958,7 +2118,7 @@ impl Host {
                 let gamepad = self
                     .link
                     .is_some_and(|l| l.addr == addr && l.purpose == Purpose::Gamepad)
-                    && !self.cfg.reconnect_only;
+                    && (!self.cfg.reconnect_only || self.window_pairs(addr));
                 log!(
                     io,
                     Hci,
@@ -1977,7 +2137,7 @@ impl Host {
                         &params::addr(addr),
                     );
                 }
-                self.refuse_pairing(io, "user confirmation");
+                self.refuse_pairing(io, "user confirmation", addr);
             }
             Event::UserPasskeyRequest { addr } => {
                 self.err(
@@ -1989,7 +2149,9 @@ impl Host {
                     op::USER_PASSKEY_REQUEST_NEGATIVE_REPLY,
                     &params::addr(addr),
                 );
-                self.refuse_pairing(io, "passkey");
+                #[cfg(feature = "pair")]
+                self.window_old_pin(now, addr, "passkey", io);
+                self.refuse_pairing(io, "passkey", addr);
             }
             Event::SimplePairingComplete { status, addr } => {
                 log!(
@@ -2236,6 +2398,25 @@ impl Host {
         link_type: u8,
         io: &mut impl Io,
     ) {
+        // A pairing window is open: nobody may call in, saved pads
+        // included (the host has room for one link, and the chosen pad is
+        // called by us). 0x0D, "no room now": a saved pad calls again
+        // after the window.
+        if self.window_open() {
+            log!(
+                io,
+                Hci,
+                "connection-request cod={:#08x} link_type={} refused: a pairing window is open (address not logged)",
+                cod,
+                link_type
+            );
+            self.cmd(
+                io,
+                op::REJECT_CONNECTION_REQUEST,
+                &params::addr_u8(addr, 0x0D),
+            );
+            return;
+        }
         // The pad we are linked to calls again: for it, the old link is
         // gone (a device has one link to us at most; it was switched off
         // and on before either side noticed). Drop the old link and take
@@ -2413,6 +2594,9 @@ impl Host {
         if c.purpose == Purpose::Gamepad {
             self.remember(c.addr);
         }
+        // A pairing window's link has SECURITY_TIMEOUT at most.
+        #[cfg(feature = "pair")]
+        self.pair.link_up(now, c.addr, SECURITY_TIMEOUT);
         self.status(
             io,
             format_args!(
@@ -2525,6 +2709,11 @@ impl Host {
             until: now + AFTER_LOSS_PAUSE,
         };
         self.status(io, format_args!("Lost: {}", hci::status_text(reason)));
+        // The chosen pad's link ended before its new key was saved.
+        #[cfg(feature = "pair")]
+        if self.target() == Some(link.addr) {
+            self.end_window(now, PairEnd::Lost, io);
+        }
     }
 
     /// The console decided the pad is gone (for example a pad that streams
@@ -2631,10 +2820,18 @@ impl Host {
         );
     }
 
-    /// Reconnect-only mode: a pairing step came (its negative answer is
-    /// already queued). Say so and end the link. Nothing in other modes.
-    fn refuse_pairing(&mut self, io: &mut impl Io, what: &str) {
+    /// Reconnect-only mode: a pairing step came for `addr` (its answer is
+    /// already queued). Say so and end the link. Nothing in other modes,
+    /// and nothing when a pairing window pairs with `addr` or is linked
+    /// to its target (a stray event for another address does not end the
+    /// pairing under way; that address was already answered "no").
+    fn refuse_pairing(&mut self, io: &mut impl Io, what: &str, addr: BdAddr) {
         if !self.cfg.reconnect_only {
+            return;
+        }
+        if let Some(t) = self.target()
+            && (t == addr || self.link.is_some_and(|l| l.addr == t))
+        {
             return;
         }
         log!(
@@ -2710,8 +2907,11 @@ impl Host {
             }
             return;
         }
+        // The pad a pairing window pairs with takes the normal path below:
+        // one retry after a collision, else the pairing failed.
+        let target = self.target() == Some(l.addr);
         // Reconnect-only: no second try, no new pairing, the key stays.
-        if self.cfg.reconnect_only {
+        if self.cfg.reconnect_only && !target {
             log!(
                 io,
                 State,
@@ -2726,7 +2926,8 @@ impl Host {
             return;
         }
         // A stored key the gamepad no longer has: forget it and pair again.
-        if matches!(status, 0x05 | 0x06) && !l.auth_retried {
+        // (Never for a window's target: it was offered no key.)
+        if matches!(status, 0x05 | 0x06) && !l.auth_retried && !target {
             log!(
                 io,
                 State,
@@ -2765,6 +2966,10 @@ impl Host {
             format_args!("Pairing failed: {}", hci::status_text(status)),
         );
         self.disconnect(io, REASON_AUTH_FAILURE);
+        #[cfg(feature = "pair")]
+        if target {
+            self.end_window(now, PairEnd::Refused, io);
+        }
     }
 
     fn on_encryption(&mut self, now: u64, status: u8, handle: u16, enabled: u8, io: &mut impl Io) {
@@ -2785,6 +2990,12 @@ impl Host {
                 }
                 if self.called_back == Some(l.addr) {
                     self.called_back = None;
+                }
+                // A pairing window's target: the new key is saved now (or
+                // the link ends when no new key came).
+                #[cfg(feature = "pair")]
+                if !self.window_encrypted(now, l.addr, io) {
+                    return;
                 }
                 self.on_secure(now, io);
             }
@@ -2816,6 +3027,10 @@ impl Host {
                 format_args!("Encryption failed: {}", hci::status_text(status)),
             );
             self.disconnect(io, REASON_AUTH_FAILURE);
+            #[cfg(feature = "pair")]
+            if self.target() == Some(l.addr) {
+                self.end_window(now, PairEnd::Refused, io);
+            }
         }
     }
 

@@ -6,6 +6,11 @@ edition     = "2024"
 license = "MIT"
 publish     = false
 
+[features]
+# The pairing window of the gate (Gate::arm, check_at, observe_at, ...).
+# Off: the gate is the reconnect-only gate and nothing else.
+pair = []
+
 [dependencies]
 
 [dev-dependencies]
@@ -13,7 +18,7 @@ publish     = false
 # and pad (crates/pad-host/tests/common, taken in by path), so a test can
 # put every packet of whole reconnects through the gate.
 board-api = { path = "../../../crates/board-api" }
-pad-host  = { path = "../../../crates/pad-host" }
+pad-host  = { path = "../../../crates/pad-host", features = ["pair"] }
 pad-proto = { path = "../../../crates/pad-proto" }
 pad-store = { path = "../../../crates/pad-store" }
 pad-view  = { path = "../../../crates/pad-view" }

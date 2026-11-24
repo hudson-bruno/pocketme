@@ -49,6 +49,13 @@ enum Ui {
     Report(Vec<u8>),
     Control(Vec<u8>),
     Disconnected,
+    /// A gamepad a pairing window heard (its name bytes as given).
+    #[cfg(feature = "pair")]
+    Found {
+        addr: BdAddr,
+        cod: u32,
+        name: Vec<u8>,
+    },
 }
 
 #[derive(Default)]
@@ -82,6 +89,16 @@ impl Io for Rec {
             UiEvent::Report(r) => Ui::Report(r.to_vec()),
             UiEvent::Control(m) => Ui::Control(m.to_vec()),
             UiEvent::Disconnected => Ui::Disconnected,
+            #[cfg(feature = "pair")]
+            UiEvent::Found {
+                addr,
+                class_of_device,
+                name,
+            } => Ui::Found {
+                addr,
+                cod: class_of_device,
+                name: name.to_vec(),
+            },
         });
     }
     fn log(&mut self, tag: Tag, args: fmt::Arguments<'_>) {
@@ -3044,4 +3061,640 @@ fn the_linked_pad_calling_again_is_accepted() {
             .any(|(o, _)| *o == op::REJECT_CONNECTION_REQUEST)
     );
     assert!(s.host.linked());
+}
+
+// ------------------------------------------------ pairing window (feature)
+
+/// The run-time pairing window (crate feature `pair`): the host stays in
+/// reconnect-only mode, and only an open window lets a search, one call
+/// and one pairing out, for the one address the user picked.
+#[cfg(feature = "pair")]
+mod pairing_window {
+    use super::*;
+    use pad_proto::{PAIR_WINDOW_MAX, PairEnd, PairError};
+
+    /// A third made-up key, for a third saved pad.
+    const KEY_B: [u8; 16] = [
+        0x5A, 0x6B, 0x7C, 0x8D, 0x9E, 0xAF, 0xB0, 0xC1, 0xD2, 0xE3, 0xF4, 0x05, 0x16, 0x27, 0x38,
+        0x49,
+    ];
+    /// A fourth made-up pad.
+    const PAD_D: BdAddr = BdAddr([0x61, 0x62, 0x63, 0x64, 0x65, 0x66]);
+    /// A name that must never reach the log.
+    const SECRET_NAME: &[u8] = b"Quokka Gamepad";
+
+    fn open(s: &mut Sim, for_ms: u64) {
+        s.host
+            .open_pairing(s.now, for_ms, &mut s.io)
+            .expect("the window opens");
+        s.settle();
+    }
+
+    fn pair_with(s: &mut Sim, addr: BdAddr, for_ms: u64) -> Result<(), PairError> {
+        let r = s.host.pair_with(addr, s.now, for_ms, &mut s.io);
+        s.settle();
+        r
+    }
+
+    fn found(s: &Sim) -> Vec<(BdAddr, u32, Vec<u8>)> {
+        s.io.ui
+            .iter()
+            .filter_map(|u| match u {
+                Ui::Found { addr, cod, name } => Some((*addr, *cod, name.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The commands reconnect-only forbids, sent since `mark`.
+    fn forbidden_since(s: &Sim, mark: usize) -> Vec<&'static str> {
+        s.all_cmds[mark..]
+            .iter()
+            .filter(|o| NEVER_IN_RECONNECT_ONLY.contains(o))
+            .map(|o| op::name(*o))
+            .collect()
+    }
+
+    /// Opens a window, hears PAD (and a phone, and OTHER), picks PAD and
+    /// sees our call go out. The link is not up yet.
+    fn scan_and_call(s: &mut Sim, for_ms: u64) {
+        open(s, for_ms);
+        let inq = s.take_cmd(op::INQUIRY);
+        assert_eq!(&inq[..3], &[0x33, 0x8B, 0x9E]);
+        s.feed(&ev_ext_inquiry(PHONE, PHONE_COD, b"Someone's phone"));
+        s.feed(&ev_ext_inquiry(OTHER, PAD_COD, b"Other Pad"));
+        s.feed(&ev_ext_inquiry(PAD, PAD_COD, b"Pro Controller"));
+        assert!(!s.sent(op::CREATE_CONNECTION), "nobody is called by itself");
+        assert!(!s.sent(op::INQUIRY_CANCEL));
+        pair_with(s, PAD, 30_000).expect("PAD was heard");
+        s.take_cmd(op::INQUIRY_CANCEL);
+        let cc = s.take_cmd(op::CREATE_CONNECTION);
+        assert_eq!(&cc[..6], &PAD.0);
+        assert_eq!(cc[8], 0x01, "page scan repetition mode from the answer");
+        assert_eq!(u16le(&cc, 10), 0x1234 | 0x8000, "clock offset, valid");
+        assert_eq!(s.host.pair_target(), Some(PAD));
+    }
+
+    /// The link to PAD comes up and pairs ("just works") with `key`, up
+    /// to encryption.
+    fn link_and_pair(s: &mut Sim, key: [u8; 16]) {
+        s.feed(&ev_conn_complete(0, H, PAD));
+        assert_eq!(s.take_cmd(op::AUTHENTICATION_REQUESTED), H.to_le_bytes());
+        s.feed(&ev_addr(0x17, PAD));
+        assert_eq!(
+            s.take_cmd(op::LINK_KEY_REQUEST_NEGATIVE_REPLY),
+            PAD.0,
+            "the target is offered no key"
+        );
+        s.feed(&ev_addr(0x31, PAD));
+        let r = s.take_cmd(op::IO_CAPABILITY_REQUEST_REPLY);
+        assert_eq!(&r[..], &cat(&[&PAD.0, &[0x03, 0x00, 0x04]])[..]);
+        s.feed(&ev_io_cap_response(PAD));
+        s.feed(&ev_user_confirmation(PAD));
+        assert_eq!(s.take_cmd(op::USER_CONFIRMATION_REQUEST_REPLY), PAD.0);
+        s.feed(&ev_ssp_complete(PAD));
+        s.feed(&ev_link_key_of(PAD, key));
+        assert!(
+            s.io.changes.is_empty(),
+            "nothing is saved before encryption"
+        );
+        s.feed(&ev_auth(0, H));
+        assert_eq!(
+            s.take_cmd(op::SET_CONNECTION_ENCRYPTION),
+            [0x0B, 0x00, 0x01]
+        );
+        s.feed(&ev_encrypted(H));
+    }
+
+    /// Map section 14, test 1: the window lists gamepads only, calls
+    /// nobody until the user picks one, pairs that one, saves its key once
+    /// encryption is on, and closes; the link goes on to HID; afterwards
+    /// nothing reconnect-only forbids leaves again.
+    #[test]
+    fn pairing_window_pairs_only_the_chosen_pad_then_closes() {
+        let mut s = Sim::with_saved(reconnect_only(), &[]);
+        s.advance(2_000);
+        assert!(s.host.waiting());
+        assert_eq!(s.host.pairing_outcome(), None);
+        scan_and_call(&mut s, 60_000);
+        assert_eq!(
+            found(&s),
+            vec![
+                (OTHER, PAD_COD, b"Other Pad".to_vec()),
+                (PAD, PAD_COD, b"Pro Controller".to_vec())
+            ],
+            "gamepads only, once each"
+        );
+        link_and_pair(&mut s, KEY);
+        assert_eq!(s.io.changes, vec![saved(PAD, KEY)]);
+        assert_eq!(s.host.key_count(), 1);
+        assert_eq!(s.host.key_addr(0), Some(PAD));
+        assert!(!s.host.pairing_open());
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Saved));
+        assert!(s.statuses().iter().any(|t| t == "Pad paired"));
+        // (Checked here: the made-up descriptor's filler below holds runs
+        // of bytes that look like these addresses.)
+        for a in [OTHER, PHONE] {
+            assert_no_full_address(&s, a);
+        }
+        sdp_and_hid_outgoing(&mut s, &descriptor(60));
+        assert!(s.host.hid_ready());
+        // From here on: reconnect-only as before.
+        let mark = s.all_cmds.len();
+        s.feed(&ev_disconnected(H, 0x13));
+        s.advance(60_000);
+        assert!(s.host.waiting());
+        assert_eq!(forbidden_since(&s, mark), Vec::<&str>::new());
+        assert_eq!(s.io.changes.len(), 1, "one save in all");
+        // The pad calls back later with its new key: accepted.
+        pad_calls(&mut s, PAD);
+        s.feed(&ev_addr(0x17, PAD));
+        let r = s.take_cmd(op::LINK_KEY_REQUEST_REPLY);
+        assert_eq!(&r[6..], &KEY[..]);
+        s.assert_key_never_printed();
+        assert_no_full_address(&s, PAD);
+    }
+
+    /// Map section 14, test 2: the deadline closes the window while
+    /// searching (Inquiry Cancel) and while calling (Create Connection
+    /// Cancel); then the host waits as before, nothing saved.
+    #[test]
+    fn pairing_window_closes_by_itself() {
+        // While searching.
+        let mut s = Sim::with_saved(reconnect_only(), &[(PAD_B, KEY_B)]);
+        s.advance(2_000);
+        open(&mut s, 3_000);
+        let inq = s.take_cmd(op::INQUIRY);
+        assert_eq!(inq[3], 2, "3 s left: two units of 1.28 s, not three");
+        s.advance(3_000);
+        s.take_cmd(op::INQUIRY_CANCEL);
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Timeout));
+        assert!(!s.host.pairing_open());
+        s.advance(100);
+        assert!(s.host.waiting(), "phase {}", s.host.phase_name());
+        let mark = s.all_cmds.len();
+        s.advance(30_000);
+        assert_eq!(forbidden_since(&s, mark), Vec::<&str>::new());
+        assert!(s.io.changes.is_empty());
+        assert_eq!(s.host.key_count(), 1);
+
+        // While calling.
+        let mut s = Sim::with_saved(reconnect_only(), &[]);
+        s.advance(2_000);
+        open(&mut s, 60_000);
+        s.take_cmd(op::INQUIRY);
+        s.feed(&ev_ext_inquiry(PAD, PAD_COD, b"Pro Controller"));
+        pair_with(&mut s, PAD, 4_000).unwrap();
+        s.take_cmd(op::INQUIRY_CANCEL);
+        s.take_cmd(op::CREATE_CONNECTION);
+        s.advance(4_000);
+        assert_eq!(s.take_cmd(op::CREATE_CONNECTION_CANCEL), PAD.0);
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Timeout));
+        // The controller's late answer to the cancelled call is quiet.
+        s.feed(&ev_conn_complete(0x02, H, PAD));
+        s.advance(1_200);
+        assert!(s.host.waiting(), "phase {}", s.host.phase_name());
+        assert!(s.io.changes.is_empty());
+        assert_eq!(s.host.key_count(), 0);
+    }
+
+    /// No search round is started that would end after the deadline, and
+    /// the rounds go on until then.
+    #[test]
+    fn no_search_round_ends_after_the_deadline() {
+        let mut s = Sim::with_saved(reconnect_only(), &[]);
+        s.advance(2_000);
+        let opened = s.now;
+        open(&mut s, 20_000);
+        let deadline = opened + 20_000;
+        let mut rounds = 0;
+        while s.host.pairing_open() {
+            if let Some(i) = s.cmds.iter().position(|(o, _)| *o == op::INQUIRY) {
+                let units = u64::from(s.cmds[i].1[3]);
+                s.cmds.remove(i);
+                rounds += 1;
+                assert!(units >= 1);
+                assert!(
+                    s.now + units * 1_280 <= deadline,
+                    "a round of {units} units at {} ends after the deadline {deadline}",
+                    s.now
+                );
+                s.advance(units * 1_280);
+                s.feed(&evt(0x01, &[0]));
+            }
+            s.advance(20);
+        }
+        assert!(rounds >= 3, "{rounds} rounds");
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Timeout));
+        assert!(s.now <= deadline + 20);
+        let mark = s.all_cmds.len();
+        s.advance(10_000);
+        assert_eq!(forbidden_since(&s, mark), Vec::<&str>::new());
+    }
+
+    /// Map section 14, test 3: while pairing PAD, nobody else is answered
+    /// "yes", and every call is refused with "no room" (0x0D).
+    #[test]
+    fn pairing_window_refuses_everyone_but_the_target() {
+        let mut s = Sim::with_saved(reconnect_only(), &[]);
+        s.advance(2_000);
+        scan_and_call(&mut s, 60_000);
+        s.feed(&ev_conn_complete(0, H, PAD));
+        s.take_cmd(op::AUTHENTICATION_REQUESTED);
+        // Another pad's events (no link of its own).
+        s.feed(&ev_addr(0x31, OTHER));
+        assert_eq!(
+            s.take_cmd(op::IO_CAPABILITY_REQUEST_NEGATIVE_REPLY),
+            cat(&[&OTHER.0, &[0x18]])
+        );
+        s.feed(&ev_user_confirmation(OTHER));
+        assert_eq!(
+            s.take_cmd(op::USER_CONFIRMATION_REQUEST_NEGATIVE_REPLY),
+            OTHER.0
+        );
+        s.feed(&ev_link_key_of(OTHER, OLD_KEY));
+        assert!(!s.sent(op::DISCONNECT), "the target's link stays");
+        // A call from someone else.
+        s.feed(&ev_conn_request(OTHER, PAD_COD));
+        assert_eq!(
+            s.take_cmd(op::REJECT_CONNECTION_REQUEST),
+            cat(&[&OTHER.0, &[0x0D]])
+        );
+        // The target still pairs.
+        s.feed(&ev_addr(0x17, PAD));
+        s.take_cmd(op::LINK_KEY_REQUEST_NEGATIVE_REPLY);
+        s.feed(&ev_addr(0x31, PAD));
+        s.take_cmd(op::IO_CAPABILITY_REQUEST_REPLY);
+        s.feed(&ev_user_confirmation(PAD));
+        s.take_cmd(op::USER_CONFIRMATION_REQUEST_REPLY);
+        s.feed(&ev_link_key(PAD));
+        s.feed(&ev_auth(0, H));
+        s.feed(&ev_encrypted(H));
+        assert_eq!(s.io.changes, vec![saved(PAD, KEY)]);
+        assert_eq!(s.host.key_count(), 1);
+        for o in [
+            op::IO_CAPABILITY_REQUEST_REPLY,
+            op::USER_CONFIRMATION_REQUEST_REPLY,
+            op::CREATE_CONNECTION,
+        ] {
+            assert!(
+                !s.io.out.iter().any(|p| p[0] == 1
+                    && u16::from_le_bytes([p[1], p[2]]) == o
+                    && p[4..].starts_with(&OTHER.0)),
+                "{} for OTHER",
+                op::name(o)
+            );
+        }
+        s.assert_key_never_printed();
+        assert_no_full_address(&s, OTHER);
+    }
+
+    /// Map section 14, test 4: four saved pads and a new one picked:
+    /// `pair_with` says Full and nothing changes; a saved pad may still be
+    /// picked. A key for a fifth address never pushes one out.
+    #[test]
+    fn pairing_window_refuses_when_full_and_never_evicts() {
+        let four = [(PAD, KEY), (PAD_B, KEY_B), (PAD_C, OLD_KEY), (PAD_D, KEY_B)];
+        let mut s = Sim::with_saved(reconnect_only(), &four);
+        s.advance(2_000);
+        open(&mut s, 60_000);
+        s.take_cmd(op::INQUIRY);
+        s.feed(&ev_ext_inquiry(OTHER, PAD_COD, b"Other Pad"));
+        s.feed(&ev_ext_inquiry(PAD_B, PAD_COD, b"Pad B"));
+        assert_eq!(pair_with(&mut s, OTHER, 30_000), Err(PairError::Full));
+        assert!(s.host.pairing_open(), "the window stays open");
+        assert!(!s.sent(op::CREATE_CONNECTION));
+        assert_eq!(pair_with(&mut s, FAKE, 30_000), Err(PairError::NotFound));
+        assert_eq!(pair_with(&mut s, PAD_B, 30_000), Ok(()));
+        assert_eq!(
+            pair_with(&mut s, PAD_B, 30_000),
+            Err(PairError::NotScanning)
+        );
+        assert_eq!(s.host.key_count(), 4);
+        assert!(s.io.changes.is_empty());
+        for (i, (a, _)) in four.iter().enumerate() {
+            assert_eq!(s.host.key_addr(i), Some(*a), "order kept");
+        }
+        s.assert_key_never_printed();
+    }
+
+    /// Map section 14, test 5: the picked pad asks for a PIN or a
+    /// passkey: negative reply, the link ends, the window ends with
+    /// OldPin. A PIN reply never leaves.
+    #[test]
+    fn pairing_window_still_refuses_pin_and_passkey() {
+        for code in [0x16_u8, 0x34] {
+            let mut s = Sim::with_saved(reconnect_only(), &[]);
+            s.advance(2_000);
+            scan_and_call(&mut s, 60_000);
+            s.feed(&ev_conn_complete(0, H, PAD));
+            s.feed(&ev_addr(code, PAD));
+            let neg = if code == 0x16 {
+                op::PIN_CODE_REQUEST_NEGATIVE_REPLY
+            } else {
+                op::USER_PASSKEY_REQUEST_NEGATIVE_REPLY
+            };
+            assert_eq!(s.take_cmd(neg), PAD.0);
+            assert_eq!(s.take_cmd(op::DISCONNECT), [0x0B, 0x00, 0x05]);
+            assert_eq!(s.host.pairing_outcome(), Some(PairEnd::OldPin));
+            assert!(!s.sent(op::PIN_CODE_REQUEST_REPLY));
+            s.feed(&ev_disconnected(H, 0x16));
+            assert_eq!(
+                s.host.pairing_outcome(),
+                Some(PairEnd::OldPin),
+                "one outcome per window"
+            );
+            s.advance(1_200);
+            assert!(s.host.waiting());
+            assert!(s.io.changes.is_empty());
+        }
+    }
+
+    /// Map section 14, test 6: forgetting one pad keeps the others in
+    /// their order, reports nothing (the caller asked), and lets that pad
+    /// go if it is linked.
+    #[test]
+    fn forget_one_key_keeps_the_others() {
+        let mut s = Sim::with_saved(
+            reconnect_only(),
+            &[(PAD, KEY), (PAD_B, KEY_B), (PAD_C, OLD_KEY)],
+        );
+        s.advance(2_000);
+        let now = s.now;
+        assert!(s.host.forget_key_of(PAD_B, now, &mut s.io));
+        s.settle();
+        assert_eq!(s.host.key_count(), 2);
+        assert_eq!(s.host.key_addr(0), Some(PAD));
+        assert_eq!(s.host.key_addr(1), Some(PAD_C));
+        assert!(!s.host.forget_key_of(PAD_B, now, &mut s.io), "already gone");
+        assert!(s.io.changes.is_empty());
+        // PAD_B calls: a stranger now.
+        s.feed(&ev_conn_request(PAD_B, PAD_COD));
+        assert_eq!(
+            s.take_cmd(op::REJECT_CONNECTION_REQUEST),
+            cat(&[&PAD_B.0, &[0x0F]])
+        );
+        // The linked pad is forgotten: let go.
+        pad_calls(&mut s, PAD);
+        s.feed(&ev_addr(0x17, PAD));
+        s.take_cmd(op::LINK_KEY_REQUEST_REPLY);
+        s.feed(&ev_encrypted(H));
+        let now = s.now;
+        assert!(s.host.forget_key_of(PAD, now, &mut s.io));
+        s.settle();
+        assert_eq!(s.take_cmd(op::DISCONNECT), [0x0B, 0x00, 0x13]);
+        assert_eq!(s.host.key_count(), 1);
+        assert_eq!(s.host.key_addr(0), Some(PAD_C));
+        assert!(s.io.changes.is_empty());
+        assert_nothing_forbidden(&s);
+        s.assert_key_never_printed();
+    }
+
+    /// A saved pad calls while the window searches: refused with "no
+    /// room" (0x0D), and the search goes on.
+    #[test]
+    fn a_saved_pad_calling_during_the_search_is_refused_and_the_search_goes_on() {
+        let mut s = Sim::with_saved(reconnect_only(), &[(PAD, KEY)]);
+        s.advance(2_000);
+        open(&mut s, 60_000);
+        let inq = s.take_cmd(op::INQUIRY);
+        s.feed(&ev_conn_request(PAD, PAD_COD));
+        assert_eq!(
+            s.take_cmd(op::REJECT_CONNECTION_REQUEST),
+            cat(&[&PAD.0, &[0x0D]])
+        );
+        assert!(!s.sent(op::ACCEPT_CONNECTION_REQUEST));
+        assert!(!s.sent(op::INQUIRY_CANCEL), "the search goes on");
+        assert!(s.host.pairing_open());
+        // The round ends; the next one starts.
+        s.advance(u64::from(inq[3]) * 1_280);
+        s.feed(&evt(0x01, &[0]));
+        s.advance(2_000);
+        s.take_cmd(op::INQUIRY);
+        assert!(s.host.pairing_open());
+        assert_eq!(s.host.key_count(), 1);
+        assert_no_full_address(&s, PAD);
+    }
+
+    /// A saved pad paired again (the user put it in pairing mode): it is
+    /// offered no key, its new key replaces the old one in place, the
+    /// count stays.
+    #[test]
+    fn a_saved_pad_paired_again_gets_its_key_replaced_in_place() {
+        let mut s = Sim::with_saved(
+            reconnect_only(),
+            &[(PAD_B, KEY_B), (PAD, OLD_KEY), (PAD_C, KEY_B)],
+        );
+        s.advance(2_000);
+        scan_and_call(&mut s, 60_000);
+        link_and_pair(&mut s, KEY);
+        assert_eq!(s.io.changes, vec![saved(PAD, KEY)]);
+        assert_eq!(s.host.key_count(), 3);
+        assert_eq!(
+            [s.host.key_addr(0), s.host.key_addr(1), s.host.key_addr(2)],
+            [Some(PAD_B), Some(PAD), Some(PAD_C)],
+            "replaced in place"
+        );
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Saved));
+        // Next time, the new key is offered.
+        s.feed(&ev_disconnected(H, 0x13));
+        s.advance(1_200);
+        pad_calls(&mut s, PAD);
+        s.feed(&ev_addr(0x17, PAD));
+        let r = s.take_cmd(op::LINK_KEY_REQUEST_REPLY);
+        assert_eq!(&r[6..], &KEY[..]);
+        s.assert_key_never_printed();
+    }
+
+    /// A failed re-pairing puts the old key back.
+    #[test]
+    fn a_failed_re_pairing_keeps_the_old_key() {
+        let mut s = Sim::with_saved(reconnect_only(), &[(PAD, OLD_KEY), (PAD_B, KEY_B)]);
+        s.advance(2_000);
+        scan_and_call(&mut s, 60_000);
+        s.feed(&ev_conn_complete(0, H, PAD));
+        s.feed(&ev_addr(0x17, PAD));
+        s.take_cmd(op::LINK_KEY_REQUEST_NEGATIVE_REPLY);
+        s.feed(&ev_link_key_of(PAD, KEY));
+        // The link is lost before encryption.
+        s.feed(&ev_disconnected(H, 0x08));
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Lost));
+        assert!(s.io.changes.is_empty());
+        assert_eq!(s.host.key_count(), 2);
+        s.advance(1_200);
+        pad_calls(&mut s, PAD);
+        s.feed(&ev_addr(0x17, PAD));
+        let r = s.take_cmd(op::LINK_KEY_REQUEST_REPLY);
+        assert_eq!(&r[6..], &OLD_KEY[..], "the old key is back");
+        s.assert_key_never_printed();
+    }
+
+    /// Both sides start authentication at once (0x23) on the target's
+    /// link: one retry after 500 ms, then the pairing goes on. A second
+    /// collision ends the window with Refused.
+    #[test]
+    fn a_security_collision_in_the_window_is_retried_once() {
+        let mut s = Sim::with_saved(reconnect_only(), &[]);
+        s.advance(2_000);
+        scan_and_call(&mut s, 60_000);
+        s.feed(&ev_conn_complete(0, H, PAD));
+        s.take_cmd(op::AUTHENTICATION_REQUESTED);
+        s.feed(&ev_auth(0x23, H));
+        assert!(s.host.pairing_open());
+        assert!(!s.sent(op::DISCONNECT));
+        s.advance(600);
+        assert_eq!(s.take_cmd(op::AUTHENTICATION_REQUESTED), H.to_le_bytes());
+        s.feed(&ev_auth(0x23, H));
+        assert_eq!(s.take_cmd(op::DISCONNECT), [0x0B, 0x00, 0x05]);
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Refused));
+        assert!(s.io.changes.is_empty());
+
+        // Once, then the pairing finishes.
+        let mut s = Sim::with_saved(reconnect_only(), &[]);
+        s.advance(2_000);
+        scan_and_call(&mut s, 60_000);
+        s.feed(&ev_conn_complete(0, H, PAD));
+        s.take_cmd(op::AUTHENTICATION_REQUESTED);
+        s.feed(&ev_auth(0x23, H));
+        s.advance(600);
+        s.take_cmd(op::AUTHENTICATION_REQUESTED);
+        s.feed(&ev_addr(0x17, PAD));
+        s.take_cmd(op::LINK_KEY_REQUEST_NEGATIVE_REPLY);
+        s.feed(&ev_addr(0x31, PAD));
+        s.take_cmd(op::IO_CAPABILITY_REQUEST_REPLY);
+        s.feed(&ev_user_confirmation(PAD));
+        s.take_cmd(op::USER_CONFIRMATION_REQUEST_REPLY);
+        s.feed(&ev_link_key(PAD));
+        s.feed(&ev_auth(0, H));
+        s.feed(&ev_encrypted(H));
+        assert_eq!(s.io.changes, vec![saved(PAD, KEY)]);
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Saved));
+    }
+
+    /// Key type 0x03 (the public debug key) is refused: the link ends,
+    /// nothing is saved, the table is as before.
+    #[test]
+    fn a_debug_key_is_refused() {
+        let mut s = Sim::with_saved(reconnect_only(), &[(PAD_B, KEY_B)]);
+        s.advance(2_000);
+        scan_and_call(&mut s, 60_000);
+        s.feed(&ev_conn_complete(0, H, PAD));
+        s.feed(&ev_addr(0x17, PAD));
+        s.take_cmd(op::LINK_KEY_REQUEST_NEGATIVE_REPLY);
+        s.feed(&evt(0x18, &cat(&[&PAD.0, &KEY, &[0x03]])));
+        assert_eq!(s.take_cmd(op::DISCONNECT), [0x0B, 0x00, 0x05]);
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Refused));
+        assert_eq!(s.host.key_count(), 1);
+        s.feed(&ev_encrypted(H));
+        assert!(s.io.changes.is_empty(), "nothing saved after a refusal");
+        s.feed(&ev_disconnected(H, 0x16));
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Refused));
+        s.assert_key_never_printed();
+    }
+
+    /// The name a gamepad gives in the search reaches the screen (Found)
+    /// but never the log, for the pad not picked and for the one picked
+    /// (whose link asks for its name again, as on any call; that answer
+    /// is logged as for a saved pad, and is not played here). A name
+    /// with a zero inside is cut there.
+    #[test]
+    fn a_found_name_never_reaches_the_log() {
+        let mut s = Sim::with_saved(reconnect_only(), &[]);
+        s.advance(2_000);
+        open(&mut s, 60_000);
+        s.take_cmd(op::INQUIRY);
+        s.feed(&ev_ext_inquiry(OTHER, PAD_COD, b"Wombat Pad\0junk"));
+        s.feed(&ev_ext_inquiry(PAD, PAD_COD, SECRET_NAME));
+        assert_eq!(
+            found(&s),
+            vec![
+                (OTHER, PAD_COD, b"Wombat Pad".to_vec()),
+                (PAD, PAD_COD, SECRET_NAME.to_vec())
+            ]
+        );
+        assert!(!s.io.logs.iter().any(|l| l.contains("Wombat")));
+        pair_with(&mut s, PAD, 30_000).unwrap();
+        s.take_cmd(op::CREATE_CONNECTION);
+        link_and_pair(&mut s, KEY);
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Saved));
+        let text = String::from_utf8_lossy(SECRET_NAME).to_string();
+        for l in &s.io.logs {
+            assert!(!l.contains(&text), "name in the log: {l}");
+            assert!(!l.contains("Quokka"), "name in the log: {l}");
+        }
+        assert!(
+            s.io.logs.iter().any(|l| l.contains("name_len=14")),
+            "the length is logged"
+        );
+        for t in s.statuses() {
+            assert!(!t.contains("Quokka"), "name in a status: {t}");
+        }
+        assert_no_full_address(&s, PAD);
+    }
+
+    /// The caller closes the window: Cancelled, once; the search stops;
+    /// the outcome stays until the next window; refusals of open_pairing.
+    #[test]
+    fn close_pairing_cancels_once_and_open_pairing_refusals() {
+        let mut s = Sim::with_saved(reconnect_only(), &[]);
+        s.advance(2_000);
+        open(&mut s, 60_000);
+        assert_eq!(
+            s.host.open_pairing(s.now, 60_000, &mut s.io),
+            Err(PairError::AlreadyOpen)
+        );
+        s.take_cmd(op::INQUIRY);
+        let now = s.now;
+        assert!(s.host.close_pairing(now, &mut s.io));
+        s.settle();
+        s.take_cmd(op::INQUIRY_CANCEL);
+        assert!(!s.host.close_pairing(now, &mut s.io));
+        assert_eq!(s.host.pairing_outcome(), Some(PairEnd::Cancelled));
+        let closed =
+            s.io.logs
+                .iter()
+                .filter(|l| l.contains("pairing window closed"))
+                .count();
+        assert_eq!(closed, 1);
+        s.advance(200);
+        assert!(s.host.waiting());
+        assert_eq!(pair_with(&mut s, PAD, 1_000), Err(PairError::NotScanning));
+
+        // A long window is cut to the longest.
+        open(&mut s, 10 * PAIR_WINDOW_MAX);
+        assert_eq!(s.host.pairing_outcome(), None, "a new window");
+        let w = s.host.pairing_window().unwrap();
+        assert_eq!(w.until(), s.now + PAIR_WINDOW_MAX);
+
+        // Not in reconnect-only mode: refused.
+        let mut s = Sim::new();
+        assert_eq!(
+            s.host.open_pairing(s.now, 10_000, &mut s.io),
+            Err(PairError::NotReconnectOnly)
+        );
+    }
+
+    /// Opening a window lets a linked saved pad go first.
+    #[test]
+    fn opening_a_window_lets_the_linked_pad_go() {
+        let mut s = Sim::with_saved(reconnect_only(), &[(PAD, KEY)]);
+        s.advance(2_000);
+        pad_calls(&mut s, PAD);
+        s.feed(&ev_addr(0x17, PAD));
+        s.take_cmd(op::LINK_KEY_REQUEST_REPLY);
+        s.feed(&ev_encrypted(H));
+        assert!(s.host.linked());
+        open(&mut s, 30_000);
+        assert_eq!(s.take_cmd(op::DISCONNECT), [0x0B, 0x00, 0x13]);
+        // The search starts at the next tick, after the disconnect's answer.
+        s.advance(20);
+        s.take_cmd(op::INQUIRY);
+        s.feed(&ev_disconnected(H, 0x16));
+        assert!(
+            s.host.pairing_open(),
+            "a late end of the old link changes nothing"
+        );
+        assert_eq!(s.host.key_count(), 1);
+        s.assert_key_never_printed();
+    }
 }

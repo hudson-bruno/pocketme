@@ -14,7 +14,7 @@ path = "src/main.rs"
 # The window is on by default. It needs the SDL3 library on the PC.
 # `--no-default-features` builds with no outside library at all; the
 # program then runs with no window only.
-default    = ["window", "boot-gather"]
+default    = ["window", "boot-gather", "settings"]
 window     = ["dep:sdl3"]
 # The GATHER boot animation and its BOOT ANIM setting (crates/console-core,
 # feature `boot-gather`; off there by default, on here so it can be seen
@@ -22,6 +22,13 @@ window     = ["dep:sdl3"]
 # `--no-default-features` runs the console without it, as the board does
 # by default.
 boot-gather = ["console-core/boot-gather"]
+# The settings app with gamepad pairing (crates/console-core, feature
+# `settings`), on here so it can be seen and tried. Its pairing pages talk
+# to a scripted stand-in for the radio (src/fake_radio.rs is board-api's).
+# `--settings-entry tile|gear|menu|row` picks the way in for one run (the
+# default, off, is the console as without the feature); `--pair` picks
+# what the stand-in radio does. `--no-default-features` leaves it out.
+settings = ["console-core/settings"]
 # Optional parts, passed on to the console and the board layer. The
 # desktop board gives each one as "absent" for now.
 bt-classic = ["board-api/bt-classic", "console-core/bt-classic", "settings-store/bt-classic"]
