@@ -24,8 +24,5 @@ board-api = { path = "../board-api" }
 # The board layer's own fake flash (`FakeStore`), for one test.
 board-api = { path = "../board-api", features = ["testing"] }
 
-# The power-cut tests try every cut point of long sequences: built with
-# some optimisation they take seconds, not minutes. (Only this crate's
-# own builds; the chip build is a release build anyway.)
-[profile.dev]
-opt-level = 1
+# The power-cut tests try every cut point of long sequences; the workspace root
+# Cargo.toml sets `[profile.dev] opt-level = 2` (and chip builds are release).

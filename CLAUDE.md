@@ -34,7 +34,7 @@ A game crate is linked straight into the simulator and, for the chip, built by `
 
 The game's folder name in capitals (`-` becomes `_`, at most 8 characters) is its folder on the card: `CONSOLE/GAMES/<NAME>/{GAME.BIN,INFO.TXT}`. `games/<name>/INFO.TXT` must be byte-identical to `boards/desktop/card/CONSOLE/GAMES/<NAME>/INFO.TXT`. Every `GAME.BIN` on the simulator's sample card, the real games' too, is deliberately a line of text and not a game file (made by `boards/desktop/tools/make_sample_card.py`).
 
-A new game touches six places besides its own crate: `boards/desktop/Cargo.toml`, `boards/desktop/src/games.rs`, `LINKED` in `make_sample_card.py` (then run it), `CRATES` in `boards/desktop/check.sh`, `TILES` in `boards/desktop/tests/games.rs`, and the list in `the_card_folder_lists_the_sample_games` in `boards/desktop/tests/board.rs`.
+A new game touches seven places besides its own crate: `Cargo.toml` (`workspace.members`), `boards/desktop/Cargo.toml`, `boards/desktop/src/games.rs`, `LINKED` in `make_sample_card.py` (then run it), `CRATES` (and `BATCH_GAMES`) in `boards/desktop/check.sh`, `TILES` in `boards/desktop/tests/games.rs`, and the list in `the_card_folder_lists_the_sample_games` in `boards/desktop/tests/board.rs`.
 
 ### The firmware (`boards/cyd`)
 
@@ -68,18 +68,23 @@ Scripted cargo calls are `--offline` (`boards/desktop/check.sh` and `games/build
 
 ### PC side
 
+The 27 PC-checked crates (`boards/desktop`, the 12 shared `crates/`, and the 14 `games/`) share an explicit root virtual Cargo workspace (`Cargo.toml`, with a single `Cargo.lock`). `boards/cyd`, `experiments/`, `tools/`, and `crates/debug-link`, `test-card`, `pad-view` are explicitly excluded so they stay standalone. The root `Cargo.toml` sets `[profile.dev] opt-level = 2` (keeping `overflow-checks = true` and `debug-assertions = true`) and `[profile.release-checked]` for fast optimized test/fuzz runs without affecting chip builds.
+
 ```bash
-boards/desktop/check.sh        # everything on the PC side; ends with "check: ok"
+boards/desktop/check.sh                             # everything on the PC side; ends with "check: ok"
+boards/desktop/check.sh games/mercator              # scope to one or more crates (skips chip/no-std if unused)
+boards/desktop/check.sh --no-chip --no-nostd        # skip chip game builds or no_std cross-builds
+boards/desktop/check.sh --cargo-test                # force plain `cargo test` instead of `cargo nextest`
 ```
 
-It builds the chip games, then runs format check, clippy (`-D warnings`) and tests for each crate in its list on several feature sets, compiles the shared crates `no_std` for the ESP32 and a bare PC, and runs the simulator once. It uses one shared build folder, `boards/desktop/target/check`. It does **not** cover `crates/debug-link`, `test-card`, `pad-proto`, `pad-view` or `pad-store`; run `cargo test --offline` in their folders when you change them.
+It overlaps the chip game build in the background (when `boards/desktop` or `crates/game-loader` is selected), checks formatting on selected crates, runs `clippy` (`-D warnings`) and tests via `cargo nextest` (automatically falling back to `cargo test`) plus `cargo test --doc`, compiles selected `SHARED` crates `no_std` for the ESP32 and a bare PC in parallel, and runs the simulator once. It skips redundant `--all-features` passes on crates without `[features]`, batches the 13 games that share a feature graph together for multi-core parallelism, and stores builds in `boards/desktop/target/check`. It does **not** cover `crates/debug-link`, `test-card` or `pad-view`; run `cargo test --offline` in their folders when you change them.
 
-One crate, by hand, from the crate's folder:
+One crate, by hand, from the crate's folder (or from the workspace root with `-p <pkg>`):
 
 ```bash
-cargo fmt --check
+cargo fmt --check -p <pkg>
 cargo clippy --offline --locked --all-targets --all-features -- -D warnings
-cargo test --offline --locked --all-features
+cargo nextest run --offline --locked --all-features --no-tests=pass   # plus `cargo test --doc` (or `cargo test`)
 ```
 
 Never `cargo fmt --all` (it reformats path dependencies in other folders).
@@ -97,7 +102,7 @@ Things that are easy to miss:
 
 - Tests that need the built game files. `check.sh` sets `GAME_FILES_DIR=boards/desktop/target/check/chip-games/files`; by hand, run `games/build-chip.sh` first and export that absolute path. Without it the simulator's chip-file tests print a note and pass without checking anything, and `crates/game-loader`'s `real_files` test looks in `crates/game-loader/target/chip/chip-games/files` and fails if that is empty.
 - After a deliberate change to the console's look: look at the new pictures in the simulator first, then `UPDATE_GOLDEN=1 cargo test --test golden` in `crates/console-core`. After changing console-video's diff rule: `node tests/data/sim_areas.mjs > tests/data/sim_areas.txt` in `crates/console-video`.
-- Longer runs: `PAD_FUZZ=200 cargo test --release --test fuzz` (pad-host), `CUT_SAVES=3000 cargo test --release --test cuts` (settings-store).
+- Longer runs: `PAD_FUZZ=200 cargo test --profile release-checked --test fuzz` (pad-host), `CUT_SAVES=3000 cargo test --profile release-checked --test cuts` (settings-store).
 
 Simulator, from `boards/desktop` (`cargo run -- --help` lists every option and key):
 

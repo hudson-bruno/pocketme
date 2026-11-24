@@ -1,0 +1,58 @@
+# Explicit virtual Cargo workspace for the PC-checked crates (crates/,
+# games/, boards/desktop). Unpinned crates, firmware crates (boards/cyd),
+# tools/ and experiments/ are intentionally excluded so they remain
+# standalone and keep their own toolchains/profiles.
+
+[workspace]
+resolver = "3"
+members = [
+    "boards/desktop",
+    "crates/board-api",
+    "crates/console-core",
+    "crates/console-video",
+    "crates/game-3d",
+    "crates/game-api",
+    "crates/game-kit",
+    "crates/game-loader",
+    "crates/pad-host",
+    "crates/pad-proto",
+    "crates/pad-store",
+    "crates/settings-store",
+    "crates/touch-filter",
+    "games/bench",
+    "games/camber",
+    "games/drive3d",
+    "games/hairpin",
+    "games/kestrel",
+    "games/lander",
+    "games/lantern",
+    "games/mercator",
+    "games/padtest",
+    "games/proto3d",
+    "games/rooftop",
+    "games/skimmer",
+    "games/stardust",
+    "games/tundra",
+]
+exclude = [
+    "boards/cyd",
+    "crates/debug-link",
+    "crates/pad-view",
+    "crates/test-card",
+    "experiments",
+    "tools",
+]
+
+# Optimize PC dev/test builds so software-rendered 3D games and long fuzz
+# or power-cut suites run quickly while keeping debug-assertions and
+# overflow-checks active. Chip builds pass profile settings explicitly via
+# games/build-chip.sh and do not use this profile.
+[profile.dev]
+opt-level = 2
+
+# Release builds with overflow checks and debug assertions enabled, e.g. for
+# long fuzz/cut runs: `cargo test --profile release-checked ...`
+[profile.release-checked]
+inherits = "release"
+overflow-checks = true
+debug-assertions = true
