@@ -115,7 +115,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
     }
 
@@ -135,6 +135,10 @@
 
     .lang-btn {
       appearance: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
       padding: 3px 6px;
       background: transparent;
       border: 0;
@@ -143,6 +147,19 @@
       color: var(--mute);
       cursor: pointer;
       transition: background 0.08s ease, color 0.08s ease;
+    }
+
+    .flag-ico {
+      width: 15px;
+      height: 10px;
+      border: 1px solid rgba(11, 15, 26, 0.45);
+      flex-shrink: 0;
+    }
+
+    #quick-lang-val {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .lang-btn:hover:not(.active) {
@@ -243,6 +260,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 8px;
       padding: 8px 14px;
       background: var(--panel);
       border-bottom: 2px solid var(--line);
@@ -375,7 +393,7 @@
     .hero-title-block h1 {
       margin: 0 0 4px;
       font-family: var(--pixel);
-      font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+      font-size: clamp(1.18rem, 2.1vw, 1.48rem);
       line-height: 1.12;
       color: var(--paper);
     }
@@ -408,6 +426,7 @@
 
     .pm-row .k {
       color: var(--paper);
+      white-space: nowrap;
     }
 
     .pm-row .v {
@@ -489,13 +508,19 @@
     }
 
     .pm-cta-title {
-      font-size: 0.88rem;
+      font-size: 0.82rem;
       line-height: 1.15;
+    }
+
+    @media (min-width: 480px) {
+      .pm-cta-title {
+        white-space: nowrap;
+      }
     }
 
     .pm-cta-sub {
       font-family: var(--mono);
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       font-weight: 700;
       color: rgba(11, 15, 26, 0.78);
       line-height: 1.1;
@@ -1699,6 +1724,12 @@
     }
 
     /* ---------------- Responsive ---------------- */
+    @media (max-width: 860px) {
+      .brand-mark span.sub {
+        display: none;
+      }
+    }
+
     @media (max-width: 820px) {
       .hero-split,
       .flag-grid,
@@ -1783,15 +1814,43 @@
         <a href="#top" class="nav-box" data-i18n="nav_install">INSTALL</a>
         <a href="#showcase" class="nav-box" data-i18n="nav_3d">3D</a>
         <a href="#catalog" class="nav-box" data-i18n="nav_games">14 GAMES</a>
-        <a href="#flash-map" class="nav-box" data-i18n="nav_flashmap">FLASH MAP</a>
+        <a href="#flash-map" class="nav-box" data-i18n="nav_flashmap">FLASH</a>
         <a href="#specs" class="nav-box" data-i18n="nav_specs">SPECS</a>
         <a href="https://github.com/hudson-bruno/pocketme" class="nav-box" data-i18n="nav_github">GITHUB &nearr;</a>
       </nav>
 
       <div class="topbar-right">
         <div class="lang-switch" id="lang-switch" role="group" data-i18n-aria="lang_switch_aria" aria-label="Language">
-          <button type="button" class="lang-btn active" data-lang="en" aria-pressed="true">EN</button>
-          <button type="button" class="lang-btn" data-lang="pt-BR" aria-pressed="false">PT-BR</button>
+          <button type="button" class="lang-btn active" data-lang="en" aria-pressed="true" aria-label="English" title="English">
+            <svg class="sprite flag-ico" width="15" height="10" viewBox="0 0 15 10" aria-hidden="true">
+              <rect width="15" height="10" fill="#f4f1e4"/>
+              <rect x="0" y="0" width="15" height="2" fill="#d94343"/>
+              <rect x="0" y="4" width="15" height="2" fill="#d94343"/>
+              <rect x="0" y="8" width="15" height="2" fill="#d94343"/>
+              <rect x="0" y="0" width="7" height="6" fill="#1d4ed8"/>
+              <rect x="1" y="1" width="1" height="1" fill="#f4f1e4"/>
+              <rect x="4" y="1" width="1" height="1" fill="#f4f1e4"/>
+              <rect x="2" y="3" width="1" height="1" fill="#f4f1e4"/>
+              <rect x="5" y="3" width="1" height="1" fill="#f4f1e4"/>
+            </svg>
+            <span>EN</span>
+          </button>
+          <button type="button" class="lang-btn" data-lang="pt-BR" aria-pressed="false" aria-label="Português (Brasil)" title="Português (Brasil)">
+            <svg class="sprite flag-ico" width="15" height="10" viewBox="0 0 15 10" aria-hidden="true">
+              <rect width="15" height="10" fill="#2e9e4f"/>
+              <rect x="6" y="1" width="3" height="1" fill="#f7d154"/>
+              <rect x="4" y="2" width="7" height="1" fill="#f7d154"/>
+              <rect x="3" y="3" width="9" height="1" fill="#f7d154"/>
+              <rect x="2" y="4" width="11" height="2" fill="#f7d154"/>
+              <rect x="3" y="6" width="9" height="1" fill="#f7d154"/>
+              <rect x="4" y="7" width="7" height="1" fill="#f7d154"/>
+              <rect x="6" y="8" width="3" height="1" fill="#f7d154"/>
+              <rect x="6" y="3" width="3" height="4" fill="#1d4ed8"/>
+              <rect x="5" y="4" width="5" height="2" fill="#1d4ed8"/>
+              <rect x="5" y="4" width="5" height="1" fill="#f4f1e4"/>
+            </svg>
+            <span>PT</span>
+          </button>
         </div>
 
         <span class="fw-pill" id="version-badge">
@@ -1818,7 +1877,7 @@
       <div class="console-shell">
         <div class="console-top-strip">
           <span class="left">POCKETME // ESP32-2432S028</span>
-          <span class="center" data-i18n="hero_strip_center">PLACEMENT E &middot; 1-CLICK WEB INSTALLER</span>
+          <span class="center" data-i18n="hero_strip_center">1-CLICK WEB INSTALLER</span>
           <span class="right" id="strip-count" data-i18n="hero_strip_right">14 GAMES</span>
         </div>
 
@@ -1839,8 +1898,8 @@
                 <button type="button" class="grid-toggle" id="grid-toggle" data-i18n="grid_toggle">LCD GRID</button>
               </div>
               <div class="screen-sub-strip">
-                <span data-i18n-html="hero_frame_info">FRAME: 160&times;120 &rarr; ST7789 320&times;240</span>
-                <span data-i18n-html="hero_tile_hint">USE &lt; &gt; OR CLICK TILES</span>
+                <span data-i18n-html="hero_frame_info">160&times;120 &rarr; ST7789 320&times;240</span>
+                <span data-i18n-html="hero_tile_hint">USE &lt; &gt; OR CLICK</span>
               </div>
             </div>
           </div>
@@ -1891,8 +1950,8 @@
                     </svg>
                   </span>
                   <span class="pm-cta-copy">
-                    <span class="pm-cta-title" data-i18n="hero_cta_title">FLASH POCKETME TO CYD</span>
-                    <span class="pm-cta-sub" data-i18n="hero_cta_sub">1-CLICK USB INSTALLER &middot; NO TOOLS</span>
+                    <span class="pm-cta-title" data-i18n="hero_cta_title">INSTALL POCKETME</span>
+                    <span class="pm-cta-sub" data-i18n="hero_cta_sub">1-CLICK USB FLASHER &middot; NO TOOLS</span>
                   </span>
                 </span>
                 <span class="pm-cta-tag">
@@ -2177,7 +2236,7 @@
                   </svg>
                 </span>
                 <span class="pm-cta-copy">
-                  <span class="pm-cta-title" data-i18n="bot_cta_title">INSTALL POCKETME NOW</span>
+                  <span class="pm-cta-title" data-i18n="bot_cta_title">INSTALL POCKETME</span>
                   <span class="pm-cta-sub" data-i18n="bot_cta_sub">3-PART SAFE FLASH</span>
                 </span>
               </span>
@@ -2557,7 +2616,7 @@
           nav_install: "INSTALL",
           nav_3d: "3D",
           nav_games: "14 GAMES",
-          nav_flashmap: "FLASH MAP",
+          nav_flashmap: "FLASH",
           nav_specs: "SPECS",
           nav_github: "GITHUB \u2197",
           lang_switch_aria: "Language",
@@ -2566,7 +2625,7 @@
           fw_file_blocked: "FILE:// BLOCKED",
           fw_localhost: "LOCALHOST",
           fw_manifest_offline: "MANIFEST OFFLINE",
-          fw_badge: "FW V{ver} ({parts} PARTS)",
+          fw_badge: "FW V{ver}",
           cta_1click: "1 CLICK",
           img_summary: "{parts} PARTS \u00b7 BOOTLOADER / PARTITIONS / APP",
 
@@ -2574,11 +2633,11 @@
           manifest_err_banner: "FLASH LOADER OR MANIFEST.JSON UNAVAILABLE \u2014 CHECK NETWORK OR USE <a href=\"https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md\">DOCS/INSTALL.MD</a>.",
 
           hero_aria: "PocketMe console preview and 1-click browser flasher",
-          hero_strip_center: "PLACEMENT E \u00b7 1-CLICK WEB INSTALLER",
+          hero_strip_center: "1-CLICK WEB INSTALLER",
           hero_strip_right: "14 GAMES",
           grid_toggle: "LCD GRID",
-          hero_frame_info: "FRAME: 160&times;120 &rarr; ST7789 320&times;240",
-          hero_tile_hint: "USE &lt; &gt; OR CLICK TILES",
+          hero_frame_info: "160&times;120 &rarr; ST7789 320&times;240",
+          hero_tile_hint: "USE &lt; &gt; OR CLICK",
           hero_h1: "60 FPS 3D. <span>520 KB RAM.</span>",
           hero_lead: "Bare-metal Rust console firmware for the Cheap Yellow Display: 14 built-in programs, tear-free video, and on-console Bluetooth gamepad pairing.",
           spec_k_speed: "SPEED ON CYD",
@@ -2589,8 +2648,8 @@
           spec_v_video: "CORE 2 DMA / 0 TEARS",
           spec_k_bt: "BLUETOOTH PAD",
           spec_v_bt: "PAIR ON CONSOLE + IMU",
-          hero_cta_title: "FLASH POCKETME TO CYD",
-          hero_cta_sub: "1-CLICK USB INSTALLER \u00b7 NO TOOLS",
+          hero_cta_title: "INSTALL POCKETME",
+          hero_cta_sub: "1-CLICK USB FLASHER \u00b7 NO TOOLS",
           badge_kept: "KEPT",
           erase_rule_1: "Select <strong>KEEP DATA</strong> in the installer to preserve BT gamepad pairing &amp; settings.",
           erase_rule_2: "Chrome / Edge over USB data cable. Flashing never locks the ESP32.",
@@ -2675,7 +2734,7 @@
 
           bot_cta_h3: "READY TO WRITE POCKETME TO YOUR CYD?",
           bot_cta_p: "Press RST on the board if it does not restart automatically when flashing completes.",
-          bot_cta_title: "INSTALL POCKETME NOW",
+          bot_cta_title: "INSTALL POCKETME",
           bot_cta_sub: "3-PART SAFE FLASH",
 
           specs_eyebrow: "04 // COMPATIBILITY & DIAGNOSTICS",
@@ -2781,16 +2840,16 @@
           nav_install: "INSTALAR",
           nav_3d: "3D",
           nav_games: "14 JOGOS",
-          nav_flashmap: "MAPA FLASH",
+          nav_flashmap: "FLASH",
           nav_specs: "SPECS",
           nav_github: "GITHUB \u2197",
           lang_switch_aria: "Idioma",
 
-          fw_loading: "CARREGANDO FW\u2026",
+          fw_loading: "CARREGANDO\u2026",
           fw_file_blocked: "FILE:// BLOQUEADO",
           fw_localhost: "LOCALHOST",
-          fw_manifest_offline: "MANIFEST OFFLINE",
-          fw_badge: "FW V{ver} ({parts} PARTES)",
+          fw_manifest_offline: "OFFLINE",
+          fw_badge: "FW V{ver}",
           cta_1click: "1 CLIQUE",
           img_summary: "{parts} PARTES \u00b7 BOOTLOADER / PARTIÇÕES / APP",
 
@@ -2798,23 +2857,23 @@
           manifest_err_banner: "GRAVADOR OU MANIFEST.JSON INDISPONÍVEL \u2014 VERIFIQUE A REDE OU VEJA <a href=\"https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md\">DOCS/INSTALL.MD</a>.",
 
           hero_aria: "Prévia do console PocketMe e instalador Web 1-clique",
-          hero_strip_center: "PLACEMENT E \u00b7 INSTALADOR WEB 1-CLIQUE",
+          hero_strip_center: "INSTALADOR WEB 1-CLIQUE",
           hero_strip_right: "14 JOGOS",
           grid_toggle: "GRADE LCD",
-          hero_frame_info: "QUADRO: 160&times;120 &rarr; ST7789 320&times;240",
-          hero_tile_hint: "USE &lt; &gt; OU CLIQUE NOS ÍCONES",
-          hero_h1: "3D A 60 FPS. <span>520 KB DE RAM.</span>",
+          hero_frame_info: "160&times;120 &rarr; ST7789 320&times;240",
+          hero_tile_hint: "USE &lt; &gt; OU CLIQUE",
+          hero_h1: "3D A 60 FPS. <span>520 KB RAM.</span>",
           hero_lead: "Firmware de console em Rust bare-metal para a Cheap Yellow Display: 14 programas integrados, vídeo sem cortes e pareamento Bluetooth direto no console.",
-          spec_k_speed: "VELOCIDADE NA CYD",
+          spec_k_speed: "FPS NA CYD",
           spec_v_speed: "59.99 FPS (9 TÍTULOS)",
           spec_k_mem: "MEMÓRIA",
           spec_v_mem: "520 KB SRAM / SEM SO",
           spec_k_video: "SINC. VÍDEO",
           spec_v_video: "CORE 2 DMA / 0 CORTES",
           spec_k_bt: "CONTROLE BT",
-          spec_v_bt: "PAREAMENTO NO CONSOLE + IMU",
-          hero_cta_title: "INSTALAR POCKETME NA CYD",
-          hero_cta_sub: "INSTALADOR USB 1-CLIQUE \u00b7 SEM FERRAMENTAS",
+          spec_v_bt: "PAREAR NO CONSOLE + IMU",
+          hero_cta_title: "INSTALAR POCKETME",
+          hero_cta_sub: "1-CLIQUE VIA USB \u00b7 SEM TOOLS",
           badge_kept: "MANTIDO",
           erase_rule_1: "Deixe <strong>MANTER DADOS</strong> selecionado para preservar o pareamento Bluetooth e as configurações.",
           erase_rule_2: "Chrome / Edge via cabo USB de dados. Gravar nunca bloqueia o ESP32.",
@@ -2899,8 +2958,8 @@
 
           bot_cta_h3: "PRONTO PARA GRAVAR O POCKETME NA SUA CYD?",
           bot_cta_p: "Pressione RST na placa caso ela não reinicie automaticamente ao fim da gravação.",
-          bot_cta_title: "INSTALAR POCKETME AGORA",
-          bot_cta_sub: "FLASH SEGURO EM 3 PARTES",
+          bot_cta_title: "INSTALAR POCKETME",
+          bot_cta_sub: "FLASH SEGURO 3 PARTES",
 
           specs_eyebrow: "04 // COMPATIBILIDADE E DIAGNÓSTICO",
           specs_h2: "ESPECIFICAÇÕES E SOLUÇÃO DE PROBLEMAS",
@@ -3841,6 +3900,10 @@
       const langBtns = Array.from(document.querySelectorAll("#lang-switch .lang-btn"));
       const quickLangBtn = document.getElementById("quick-lang");
       const quickLangVal = document.getElementById("quick-lang-val");
+      const FLAG_SVG = {
+        en: '<svg class="sprite flag-ico" width="15" height="10" viewBox="0 0 15 10" aria-hidden="true"><rect width="15" height="10" fill="#f4f1e4"/><rect x="0" y="0" width="15" height="2" fill="#d94343"/><rect x="0" y="4" width="15" height="2" fill="#d94343"/><rect x="0" y="8" width="15" height="2" fill="#d94343"/><rect x="0" y="0" width="7" height="6" fill="#1d4ed8"/><rect x="1" y="1" width="1" height="1" fill="#f4f1e4"/><rect x="4" y="1" width="1" height="1" fill="#f4f1e4"/><rect x="2" y="3" width="1" height="1" fill="#f4f1e4"/><rect x="5" y="3" width="1" height="1" fill="#f4f1e4"/></svg>',
+        "pt-BR": '<svg class="sprite flag-ico" width="15" height="10" viewBox="0 0 15 10" aria-hidden="true"><rect width="15" height="10" fill="#2e9e4f"/><rect x="6" y="1" width="3" height="1" fill="#f7d154"/><rect x="4" y="2" width="7" height="1" fill="#f7d154"/><rect x="3" y="3" width="9" height="1" fill="#f7d154"/><rect x="2" y="4" width="11" height="2" fill="#f7d154"/><rect x="3" y="6" width="9" height="1" fill="#f7d154"/><rect x="4" y="7" width="7" height="1" fill="#f7d154"/><rect x="6" y="8" width="3" height="1" fill="#f7d154"/><rect x="6" y="3" width="3" height="4" fill="#1d4ed8"/><rect x="5" y="4" width="5" height="2" fill="#1d4ed8"/><rect x="5" y="4" width="5" height="1" fill="#f4f1e4"/></svg>',
+      };
 
       function applyLang(lang, persist = false) {
         currentLang = lang === "pt-BR" ? "pt-BR" : "en";
@@ -3858,7 +3921,7 @@
           b.classList.toggle("active", on);
           b.setAttribute("aria-pressed", String(on));
         });
-        quickLangVal.textContent = currentLang === "pt-BR" ? "PT-BR" : "EN";
+        quickLangVal.innerHTML = `${FLAG_SVG[currentLang]}<span>${currentLang === "pt-BR" ? "PT-BR" : "EN"}</span>`;
 
         document.querySelectorAll("[data-i18n]").forEach((el) => {
           el.textContent = t(el.dataset.i18n);

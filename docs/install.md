@@ -159,8 +159,8 @@ over `http://localhost:8765`, see
 2. **Open the web installer page** in Google Chrome or Microsoft Edge
    (over `https://` or `http://localhost`). *You see:* the live
    Home screen preview, the firmware version badge, and the
-   **FLASH POCKETME TO CYD** button.
-3. **Click FLASH POCKETME TO CYD** to open the installer modal.
+   **INSTALL POCKETME** button (**INSTALAR POCKETME** in Portuguese).
+3. **Click INSTALL POCKETME** to open the installer modal.
    Leave **BOARD PRESET** on **ESP32-2432S028 (2 USB)** (or switch to
    **CUSTOM** to adjust baud rate, reset mode or debug logging) and
    leave **ERASE FLASH** on **KEEP DATA** (**MANTER DADOS**) to keep

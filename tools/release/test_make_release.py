@@ -256,6 +256,7 @@ class WebInstallerAssetsTests(unittest.TestCase):
         self.assertIn("ESP32-2432S028 (2 USB)", html)
         self.assertIn('id="flash-custom-opts"', html)
         self.assertIn('id="lang-switch"', html)
+        self.assertIn("flag-ico", html)
         self.assertIn('"pt-BR"', html)
         self.assertIn("navigator.languages", html)
         self.assertIn("pocketme_lang", html)
