@@ -346,11 +346,13 @@ a crate's folder downloads them). [docs/testing.md](docs/testing.md) explains wh
 ## Run it on the board
 
 **Without building anything:** [docs/install.md](docs/install.md) is a
-step-by-step guide for people who are not programmers: one ready-made
-file, written to the board from a web browser. It has not been tried on
-a board yet. That firmware cannot pair a gamepad, so the console is
-played by touch and the BOOT button, and ROOFTOP, DRIVE3D and PROTO3D
-cannot be played that way. The files are made by
+step-by-step guide for people who are not programmers: a 1-click browser
+installer (`esptool-js` over Web Serial using `manifest.json`, with
+automatic English and Brazilian Portuguese UI) and ready-made binary
+files for the command line. The 1-click browser installer was tested on
+the project's CYD board. With the `pair` feature included, you can pair a
+classic Bluetooth gamepad directly from the console's **GAMEPADS** tile
+and play all fourteen programs. The files are made by
 [tools/release](tools/release/README.md).
 
 **Building it yourself.** You need the board (see [docs/hardware.md](docs/hardware.md)), the Rust
@@ -384,17 +386,16 @@ Things to know before flashing:
   settings partition at the top of the flash; without it the console
   cannot keep its settings), and do not use
   `cargo run` in `boards/cyd` (its runner flashes without the table).
-- **Never erase the whole flash** once a gamepad is paired: the pairing
-  is kept in the chip's flash and the console cannot pair again by
-  itself.
+- **Never erase the whole flash** unnecessarily once a gamepad is paired:
+  the pairing is kept in `nvs` (`0x9000..0xB000`). If you do wipe flash,
+  a build with `pair` can pair again from the console.
 - The firmware was written for and tested on one board. Other variants
   of the "Cheap Yellow Display" are untested.
-- The gamepad is optional (add `,pad` to the feature list). The console
-  only reconnects to a pad that was paired before; pairing is done once
-  with the separate test firmware in
-  [experiments/bt-gamepad-test](experiments/bt-gamepad-test). Without a
-  pad, the touch screen and the BOOT button work the console and most
-  games; ROOFTOP, DRIVE3D and PROTO3D need the pad.
+- The gamepad is optional: add `,pad` for reconnect-only support, or
+  `,pad,pair` for on-console classic Bluetooth gamepad pairing and the
+  settings screens (`GAMEPADS` and `SETTINGS` tiles). Without a pad, the
+  touch screen and the BOOT button work the console and most games;
+  ROOFTOP, DRIVE3D and PROTO3D need the pad.
 
 The firmware's own README, [boards/cyd/README.md](boards/cyd/README.md),
 has every feature, the log lines and the measurements.
@@ -442,7 +443,7 @@ or a tool.
 | [Design decisions](docs/decisions.md) | The choices and the reasons, with dates |
 | [Limitations](docs/limitations.md) | What the build cannot do, and what is not known |
 | [Hardware](docs/hardware.md) | The board, its pins and its quirks |
-| [Put it on your own board](docs/install.md) | A guide for non-programmers: a ready-made file and a web browser (not tried on a board yet) |
+| [Put it on your own board](docs/install.md) | A guide for non-programmers: 1-click browser installer and ready-made files |
 | [Testing](docs/testing.md) | The check scripts, the kinds of test, what only the board can tell |
 | [Gallery](docs/gallery.md) | Clips of every game and of the console, by topic |
 | [Credits](docs/credits.md) | The crates, tools and references the project stands on |
