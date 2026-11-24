@@ -1,9 +1,15 @@
-<h1 align="center">PocketMe</h1>
+<h1 align="center"><img src="docs/pocketme-icon.svg" width="32" height="32" alt=""> PocketMe</h1>
 
 <p align="center">
   <b>A hand-held game console written from scratch in bare-metal Rust.</b><br>
   3D games at about 60 pictures a second on a classic ESP32 with 520 KB of RAM,<br>
   a Bluetooth gamepad with motion sensors, and the same console on a PC as a simulator.
+</p>
+
+<p align="center">
+  <a href="https://hudson-bruno.github.io/pocketme/"><b>Install it on your CYD in one click, from the browser</b></a> ·
+  <a href="https://github.com/hudson-bruno/pocketme/releases/latest">Latest release</a> ·
+  <a href="docs/install.md">Install guide</a>
 </p>
 
 <table>
@@ -345,11 +351,13 @@ a crate's folder downloads them). [docs/testing.md](docs/testing.md) explains wh
 
 ## Run it on the board
 
-**Without building anything:** [docs/install.md](docs/install.md) is a
-step-by-step guide for people who are not programmers: a 1-click browser
-installer (`esptool-js` over Web Serial using `manifest.json`, with
-automatic English and Brazilian Portuguese UI) and ready-made binary
-files for the command line. The 1-click browser installer was tested on
+**Without building anything:** open the 1-click installer at
+<https://hudson-bruno.github.io/pocketme/> in desktop Chrome or Edge
+(`esptool-js` over Web Serial using `manifest.json`, with automatic
+English and Brazilian Portuguese UI), or download the ready-made files
+from the [latest release](https://github.com/hudson-bruno/pocketme/releases/latest).
+[docs/install.md](docs/install.md) is the step-by-step guide for people
+who are not programmers. The 1-click browser installer was tested on
 the project's CYD board. With the `pair` feature included, you can pair a
 classic Bluetooth gamepad directly from the console's **GAMEPADS** tile
 and play all fourteen programs. The files are made by
@@ -459,7 +467,6 @@ The prototype is playable, but it is not finished. What it does not
 have:
 
 - no saved games, and no installing of games into flash;
-- no pairing of a gamepad from the console itself, and no settings app;
 - no sound, and no battery support;
 - a game that panics stops the console until the reset button;
 - it was built for and measured on one board only.

@@ -129,8 +129,8 @@ is called CH341SER; not checked by the project).
 download any `.bin` files manually.
 
 **If you prefer the manual browser tool (`esptool-js`) or the command
-line**, open the newest release on the Releases page of this
-repository, click **Assets**, and download either:
+line**, open the [latest release](https://github.com/hudson-bruno/pocketme/releases/latest)
+on GitHub, click **Assets**, and download either:
 
 - the three parts (`*-bootloader-0x1000.bin`, `*-partitions-0x8000.bin`,
   `*-app-0x10000.bin`) to keep a saved gamepad pairing, or
@@ -146,11 +146,11 @@ are the program's text, not something you can write to the board.
 This way uses PocketMe's built-in **1-click installer** powered by
 `esptool-js` over Web Serial directly in desktop Chrome or Edge (the
 page automatically opens in Brazilian Portuguese or English matching
-your browser language, and can be switched with `EN | PT-BR` in the top
-bar). Once a public release is published with GitHub Pages enabled, the
-hosted installer lives at <https://hudson-bruno.github.io/pocketme/> (you
-can also run a local copy built with `make_release.py --web-installer`
-over `http://localhost:8765`, see
+your browser language, and can be switched with the `EN | PT` flag
+buttons in the top bar). The hosted installer is live at
+<https://hudson-bruno.github.io/pocketme/> (you can also run a local
+copy built with `make_release.py --web-installer` over
+`http://localhost:8765`, see
 [tools/release/README.md](../tools/release/README.md)).
 
 1. **Plug the board into the computer** with the USB data cable.
@@ -216,8 +216,9 @@ from its repository source, not tried with a board.
 
 ## Check the download (optional)
 
-If you downloaded release files manually, `SHA256SUMS.txt` on the same
-release page gives each file's SHA-256 checksum. Open a terminal in your
+If you downloaded release files manually, `SHA256SUMS.txt` on the
+[latest release](https://github.com/hudson-bruno/pocketme/releases/latest)
+gives each file's SHA-256 checksum. Open a terminal in your
 Downloads folder and check your file against `SHA256SUMS.txt`:
 
 - **Windows**: `(Get-FileHash .\pocketme-cyd-1.0.bin).Hash`

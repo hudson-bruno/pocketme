@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- HANDHELD sprite from crates/console-core/src/gfx.rs, in the theme.rs palette; also the web installer's favicon -->
+  <rect x="2" y="0" width="12" height="1" fill="#f4f1e4"/>
+  <rect x="1" y="1" width="1" height="13" fill="#f4f1e4"/>
+  <rect x="14" y="1" width="1" height="13" fill="#f4f1e4"/>
+  <rect x="2" y="14" width="12" height="1" fill="#f4f1e4"/>
+  <rect x="2" y="1" width="12" height="13" fill="#7b93b8"/>
+  <rect x="3" y="2" width="10" height="6" fill="#0b0f1a"/>
+  <rect x="4" y="3" width="8" height="4" fill="#f7d154"/>
+  <rect x="3" y="9" width="1" height="1" fill="#0b0f1a"/>
+  <rect x="2" y="10" width="3" height="1" fill="#0b0f1a"/>
+  <rect x="3" y="11" width="1" height="1" fill="#0b0f1a"/>
+  <rect x="11" y="10" width="1" height="1" fill="#e2714a"/>
+  <rect x="10" y="11" width="1" height="1" fill="#5fb04f"/>
+</svg>

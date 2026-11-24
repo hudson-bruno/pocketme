@@ -150,11 +150,13 @@ or `https://`, not `file://`):
 python3 -m http.server 8765 --bind 127.0.0.1 --directory <folder>
 ```
 
-Then open `http://localhost:8765` in Chrome or Edge. When a GitHub
-Release is published with `--web-installer` / `--web-manifest` assets,
+Then open `http://localhost:8765` in Chrome or Edge. When a `v*` GitHub
+Release is published with `--web-manifest` (or `--web-installer`) assets,
 `../../.github/workflows/pages.yml` builds `_site/` from the release
 assets plus `tools/release/web/index.html` and the clips listed in
-`tools/release/web/media.txt` for GitHub Pages.
+`tools/release/web/media.txt` and deploys to GitHub Pages (with `v*` tags
+allowed alongside `main` in the `github-pages` environment's deployment
+branch policy).
 
 ## Which firmware may be handed out
 
@@ -204,15 +206,14 @@ ILI9341 panel is a commonly named one; a general fact, not checked
 here) are untested, and an ESP32 older than v3.0 cannot run it (see
 "What it checks").
 
-## Open before a public release
+## Published releases
 
-- **Release link & GitHub Pages.** Create a GitHub Release with the files
-  built from a clean committed tree (including `THIRD_PARTY_NOTICES.txt`,
-  `manifest.json`, and the three firmware parts), enable GitHub Pages
-  for `.github/workflows/pages.yml` once the repository is public, and
-  add the release link in `docs/install.md`. (The 1-click browser
-  installer itself was hardware-verified on a real CYD board on
-  `2026-11-24`.)
+The repository is public, `v0.1.0` (built from commit `0a83a35`) is
+published at <https://github.com/hudson-bruno/pocketme/releases/tag/v0.1.0>
+with all 8 release files, and GitHub Pages serves the live 1-click
+browser installer at <https://hudson-bruno.github.io/pocketme/>. Future
+`v*` releases published with `--web-manifest` assets deploy automatically
+through `.github/workflows/pages.yml`.
 
 ## Trial run
 
