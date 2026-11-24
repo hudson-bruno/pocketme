@@ -32,12 +32,6 @@ pad-view = { path = "../pad-view" }
 # The saved pairings, read only (`read_pairings`).
 pad-store = { path = "../pad-store" }
 
-# The fuzz tests feed many thousands of packets: with some optimisation
-# they take seconds. Overflow checks stay on in every test build, release
-# too, so a long run finds any arithmetic overflow.
-[profile.dev]
-opt-level = 1
-
-[profile.release]
-overflow-checks = true
-debug-assertions = true
+# The fuzz tests feed many thousands of packets; the workspace root Cargo.toml
+# sets `[profile.dev] opt-level = 2` (with overflow checks on) and provides
+# `[profile.release-checked]` for long release runs with overflow checks.

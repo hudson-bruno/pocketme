@@ -596,11 +596,17 @@ and runs this program once. No board is needed. It takes about 75
 seconds after a change (most of it the random runs of
 `tests/attack.rs`, three times: once per set of parts).
 
-There is no shared Cargo workspace on purpose. A workspace above
-`crates/` would take in the older crates and experiments too. So
-`check.sh` checks each crate in its own folder, with one build folder
-(`target/check`). Each folder pins Rust 1.99.0. The chip build names
-the esp toolchain on the command line.
+The root `Cargo.toml` defines an explicit virtual workspace covering these
+27 PC-checked crates (excluding `boards/cyd`, `tools/`, `experiments/`,
+and `crates/debug-link`, `test-card`, `pad-view` so they keep their own
+toolchains and builds) with a shared `Cargo.lock` and `[profile.dev] opt-level = 2` (overflow checks
+and debug assertions stay enabled). `check.sh` uses `cargo-nextest`
+(plus `cargo test --doc`, falling back to `cargo test`), skips
+`--all-features` on crates without `[features]`, batches the 13 games
+that share a feature graph, runs chip game builds and `no_std` targets
+in parallel, and accepts `--no-chip`, `--no-nostd`, `--cargo-test`, or
+specific crate names/paths to scope a run. Each folder pins Rust 1.99.0;
+the chip build names the `esp` toolchain on the command line.
 
 ## Rules
 
