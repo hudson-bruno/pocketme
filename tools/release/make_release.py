@@ -12,8 +12,10 @@ and writes into DIR:
     <name>-partitions-0x8000.bin    partition table, written at 0x8000
     <name>-app-0x10000.bin          the console, written at 0x10000
     BUILD.txt                       ELF SHA-256, espflash version, chip revision
+    THIRD_PARTY_NOTICES.txt         licence notices for bundled libraries
     SHA256SUMS.txt                  what "sha256sum -c" reads
-    manifest.json                   only with --web-manifest (not tried)
+    manifest.json                   with --web-manifest or --web-installer
+    index.html, media/*             only with --web-installer (1-click Web Serial installer page)
 
 Before it writes anything it checks the image (ESP image headers and
 their checksums and digests, flash mode, size and clock, the partition
@@ -36,6 +38,10 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DEFAULT_TABLE = os.path.join(ROOT, "boards", "cyd", "partitions.csv")
+NOTICES_FILE = os.path.join(HERE, "THIRD_PARTY_NOTICES.txt")
+WEB_INDEX = os.path.join(HERE, "web", "index.html")
+WEB_MEDIA_LIST = os.path.join(HERE, "web", "media.txt")
+DOCS_MEDIA_DIR = os.path.join(ROOT, "docs", "media")
 
 # Where the ESP32's first-stage ROM loader looks: fixed by the chip.
 BOOT_ADDR = 0x1000
@@ -329,17 +335,18 @@ def wiped_partitions(rows, length):
     return out
 
 
-def manifest(name, version, merged_file):
-    """ESP Web Tools manifest (https://esphome.github.io/esp-web-tools/).
+def manifest(name, version, part_files):
+    """Web installer manifest (compatible with ESP Web Tools and index.html).
 
-    Only written with --web-manifest, and not tried on a board. It names
-    the merged image at offset 0, because the ESP Web Tools documentation
-    says ESP-IDF v4+ firmware for the ESP32 needs a merged file. ESP Web
-    Tools erases the whole chip on a "new install" unless
-    new_install_prompt_erase is true, which shows the person an erase
-    choice instead; this firmware has no Improv Serial, so every install
-    is new. new_install_improv_wait_time 0 skips the wait for an Improv
-    answer that never comes."""
+    Written with --web-manifest or --web-installer. It lists the three
+    separate parts (bootloader at 4096, partition table at 32768, app at
+    65536) rather than a single merged image so that both fresh installs
+    and updates work while leaving 0x9000..0x10000 (saved Bluetooth
+    gamepad pairing) and 0x3FE000..0x400000 (console settings) untouched
+    whenever the user chooses KEEP DATA. ESP Web Tools compatible fields
+    (new_install_prompt_erase: true, new_install_improv_wait_time: 0)
+    are kept so external ESP Web Tools hosts also prompt instead of
+    wiping NVS/settings without asking."""
     return {
         "name": name,
         "version": version,
@@ -347,9 +354,15 @@ def manifest(name, version, merged_file):
         "new_install_improv_wait_time": 0,
         "builds": [{
             "chipFamily": "ESP32",
-            "parts": [{"path": merged_file, "offset": 0}],
+            "parts": [{"path": path, "offset": offset} for offset, path in part_files],
         }],
     }
+
+
+def load_web_media(list_path=WEB_MEDIA_LIST):
+    """Curated list of media filenames bundled alongside the 1-click installer."""
+    with open(list_path, encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
 
 
 def build_text(name, version, elf_name, elf_sha, espflash_version, app_info, table_name):
@@ -391,8 +404,11 @@ def main(argv=None):
     ap.add_argument("--version", help="version for BUILD.txt and manifest.json "
                     "(default: --name without 'pocketme-cyd-')")
     ap.add_argument("--web-manifest", action="store_true",
-                    help="also write manifest.json for ESP Web Tools "
-                    "(merged image at 0; not tried on a board)")
+                    help="also write manifest.json for the 1-click browser installer / ESP Web Tools "
+                    "(three parts at 0x1000/0x8000/0x10000)")
+    ap.add_argument("--web-installer", action="store_true",
+                    help="also write manifest.json, index.html and curated media/* for the "
+                    "1-click PocketMe browser installer (implies --web-manifest)")
     ap.add_argument("--partition-table", default=DEFAULT_TABLE,
                     help="partition CSV (default: boards/cyd/partitions.csv)")
     ap.add_argument("--espflash", default=None, help="espflash program (default: from PATH)")
@@ -408,8 +424,31 @@ def main(argv=None):
     version = a.version or (a.name[len("pocketme-cyd-"):]
                             if a.name.startswith("pocketme-cyd-") else a.name)
 
+    if not os.path.isfile(NOTICES_FILE):
+        sys.exit("make_release: missing notices file: %s" % NOTICES_FILE)
+    web_media = []
+    if a.web_installer:
+        if not os.path.isfile(WEB_INDEX):
+            sys.exit("make_release: missing web installer page: %s" % WEB_INDEX)
+        if not os.path.isfile(WEB_MEDIA_LIST):
+            sys.exit("make_release: missing web media list: %s" % WEB_MEDIA_LIST)
+        web_media = load_web_media()
+        if not web_media:
+            sys.exit("make_release: web media list is empty: %s" % WEB_MEDIA_LIST)
+        for fname in web_media:
+            if not os.path.isfile(os.path.join(DOCS_MEDIA_DIR, fname)):
+                sys.exit("make_release: missing media asset: %s"
+                         % os.path.join(DOCS_MEDIA_DIR, fname))
+    write_manifest = a.web_manifest or a.web_installer
+
     with open(a.partition_table, encoding="utf-8") as f:
         csv_text = f.read()
+    with open(NOTICES_FILE, encoding="utf-8") as f:
+        notices_text = f.read()
+    web_index_text = None
+    if a.web_installer:
+        with open(WEB_INDEX, encoding="utf-8") as f:
+            web_index_text = f.read()
     os.makedirs(a.out, exist_ok=True)
     common = ["save-image", "--chip", "esp32", "--partition-table", a.partition_table,
               "--flash-mode", "dio", "--flash-size", "4mb", "--flash-freq", "80mhz",
@@ -444,25 +483,45 @@ def main(argv=None):
         files.append(("%s-%s-0x%X.bin" % (a.name, labels[addr], addr), addr, blob))
     with open(a.elf, "rb") as f:
         elf_sha = sha256(f.read())
-    texts = [("BUILD.txt", build_text(
-        a.name, version, os.path.basename(a.elf), elf_sha, espflash_version,
-        app_info, os.path.basename(a.partition_table)))]
-    if a.web_manifest:
-        man = manifest("PocketMe", version, files[0][0])
+    texts = [
+        ("BUILD.txt", build_text(
+            a.name, version, os.path.basename(a.elf), elf_sha, espflash_version,
+            app_info, os.path.basename(a.partition_table))),
+        ("THIRD_PARTY_NOTICES.txt", notices_text),
+    ]
+    if write_manifest:
+        man = manifest("PocketMe", version, [(addr, fname) for fname, addr, _ in files[1:]])
         texts.append(("manifest.json", json.dumps(man, indent=2) + "\n"))
-    stale = os.path.join(a.out, "manifest.json")
-    stale = stale if not a.web_manifest and os.path.exists(stale) else None
+    stale_files = []
+    if not write_manifest:
+        stale_manifest = os.path.join(a.out, "manifest.json")
+        if os.path.exists(stale_manifest):
+            stale_files.append(stale_manifest)
+    if not a.web_installer:
+        stale_index = os.path.join(a.out, "index.html")
+        if os.path.exists(stale_index):
+            stale_files.append(stale_index)
     for fname, _, blob in files:
         with open(os.path.join(a.out, fname), "wb") as f:
             f.write(blob)
     for fname, text in texts:
-        with open(os.path.join(a.out, fname), "w", encoding="utf-8") as f:
+        with open(os.path.join(a.out, fname), "w", encoding="utf-8", newline="") as f:
             f.write(text)
     sums = [(sha256(blob), fname) for fname, _, blob in files]
     sums += [(sha256(text.encode("utf-8")), fname) for fname, text in texts]
-    with open(os.path.join(a.out, "SHA256SUMS.txt"), "w", encoding="utf-8") as f:
+    with open(os.path.join(a.out, "SHA256SUMS.txt"), "w", encoding="utf-8", newline="") as f:
         for digest, fname in sums:
             f.write("%s  %s\n" % (digest, fname))
+    extra_written = []
+    if a.web_installer:
+        with open(os.path.join(a.out, "index.html"), "w", encoding="utf-8", newline="") as f:
+            f.write(web_index_text)
+        media_out = os.path.join(a.out, "media")
+        os.makedirs(media_out, exist_ok=True)
+        for fname in web_media:
+            shutil.copy2(os.path.join(DOCS_MEDIA_DIR, fname), os.path.join(media_out, fname))
+        extra_written.append("index.html")
+        extra_written.append("media/ (%d files)" % len(web_media))
 
     factory = find_row(rows, TYPES["app"], APP_SUBTYPES["factory"])
     print("make_release: all checks passed (DIO, 4MB, 80MHz; table = %s)"
@@ -476,9 +535,9 @@ def main(argv=None):
     print("the merged image writes 0xFF over: %s" % (wiped or "nothing"))
     print("chip: ESP32 revision %s or later (app header); %s"
           % (rev_text(app_info["min_rev"]), espflash_version))
-    print("wrote %s, %s, SHA256SUMS.txt in %s" % (
-        ", ".join(f for f, _, _ in files), ", ".join(f for f, _ in texts), a.out))
-    if stale:
+    wrote_list = [f for f, _, _ in files] + [f for f, _ in texts] + ["SHA256SUMS.txt"] + extra_written
+    print("wrote %s in %s" % (", ".join(wrote_list), a.out))
+    for stale in stale_files:
         # Not written by this run and not in SHA256SUMS.txt: it must not be
         # shipped by mistake.
         sys.stderr.write("make_release: WARNING: %s is from an earlier run and is "

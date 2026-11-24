@@ -1,0 +1,4050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>POCKETME // ESP32 CYD 1-Click Installer</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect x='2' y='0' width='12' height='1' fill='%23f4f1e4'/%3E%3Crect x='1' y='1' width='1' height='13' fill='%23f4f1e4'/%3E%3Crect x='14' y='1' width='1' height='13' fill='%23f4f1e4'/%3E%3Crect x='2' y='14' width='12' height='1' fill='%23f4f1e4'/%3E%3Crect x='2' y='1' width='12' height='13' fill='%237b93b8'/%3E%3Crect x='3' y='2' width='10' height='6' fill='%230b0f1a'/%3E%3Crect x='4' y='3' width='8' height='4' fill='%23f7d154'/%3E%3Crect x='3' y='9' width='1' height='1' fill='%230b0f1a'/%3E%3Crect x='2' y='10' width='3' height='1' fill='%230b0f1a'/%3E%3Crect x='3' y='11' width='1' height='1' fill='%230b0f1a'/%3E%3Crect x='11' y='10' width='1' height='1' fill='%23e2714a'/%3E%3Crect x='10' y='11' width='1' height='1' fill='%235fb04f'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* Exact 8-colour console palette from crates/console-core/src/theme.rs */
+    :root {
+      --ink: #0b0f1a;
+      --panel: #1b2438;
+      --paper: #f4f1e4;
+      --gold: #f7d154;
+      --mute: #7b93b8;
+      --ok: #5fb04f;
+      --warn: #e2714a;
+      --line: #2e3a59;
+      --pixel: "Silkscreen", "JetBrains Mono", ui-monospace, monospace;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      border-radius: 0 !important;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding-bottom: 56px; /* clear sticky console bottom bar */
+      background-color: var(--ink);
+      /* Subtle crisp pixel star-dots matching home.rs backdrop */
+      background-image:
+        radial-gradient(circle, var(--line) 1px, transparent 1px),
+        radial-gradient(circle, rgba(123, 147, 184, 0.35) 1px, transparent 1px);
+      background-size: 96px 72px, 144px 108px;
+      background-position: 14px 18px, 60px 44px;
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 14px;
+      line-height: 1.55;
+      -webkit-font-smoothing: none;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+    }
+
+    svg.sprite {
+      display: block;
+      shape-rendering: crispEdges;
+      flex-shrink: 0;
+    }
+
+    .px-art {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .px-font {
+      font-family: var(--pixel);
+      letter-spacing: 0.03em;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .wrap {
+      max-width: 960px; /* exact 6x PocketMe's 160px frame width */
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.9em;
+      background: var(--ink);
+      border: 1px solid var(--line);
+      padding: 1px 5px;
+      color: var(--gold);
+    }
+
+    /* ---------------- Top Console Header (matches TOP_Y in home.rs) ---------------- */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: var(--ink);
+      border-bottom: 2px solid var(--line);
+    }
+
+    .topbar-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .topbar-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      background: var(--panel);
+      border: 2px solid var(--line);
+    }
+
+    .lang-btn {
+      appearance: none;
+      padding: 3px 6px;
+      background: transparent;
+      border: 0;
+      font-family: var(--pixel);
+      font-size: 0.63rem;
+      color: var(--mute);
+      cursor: pointer;
+      transition: background 0.08s ease, color 0.08s ease;
+    }
+
+    .lang-btn:hover:not(.active) {
+      color: var(--paper);
+    }
+
+    .lang-btn.active {
+      background: var(--gold);
+      color: var(--ink);
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--pixel);
+      font-size: 0.9rem;
+      color: var(--paper);
+      white-space: nowrap;
+    }
+
+    .brand-mark span.sub {
+      color: var(--mute);
+      font-size: 0.62rem;
+    }
+
+    .top-nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .nav-box {
+      padding: 3px 6px;
+      background: var(--panel);
+      border: 2px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.63rem;
+      color: var(--paper);
+      white-space: nowrap;
+      transition: background 0.08s ease, color 0.08s ease, border-color 0.08s ease;
+    }
+
+    .nav-box:hover {
+      background: var(--gold);
+      color: var(--ink);
+      border-color: var(--gold);
+    }
+
+    .fw-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 7px;
+      background: var(--panel);
+      border: 2px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.63rem;
+      color: var(--ok);
+      white-space: nowrap;
+    }
+
+    .fw-sq {
+      width: 6px;
+      height: 6px;
+      background: var(--ok);
+      display: inline-block;
+    }
+
+    /* ---------------- System Alerts ---------------- */
+    .sys-note {
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: var(--panel);
+      border: 2px solid var(--warn);
+      font-family: var(--pixel);
+      font-size: 0.74rem;
+      color: var(--warn);
+    }
+
+    .sys-note a {
+      color: var(--gold);
+      text-decoration: underline;
+    }
+
+    /* ---------------- Hero Console Spread ---------------- */
+    .hero-section {
+      padding: 20px 0 26px;
+    }
+
+    .console-shell {
+      background: var(--ink);
+      border: 2px solid var(--line);
+    }
+
+    .console-top-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: var(--panel);
+      border-bottom: 2px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.74rem;
+    }
+
+    .console-top-strip .left {
+      color: var(--mute);
+    }
+
+    .console-top-strip .center {
+      color: var(--gold);
+    }
+
+    .console-top-strip .right {
+      color: var(--paper);
+    }
+
+    .hero-split {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      border-bottom: 2px solid var(--line);
+    }
+
+    /* Left: 4:3 Native Console Viewport */
+    .hero-screen-col {
+      background: var(--ink);
+      border-right: 2px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .lcd-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .lcd-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .lcd-scanlines {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(11, 15, 26, 0.24) 0px,
+        rgba(11, 15, 26, 0.24) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      opacity: 0;
+    }
+
+    .lcd-frame.grid-on .lcd-scanlines {
+      opacity: 1;
+    }
+
+    .hero-screen-foot {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-top: 2px solid var(--line);
+      background: var(--ink);
+    }
+
+    .note-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.68rem;
+    }
+
+    .note-bar .note-fps {
+      color: var(--gold);
+    }
+
+    .screen-sub-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 12px;
+      font-family: var(--pixel);
+      font-size: 0.62rem;
+      color: var(--mute);
+    }
+
+    .grid-toggle {
+      appearance: none;
+      background: var(--ink);
+      border: 1px solid var(--line);
+      padding: 2px 7px;
+      font-family: var(--pixel);
+      font-size: 0.64rem;
+      color: var(--mute);
+      cursor: pointer;
+    }
+
+    .grid-toggle:hover,
+    .grid-toggle.on {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* Right: PocketMe SETTINGS-Style Spec + Flash Panel */
+    .hero-ctrl-col {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--ink);
+    }
+
+    .hero-title-block h1 {
+      margin: 0 0 4px;
+      font-family: var(--pixel);
+      font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+      line-height: 1.12;
+      color: var(--paper);
+    }
+
+    .hero-title-block h1 span {
+      color: var(--gold);
+    }
+
+    .hero-title-block p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--mute);
+    }
+
+    /* Settings-style rows (exact horizontal hairline pattern from tour-01-main.png) */
+    .pm-rows {
+      border-top: 2px solid var(--line);
+    }
+
+    .pm-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 6px;
+      border-bottom: 1px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.72rem;
+    }
+
+    .pm-row .k {
+      color: var(--paper);
+    }
+
+    .pm-row .v {
+      color: var(--mute);
+      text-align: right;
+    }
+
+    .pm-row .v.ok {
+      color: var(--ok);
+    }
+
+    .pm-row .v.gold {
+      color: var(--gold);
+    }
+
+    /* Signature GOLD selection ring + bevel CTA button */
+    .pm-cta-frame {
+      padding: 3px;
+      border: 2px solid var(--gold);
+      background: var(--ink);
+    }
+
+    .pm-cta {
+      appearance: none;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 13px;
+      background: var(--gold);
+      color: var(--ink);
+      border: 2px solid var(--gold);
+      box-shadow: inset 0 -4px 0 rgba(11, 15, 26, 0.28);
+      font-family: var(--pixel);
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.08s ease, border-color 0.08s ease, transform 0.06s ease;
+    }
+
+    .pm-cta:hover:not(:disabled) {
+      background: var(--paper);
+      border-color: var(--paper);
+    }
+
+    .pm-cta:active:not(:disabled) {
+      box-shadow: none;
+      transform: translateY(2px);
+    }
+
+    .pm-cta:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .pm-cta-main {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 0;
+    }
+
+    .pm-cta-ico {
+      width: 30px;
+      height: 30px;
+      background: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .pm-cta-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .pm-cta-title {
+      font-size: 0.88rem;
+      line-height: 1.15;
+    }
+
+    .pm-cta-sub {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: rgba(11, 15, 26, 0.78);
+      line-height: 1.1;
+    }
+
+    .pm-cta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: var(--ink);
+      color: var(--gold);
+      font-size: 0.66rem;
+      flex-shrink: 0;
+    }
+
+    .pm-cta-led {
+      width: 6px;
+      height: 6px;
+      background: var(--ok);
+      display: inline-block;
+    }
+
+    .flash-preset-note {
+      padding: 6px 9px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.64rem;
+      color: var(--mute);
+    }
+
+    .flash-preset-note.custom {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .flash-custom-box {
+      padding: 8px 10px;
+      background: rgba(27, 36, 56, 0.5);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .flash-custom-box .flash-setting-row:last-child {
+      border-bottom: 0;
+    }
+
+    .slot-warn-box {
+      padding: 10px 12px;
+      background: var(--panel);
+      border: 2px solid var(--warn);
+      font-family: var(--pixel);
+      font-size: 0.7rem;
+      color: var(--warn);
+    }
+
+    .slot-warn-box a {
+      color: var(--gold);
+      text-decoration: underline;
+    }
+
+    .erase-rules {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 0.78rem;
+    }
+
+    .erase-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      color: var(--mute);
+    }
+
+    .badge-ok,
+    .badge-info {
+      flex-shrink: 0;
+      padding: 1px 5px;
+      font-family: var(--pixel);
+      font-size: 0.62rem;
+      margin-top: 2px;
+    }
+
+    .badge-ok {
+      background: var(--ok);
+      color: var(--ink);
+    }
+
+    .badge-info {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      color: var(--paper);
+    }
+
+    /* ---------------- Interactive Placement-E Home Carousel (matches today-home.png) ---------------- */
+    .home-carousel-stage {
+      padding: 16px 14px 14px;
+      background: var(--ink);
+    }
+
+    .carousel-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .car-arrow {
+      appearance: none;
+      width: 34px;
+      height: 76px;
+      background: var(--panel);
+      border: 2px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 1rem;
+      color: var(--paper);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .car-arrow:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .tile-strip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 6px 4px;
+      scrollbar-width: none;
+      flex: 1;
+    }
+
+    .tile-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Exact FRAME_W + FRAME_GAP geometry: GOLD ring separated by INK gap around tile */
+    .tile-slot {
+      appearance: none;
+      background: transparent;
+      border: 3px solid transparent;
+      padding: 3px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.08s ease;
+    }
+
+    .tile-slot:hover {
+      border-color: var(--line);
+    }
+
+    .tile-slot.active {
+      border-color: var(--gold);
+    }
+
+    .tile-box {
+      width: 72px;
+      height: 72px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .tile-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .tile-sys-lbl {
+      font-family: var(--pixel);
+      font-size: 0.52rem;
+      color: var(--mute);
+    }
+
+    .tile-slot.active .tile-sys-lbl {
+      color: var(--gold);
+    }
+
+    .home-meta {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .home-name {
+      font-family: var(--pixel);
+      font-size: clamp(1.25rem, 2.4vw, 1.65rem);
+      color: var(--paper);
+      line-height: 1.15;
+    }
+
+    .home-tag {
+      margin-top: 3px;
+      font-family: var(--pixel);
+      font-size: 0.72rem;
+      color: var(--mute);
+    }
+
+    .home-dots {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .h-dot {
+      appearance: none;
+      width: 7px;
+      height: 7px;
+      padding: 0;
+      border: 0;
+      background: var(--line);
+      cursor: pointer;
+    }
+
+    .h-dot.active {
+      background: var(--gold);
+    }
+
+    /* ---------------- Section Headers (Settings-style Rule & Title) ---------------- */
+    section.console-sec {
+      padding: 28px 0;
+      border-top: 2px solid var(--line);
+    }
+
+    .sec-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 10px;
+      margin-bottom: 18px;
+      border-bottom: 2px solid var(--line);
+    }
+
+    .sec-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .sec-eyebrow {
+      font-family: var(--pixel);
+      font-size: 0.68rem;
+      color: var(--mute);
+    }
+
+    .sec-title-group h2 {
+      margin: 0;
+      font-family: var(--pixel);
+      font-size: clamp(1.08rem, 2.2vw, 1.38rem);
+      color: var(--gold);
+    }
+
+    .sec-lead {
+      margin: 0;
+      max-width: 48ch;
+      font-size: 0.84rem;
+      color: var(--mute);
+    }
+
+    /* ---------------- Flagship Showcases (Settings-page visual grammar) ---------------- */
+    .flag-stack {
+      display: grid;
+      gap: 20px;
+    }
+
+    .pm-window {
+      background: var(--ink);
+      border: 2px solid var(--line);
+    }
+
+    .pm-win-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 14px;
+      background: var(--panel);
+      border-bottom: 2px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.74rem;
+    }
+
+    .win-pill {
+      padding: 2px 7px;
+      background: var(--ink);
+      border: 1px solid var(--line);
+      color: var(--mute);
+    }
+
+    .win-title {
+      color: var(--gold);
+    }
+
+    .win-fps {
+      color: var(--ok);
+    }
+
+    .flag-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+    }
+
+    .flag-grid.flip .flag-media-col {
+      order: 2;
+      border-right: 0;
+      border-left: 2px solid var(--line);
+    }
+
+    .flag-media-col {
+      background: #05070d;
+      border-right: 2px solid var(--line);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .flag-viewport {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+    }
+
+    .flag-viewport img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .flag-body-col {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .flag-body-col h3 {
+      margin: 0 0 6px;
+      font-family: var(--pixel);
+      font-size: 1.25rem;
+      color: var(--paper);
+    }
+
+    .flag-body-col p {
+      margin: 0;
+      color: var(--mute);
+      font-size: 0.88rem;
+    }
+
+    /* Authentic segmented choice row (matches BOOT ANIM: FULL SHORT [OFF]) */
+    .opt-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 8px 10px;
+      background: var(--panel);
+      border-top: 2px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.68rem;
+    }
+
+    .opt-strip .lbl {
+      color: var(--mute);
+    }
+
+    .opt-choices {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .opt-btn {
+      appearance: none;
+      padding: 4px 8px;
+      background: transparent;
+      border: 1px solid transparent;
+      font-family: var(--pixel);
+      font-size: 0.68rem;
+      color: var(--mute);
+      cursor: pointer;
+    }
+
+    .opt-btn:hover {
+      border-color: var(--line);
+      color: var(--paper);
+    }
+
+    .opt-btn.active {
+      background: var(--gold);
+      color: var(--ink);
+      border-color: var(--gold);
+    }
+
+    /* ---------------- All 14 Built-in Titles + OS Matrix ---------------- */
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .flt-tab {
+      appearance: none;
+      padding: 5px 10px;
+      background: var(--panel);
+      border: 2px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.68rem;
+      color: var(--mute);
+      cursor: pointer;
+    }
+
+    .flt-tab:hover {
+      color: var(--paper);
+      border-color: var(--paper);
+    }
+
+    .flt-tab.active {
+      background: var(--gold);
+      color: var(--ink);
+      border-color: var(--gold);
+    }
+
+    .rom-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .rom-card {
+      appearance: none;
+      width: 100%;
+      padding: 3px;
+      background: var(--ink);
+      border: 2px solid var(--line);
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .rom-card:hover {
+      border-color: var(--gold);
+    }
+
+    .rom-inner {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+    }
+
+    .rom-head {
+      padding: 6px 9px;
+      background: var(--ink);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--pixel);
+      font-size: 0.64rem;
+    }
+
+    .rom-head .id {
+      color: var(--mute);
+    }
+
+    .rom-head .fps {
+      color: var(--gold);
+    }
+
+    .rom-shot {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #000;
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .rom-shot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .rom-copy {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+    }
+
+    .rom-name {
+      font-family: var(--pixel);
+      font-size: 0.85rem;
+      color: var(--paper);
+    }
+
+    .rom-desc {
+      font-size: 0.8rem;
+      color: var(--mute);
+      line-height: 1.4;
+      flex: 1;
+    }
+
+    .rom-foot {
+      padding-top: 6px;
+      margin-top: 4px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--pixel);
+      font-size: 0.6rem;
+      color: var(--mute);
+    }
+
+    .rom-card:hover .rom-foot .zoom {
+      color: var(--gold);
+    }
+
+    .sim-footnote {
+      margin: 14px 0 0;
+      font-size: 0.78rem;
+      color: var(--mute);
+    }
+
+    /* ---------------- 3 Steps + 4 MB Flash Memory Map ---------------- */
+    .steps-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .step-card {
+      background: var(--panel);
+      border: 2px solid var(--line);
+      padding: 14px;
+    }
+
+    .step-tag {
+      display: inline-block;
+      padding: 2px 7px;
+      background: var(--gold);
+      color: var(--ink);
+      font-family: var(--pixel);
+      font-size: 0.66rem;
+      margin-bottom: 8px;
+    }
+
+    .step-card h3 {
+      margin: 0 0 6px;
+      font-family: var(--pixel);
+      font-size: 0.82rem;
+      color: var(--paper);
+    }
+
+    .step-card p {
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--mute);
+    }
+
+    .flash-map-panel {
+      background: var(--panel);
+      border: 2px solid var(--line);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .flash-map-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      font-family: var(--pixel);
+      font-size: 0.74rem;
+    }
+
+    .flash-map-title span.sub {
+      color: var(--mute);
+      font-size: 0.68rem;
+    }
+
+    .flash-bar {
+      display: grid;
+      grid-template-columns: 1.15fr 0.95fr 1.4fr 3.3fr 1.25fr;
+      border: 2px solid var(--line);
+      background: var(--ink);
+      min-height: 78px;
+    }
+
+    .f-cell {
+      padding: 9px;
+      border-right: 2px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 4px;
+      font-family: var(--pixel);
+      font-size: 0.64rem;
+    }
+
+    .f-cell:last-child {
+      border-right: 0;
+    }
+
+    .f-cell.write {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .f-cell.keep {
+      background: rgba(95, 176, 79, 0.14);
+      color: var(--paper);
+    }
+
+    .f-cell .addr {
+      color: var(--gold);
+    }
+
+    .f-cell.keep .addr {
+      color: var(--ok);
+    }
+
+    .f-cell .tag {
+      align-self: flex-start;
+      padding: 1px 5px;
+      font-size: 0.58rem;
+    }
+
+    .f-cell.write .tag {
+      background: var(--gold);
+      color: var(--ink);
+    }
+
+    .f-cell.keep .tag {
+      background: var(--ok);
+      color: var(--ink);
+    }
+
+    .cta-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 16px;
+      background: var(--panel);
+      border: 2px solid var(--line);
+    }
+
+    .cta-panel h3 {
+      margin: 0 0 4px;
+      font-family: var(--pixel);
+      font-size: 0.94rem;
+      color: var(--paper);
+    }
+
+    .cta-panel p {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--mute);
+    }
+
+    .cta-panel .cta-btn-slot {
+      min-width: 280px;
+    }
+
+    /* ---------------- Specs & FAQ Dual Console Panel ---------------- */
+    .dual-specs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .pm-box {
+      background: var(--ink);
+      border: 2px solid var(--line);
+    }
+
+    .pm-box-head {
+      padding: 8px 12px;
+      background: var(--panel);
+      border-bottom: 2px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.74rem;
+      color: var(--gold);
+    }
+
+    .pm-box-body {
+      padding: 8px 12px 12px;
+    }
+
+    .faq-row {
+      border-bottom: 1px solid var(--line);
+    }
+
+    .faq-row summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 9px 6px;
+      font-family: var(--pixel);
+      font-size: 0.7rem;
+      color: var(--paper);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .faq-row summary::after {
+      content: ">";
+      color: var(--mute);
+    }
+
+    .faq-row[open] summary {
+      background: var(--gold);
+      color: var(--ink);
+    }
+
+    .faq-row[open] summary::after {
+      content: "v";
+      color: var(--ink);
+    }
+
+    .faq-text {
+      padding: 8px 8px 10px;
+      font-size: 0.82rem;
+      color: var(--mute);
+    }
+
+    .faq-text ul {
+      margin: 4px 0 0;
+      padding-left: 18px;
+    }
+
+    .faq-text a {
+      color: var(--gold);
+      text-decoration: underline;
+    }
+
+    /* ---------------- Footer Links ---------------- */
+    .site-footer {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 18px 16px 28px;
+      border-top: 2px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-family: var(--pixel);
+      font-size: 0.66rem;
+      color: var(--mute);
+    }
+
+    .site-footer .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+    }
+
+    .site-footer a {
+      color: var(--paper);
+    }
+
+    .site-footer a:hover {
+      color: var(--gold);
+      text-decoration: underline;
+    }
+
+    /* ---------------- Authentic Bottom Console Status Bar (crates/console-core/src/bar.rs) ---------------- */
+    .status-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 50;
+      background: var(--panel);
+      border-top: 2px solid var(--line);
+    }
+
+    .status-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-family: var(--pixel);
+      font-size: 0.72rem;
+    }
+
+    .bar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .bar-clock {
+      color: var(--paper);
+    }
+
+    .bar-bat {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--mute);
+    }
+
+    .bar-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .bar-hints {
+      color: var(--mute);
+      font-size: 0.68rem;
+    }
+
+    .gear-btn {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      padding: 3px;
+      cursor: pointer;
+      color: var(--mute);
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .gear-btn:hover,
+    .gear-btn.open {
+      color: var(--gold);
+    }
+
+    /* ---------------- PocketMe Pause / Quick Menu & Modal (crates/console-core/src/pause.rs) ---------------- */
+    .overlay-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      background: rgba(11, 15, 26, 0.86);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .quick-menu-box {
+      width: 100%;
+      max-width: 320px;
+      background: var(--panel);
+      border: 2px solid var(--line);
+      padding: 8px;
+    }
+
+    .quick-item {
+      appearance: none;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: transparent;
+      border: 0;
+      font-family: var(--pixel);
+      font-size: 0.78rem;
+      color: var(--paper);
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .quick-item:hover {
+      background: var(--gold);
+      color: var(--ink);
+    }
+
+    .modal-box {
+      width: 100%;
+      max-width: 640px;
+      background: var(--ink);
+      border: 2px solid var(--gold);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--panel);
+      border-bottom: 2px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.74rem;
+    }
+
+    .back-btn {
+      appearance: none;
+      padding: 4px 8px;
+      background: var(--panel);
+      border: 2px solid var(--mute);
+      font-family: var(--pixel);
+      font-size: 0.68rem;
+      color: var(--paper);
+      cursor: pointer;
+    }
+
+    .back-btn:hover {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--ink);
+    }
+
+    .modal-screen {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #000;
+      border-bottom: 2px solid var(--line);
+      overflow: hidden;
+    }
+
+    .modal-screen img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .modal-copy {
+      padding: 14px 16px;
+    }
+
+    .modal-copy h3 {
+      margin: 0 0 6px;
+      font-family: var(--pixel);
+      font-size: 1.05rem;
+      color: var(--gold);
+    }
+
+    .modal-copy p {
+      margin: 0 0 8px;
+      font-size: 0.86rem;
+      color: var(--paper);
+    }
+
+    .modal-meta {
+      font-family: var(--pixel);
+      font-size: 0.66rem;
+      color: var(--mute);
+    }
+
+    /* ---------------- Native PocketMe Flash Modal ---------------- */
+    .flash-box {
+      width: 100%;
+      max-width: 660px;
+      max-height: 92vh;
+      overflow-y: auto;
+      background: var(--ink);
+      border: 2px solid var(--gold);
+    }
+
+    .flash-body {
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .flash-setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.72rem;
+    }
+
+    .flash-setting-row .k {
+      color: var(--paper);
+    }
+
+    .flash-opt-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .f-opt {
+      appearance: none;
+      padding: 4px 9px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.68rem;
+      color: var(--mute);
+      cursor: pointer;
+    }
+
+    .f-opt:hover:not(:disabled) {
+      border-color: var(--paper);
+      color: var(--paper);
+    }
+
+    .f-opt.active {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--ink);
+    }
+
+    .f-opt:disabled,
+    .back-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .flash-hint {
+      padding: 7px 9px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      font-size: 0.76rem;
+      color: var(--ok);
+    }
+
+    .flash-hint.warn {
+      border-color: var(--warn);
+      color: var(--warn);
+    }
+
+    .flash-tip {
+      padding: 8px 10px;
+      background: var(--panel);
+      border: 2px solid var(--line);
+      font-size: 0.76rem;
+      color: var(--mute);
+    }
+
+    .flash-tip strong {
+      color: var(--gold);
+    }
+
+    .flash-status-msg {
+      min-height: 18px;
+      font-family: var(--pixel);
+      font-size: 0.68rem;
+      color: var(--mute);
+    }
+
+    .flash-status-msg.warn {
+      color: var(--warn);
+    }
+
+    .flash-phase-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-family: var(--pixel);
+      font-size: 0.76rem;
+    }
+
+    .flash-phase-row .phase {
+      color: var(--gold);
+    }
+
+    .flash-phase-row .pct {
+      color: var(--paper);
+    }
+
+    .flash-prog-track {
+      width: 100%;
+      height: 18px;
+      background: var(--panel);
+      border: 2px solid var(--line);
+      padding: 2px;
+    }
+
+    .flash-prog-fill {
+      width: 0%;
+      height: 100%;
+      background: var(--gold);
+      transition: width 0.08s linear, background-color 0.15s ease;
+    }
+
+    .flash-prog-fill.done {
+      background: var(--ok);
+    }
+
+    .flash-prog-fill.err {
+      background: var(--warn);
+    }
+
+    .parts-track {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .part-pill {
+      padding: 5px 8px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      font-family: var(--pixel);
+      font-size: 0.62rem;
+      color: var(--mute);
+      text-align: center;
+    }
+
+    .part-pill.active {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--ink);
+    }
+
+    .part-pill.done {
+      background: var(--ok);
+      border-color: var(--ok);
+      color: var(--ink);
+    }
+
+    .flash-log-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .flash-log-lbl {
+      font-family: var(--pixel);
+      font-size: 0.64rem;
+      color: var(--mute);
+    }
+
+    .flash-log {
+      margin: 0;
+      height: 150px;
+      overflow-y: auto;
+      padding: 8px 10px;
+      background: #05070d;
+      border: 2px solid var(--line);
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      line-height: 1.45;
+      color: var(--paper);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .flash-result {
+      padding: 10px 12px;
+      background: var(--panel);
+      border: 2px solid var(--ok);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      font-size: 0.8rem;
+      color: var(--ok);
+    }
+
+    .flash-result.err {
+      border-color: var(--warn);
+      color: var(--warn);
+    }
+
+    .flash-result .px-title {
+      font-family: var(--pixel);
+      font-size: 0.72rem;
+    }
+
+    .flash-result .sub {
+      color: var(--paper);
+      font-size: 0.78rem;
+    }
+
+    /* ---------------- Responsive ---------------- */
+    @media (max-width: 820px) {
+      .hero-split,
+      .flag-grid,
+      .flag-grid.flip,
+      .dual-specs,
+      .steps-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-screen-col,
+      .flag-media-col,
+      .flag-grid.flip .flag-media-col {
+        order: 0;
+        border-right: 0;
+        border-left: 0;
+        border-bottom: 2px solid var(--line);
+      }
+
+      .rom-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .flash-bar {
+        grid-template-columns: 1fr;
+      }
+
+      .f-cell {
+        border-right: 0;
+        border-bottom: 2px solid var(--line);
+      }
+
+      .f-cell:last-child {
+        border-bottom: 0;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .top-nav,
+      .bar-hints {
+        display: none;
+      }
+
+      .rom-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .car-arrow {
+        width: 28px;
+        height: 68px;
+      }
+
+      .tile-box {
+        width: 62px;
+        height: 62px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="#top" class="brand-mark">
+        <!-- HANDHELD sprite from crates/console-core/src/gfx.rs (16x16) -->
+        <svg class="sprite" width="24" height="24" viewBox="0 0 16 16" aria-hidden="true">
+          <rect x="2" y="0" width="12" height="1" fill="#f4f1e4"/>
+          <rect x="1" y="1" width="1" height="13" fill="#f4f1e4"/>
+          <rect x="14" y="1" width="1" height="13" fill="#f4f1e4"/>
+          <rect x="2" y="14" width="12" height="1" fill="#f4f1e4"/>
+          <rect x="2" y="1" width="12" height="13" fill="#7b93b8"/>
+          <rect x="3" y="2" width="10" height="6" fill="#0b0f1a"/>
+          <rect x="4" y="3" width="8" height="4" fill="#f7d154"/>
+          <rect x="3" y="9" width="1" height="1" fill="#0b0f1a"/>
+          <rect x="2" y="10" width="3" height="1" fill="#0b0f1a"/>
+          <rect x="3" y="11" width="1" height="1" fill="#0b0f1a"/>
+          <rect x="11" y="10" width="1" height="1" fill="#e2714a"/>
+          <rect x="10" y="11" width="1" height="1" fill="#5fb04f"/>
+        </svg>
+        <span>POCKETME <span class="sub">// CYD ESP32</span></span>
+      </a>
+
+      <nav class="top-nav" data-i18n-aria="nav_aria" aria-label="Console navigation">
+        <a href="#top" class="nav-box" data-i18n="nav_install">INSTALL</a>
+        <a href="#showcase" class="nav-box" data-i18n="nav_3d">3D</a>
+        <a href="#catalog" class="nav-box" data-i18n="nav_games">14 GAMES</a>
+        <a href="#flash-map" class="nav-box" data-i18n="nav_flashmap">FLASH MAP</a>
+        <a href="#specs" class="nav-box" data-i18n="nav_specs">SPECS</a>
+        <a href="https://github.com/hudson-bruno/pocketme" class="nav-box" data-i18n="nav_github">GITHUB &nearr;</a>
+      </nav>
+
+      <div class="topbar-right">
+        <div class="lang-switch" id="lang-switch" role="group" data-i18n-aria="lang_switch_aria" aria-label="Language">
+          <button type="button" class="lang-btn active" data-lang="en" aria-pressed="true">EN</button>
+          <button type="button" class="lang-btn" data-lang="pt-BR" aria-pressed="false">PT-BR</button>
+        </div>
+
+        <span class="fw-pill" id="version-badge">
+          <span class="fw-sq" aria-hidden="true"></span>
+          <span>FW LOADING&hellip;</span>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap" id="top">
+    <div id="file-proto-banner" class="sys-note hidden" data-i18n-html="file_proto_banner">
+      OPENED AS FILE:// — WEB SERIAL REQUIRES HTTPS OR HTTP://LOCALHOST. RUN
+      <code>python3 -m http.server 8765</code> AND OPEN <code>http://localhost:8765</code>.
+    </div>
+
+    <div id="ewt-error-banner" class="sys-note hidden" data-i18n-html="manifest_err_banner">
+      FLASH LOADER OR MANIFEST.JSON UNAVAILABLE — CHECK NETWORK OR USE
+      <a href="https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md">DOCS/INSTALL.MD</a>.
+    </div>
+
+    <!-- HERO: CONSOLE FRAME + PLACEMENT-E HOME ROW + 1-CLICK FLASH -->
+    <section class="hero-section" data-i18n-aria="hero_aria" aria-label="PocketMe console preview and 1-click browser flasher">
+      <div class="console-shell">
+        <div class="console-top-strip">
+          <span class="left">POCKETME // ESP32-2432S028</span>
+          <span class="center" data-i18n="hero_strip_center">PLACEMENT E &middot; 1-CLICK WEB INSTALLER</span>
+          <span class="right" id="strip-count" data-i18n="hero_strip_right">14 GAMES</span>
+        </div>
+
+        <div class="hero-split">
+          <!-- Left: 160x120 scaled pixel-exact console screen -->
+          <div class="hero-screen-col">
+            <div class="lcd-frame" id="hero-lcd">
+              <img
+                id="hero-lcd-img"
+                class="px-art"
+                src="media/camber-carve-lap.gif"
+                alt="CAMBER hover racing running on PocketMe">
+              <div class="lcd-scanlines" aria-hidden="true"></div>
+            </div>
+            <div class="hero-screen-foot">
+              <div class="note-bar">
+                <span class="note-fps" id="hero-note-fps">CAMBER &middot; 59.7 FPS ON CYD</span>
+                <button type="button" class="grid-toggle" id="grid-toggle" data-i18n="grid_toggle">LCD GRID</button>
+              </div>
+              <div class="screen-sub-strip">
+                <span data-i18n-html="hero_frame_info">FRAME: 160&times;120 &rarr; ST7789 320&times;240</span>
+                <span data-i18n-html="hero_tile_hint">USE &lt; &gt; OR CLICK TILES</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: PocketMe SETTINGS-style telemetry + 1-click flash control -->
+          <div class="hero-ctrl-col">
+            <div class="hero-title-block">
+              <h1 data-i18n-html="hero_h1">60 FPS 3D. <span>520 KB RAM.</span></h1>
+              <p data-i18n="hero_lead">
+                Bare-metal Rust console firmware for the Cheap Yellow Display: 14 built-in
+                programs, tear-free video, and on-console Bluetooth gamepad pairing.
+              </p>
+            </div>
+
+            <div class="pm-rows">
+              <div class="pm-row">
+                <span class="k" data-i18n="spec_k_speed">SPEED ON CYD</span>
+                <span class="v gold" data-i18n="spec_v_speed">59.99 FPS (9 TITLES)</span>
+              </div>
+              <div class="pm-row">
+                <span class="k" data-i18n="spec_k_mem">MEMORY</span>
+                <span class="v" data-i18n="spec_v_mem">520 KB SRAM / NO OS</span>
+              </div>
+              <div class="pm-row">
+                <span class="k" data-i18n="spec_k_video">VIDEO SYNC</span>
+                <span class="v" data-i18n="spec_v_video">CORE 2 DMA / 0 TEARS</span>
+              </div>
+              <div class="pm-row">
+                <span class="k" data-i18n="spec_k_bt">BLUETOOTH PAD</span>
+                <span class="v ok" data-i18n="spec_v_bt">PAIR ON CONSOLE + IMU</span>
+              </div>
+            </div>
+
+            <div class="pm-cta-frame">
+              <button type="button" class="pm-cta" data-open-flash>
+                <span class="pm-cta-main">
+                  <span class="pm-cta-ico" aria-hidden="true">
+                    <svg class="sprite" width="16" height="16" viewBox="0 0 12 12">
+                      <rect x="6" y="1" width="2" height="1" fill="#f7d154"/>
+                      <rect x="5" y="2" width="2" height="1" fill="#f7d154"/>
+                      <rect x="4" y="3" width="2" height="1" fill="#f7d154"/>
+                      <rect x="3" y="4" width="3" height="1" fill="#f7d154"/>
+                      <rect x="2" y="5" width="7" height="2" fill="#f7d154"/>
+                      <rect x="6" y="7" width="3" height="1" fill="#f7d154"/>
+                      <rect x="6" y="8" width="2" height="1" fill="#f7d154"/>
+                      <rect x="5" y="9" width="2" height="1" fill="#f7d154"/>
+                      <rect x="4" y="10" width="2" height="1" fill="#f7d154"/>
+                    </svg>
+                  </span>
+                  <span class="pm-cta-copy">
+                    <span class="pm-cta-title" data-i18n="hero_cta_title">FLASH POCKETME TO CYD</span>
+                    <span class="pm-cta-sub" data-i18n="hero_cta_sub">1-CLICK USB INSTALLER &middot; NO TOOLS</span>
+                  </span>
+                </span>
+                <span class="pm-cta-tag">
+                  <span class="pm-cta-led" aria-hidden="true"></span>
+                  <span id="cta-version">1 CLICK</span>
+                </span>
+              </button>
+            </div>
+
+            <div class="erase-rules">
+              <div class="erase-line">
+                <span class="badge-ok" data-i18n="badge_kept">KEPT</span>
+                <span data-i18n-html="erase_rule_1">Select <strong>KEEP DATA</strong> in the installer to preserve BT gamepad pairing &amp; settings.</span>
+              </div>
+              <div class="erase-line">
+                <span class="badge-info">USB</span>
+                <span data-i18n="erase_rule_2">Chrome / Edge over USB data cable. Flashing never locks the ESP32.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Authentic Placement-E Home Carousel (GAMEPADS -> 14 games -> SETTINGS) -->
+        <div class="home-carousel-stage" data-i18n-aria="carousel_aria" aria-label="Interactive Home screen tile row">
+          <div class="carousel-wrap">
+            <button type="button" class="car-arrow" id="home-prev" data-i18n-aria="prev_tile_aria" aria-label="Previous tile">&lt;</button>
+            <div class="tile-strip" id="home-strip"></div>
+            <button type="button" class="car-arrow" id="home-next" data-i18n-aria="next_tile_aria" aria-label="Next tile">&gt;</button>
+          </div>
+
+          <div class="home-meta">
+            <div class="home-name" id="home-name">CAMBER</div>
+            <div class="home-tag" id="home-tag">HOVER RACING &middot; 59.7 FPS &middot; TOUCH + PAD</div>
+            <div class="home-dots" id="home-dots" data-i18n-aria="tile_dots_aria" aria-label="Tile position dots"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FLAGSHIP SHOWCASES (SETTINGS SCREEN VISUAL GRAMMAR) -->
+    <section class="console-sec" id="showcase">
+      <div class="sec-bar">
+        <div class="sec-title-group">
+          <span class="sec-eyebrow" data-i18n="showcase_eyebrow">01 // REAL-TIME INTEGER 3D</span>
+          <h2 data-i18n="showcase_h2">CAMBER &amp; MERCATOR ON BARE SILICON</h2>
+        </div>
+        <p class="sec-lead" data-i18n="showcase_lead">
+          Fixed-point flat-shaded polygons, spill-RAM slot execution, and XIP flash splitting built
+          without an OS or external PSRAM.
+        </p>
+      </div>
+
+      <div class="flag-stack">
+        <!-- CAMBER Window -->
+        <article class="pm-window">
+          <div class="pm-win-head">
+            <span class="win-pill">CART-01</span>
+            <span class="win-title">CAMBER</span>
+            <span class="win-fps" data-i18n="camber_fps">58.9&ndash;59.7 FPS ON CYD</span>
+          </div>
+
+          <div class="flag-grid">
+            <div class="flag-media-col">
+              <div class="flag-viewport">
+                <img
+                  id="camber-stage-img"
+                  class="px-art"
+                  src="media/camber-carve-lap.gif"
+                  alt="CAMBER hover ship carving a corner">
+              </div>
+              <div class="opt-strip">
+                <span class="lbl" data-i18n="clip_lbl">CLIP</span>
+                <div class="opt-choices">
+                  <button type="button" class="opt-btn active" data-target="camber-stage-img" data-src="media/camber-carve-lap.gif" data-group="camber" data-i18n="camber_clip_1">CARVE LAP</button>
+                  <button type="button" class="opt-btn" data-target="camber-stage-img" data-src="media/camber-jump.gif" data-group="camber" data-i18n="camber_clip_2">GLACIER JUMP</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="flag-body-col">
+              <div>
+                <h3 data-i18n="camber_h3">HOVER-SHIP RACING</h3>
+                <p data-i18n="camber_p">
+                  Eight ships tearing across Lagoon, Furnace, and Glacier tracks with banked bends,
+                  rock tunnels, boost-pad jumps, and shield heat slinging. Defaults to HIGH detail
+                  and 60 FPS target.
+                </p>
+              </div>
+              <div class="pm-rows">
+                <div class="pm-row">
+                  <span class="k" data-i18n="camber_k1">RIVALS</span>
+                  <span class="v" data-i18n="camber_v1">7 AI SHIPS (CATCH-UP)</span>
+                </div>
+                <div class="pm-row">
+                  <span class="k" data-i18n="camber_k2">TRACKS</span>
+                  <span class="v" data-i18n="camber_v2">3 COURSES + TUNNELS</span>
+                </div>
+                <div class="pm-row">
+                  <span class="k" data-i18n="camber_k3">INPUT</span>
+                  <span class="v" data-i18n="camber_v3">TOUCH OR BT GAMEPAD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- MERCATOR Window -->
+        <article class="pm-window">
+          <div class="pm-win-head">
+            <span class="win-pill">CART-02</span>
+            <span class="win-title">MERCATOR</span>
+            <span class="win-fps" data-i18n="mercator_fps">59.99 FPS IN FLIGHT</span>
+          </div>
+
+          <div class="flag-grid flip">
+            <div class="flag-media-col">
+              <div class="flag-viewport">
+                <img
+                  id="mercator-stage-img"
+                  class="px-art"
+                  src="media/mercator-fight.gif"
+                  alt="MERCATOR dogfight against raider pack">
+              </div>
+              <div class="opt-strip">
+                <span class="lbl" data-i18n="clip_lbl">CLIP</span>
+                <div class="opt-choices">
+                  <button type="button" class="opt-btn active" data-target="mercator-stage-img" data-src="media/mercator-fight.gif" data-group="mercator" data-i18n="mercator_clip_1">FIGHT</button>
+                  <button type="button" class="opt-btn" data-target="mercator-stage-img" data-src="media/mercator-entry.gif" data-group="mercator" data-i18n="mercator_clip_2">ENTRY</button>
+                  <button type="button" class="opt-btn" data-target="mercator-stage-img" data-src="media/mercator-landing.gif" data-group="mercator" data-i18n="mercator_clip_3">LANDING</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="flag-body-col">
+              <div>
+                <h3 data-i18n="mercator_h3">SPACE TRADE &amp; PLANET LANDING</h3>
+                <p data-i18n="mercator_p">
+                  PocketMe's biggest cartridge: buy and haul cargo, hyperspace jump between star
+                  systems, fight raider packs, dive through orbital entry rings, touch down on
+                  thrusters, and explore wrecks on foot.
+                </p>
+              </div>
+              <div class="pm-rows">
+                <div class="pm-row">
+                  <span class="k" data-i18n="mercator_k1">FLASH SPLIT</span>
+                  <span class="v" data-i18n="mercator_v1">106 KB XIP CODE + RO</span>
+                </div>
+                <div class="pm-row">
+                  <span class="k" data-i18n="mercator_k2">VIEWS</span>
+                  <span class="v" data-i18n="mercator_v2">CHASE / COCKPIT / FOOT</span>
+                </div>
+                <div class="pm-row">
+                  <span class="k" data-i18n="mercator_k3">INPUT</span>
+                  <span class="v" data-i18n="mercator_v3">TOUCH OR BT GAMEPAD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ALL 14 BUILT-IN TITLES + OS MATRIX -->
+    <section class="console-sec" id="catalog">
+      <div class="sec-bar">
+        <div class="sec-title-group">
+          <span class="sec-eyebrow" data-i18n="catalog_eyebrow">02 // BUILT-IN ROM CARTRIDGE LIST</span>
+          <h2 data-i18n="catalog_h2">ALL 14 PROGRAMS INCLUDED</h2>
+        </div>
+
+        <div class="filter-row" id="catalog-filters" role="group" data-i18n-aria="filter_aria" aria-label="Filter built-in titles">
+          <button type="button" class="flt-tab active" data-filter="all" data-i18n="flt_all">ALL (16)</button>
+          <button type="button" class="flt-tab" data-filter="3d" data-i18n="flt_3d">3D (7)</button>
+          <button type="button" class="flt-tab" data-filter="arcade" data-i18n="flt_arcade">ARCADE (5)</button>
+          <button type="button" class="flt-tab" data-filter="os" data-i18n="flt_os">OS &amp; TOOLS (4)</button>
+        </div>
+      </div>
+
+      <div class="rom-grid" id="rom-grid"></div>
+
+      <p class="sim-footnote" data-i18n="sim_footnote">
+        * Capture note: every GIF is rendered pixel-for-pixel by the PocketMe simulator executing
+        the same Rust console and game crates; FPS numbers were measured on the real CYD hardware.
+      </p>
+    </section>
+
+    <!-- FLASH ARCHITECTURE & 4 MB PARTITION MAP -->
+    <section class="console-sec" id="flash-map">
+      <div class="sec-bar">
+        <div class="sec-title-group">
+          <span class="sec-eyebrow" data-i18n="flashmap_eyebrow">03 // 3-PART FLASH ARCHITECTURE</span>
+          <h2 data-i18n="flashmap_h2">UPDATE WITHOUT LOSING YOUR PAIRING</h2>
+        </div>
+        <p class="sec-lead" data-i18n="flashmap_lead">
+          When KEEP DATA stays selected, the web installer writes only bootloader, partitions, and
+          app, leaving Bluetooth link keys and settings untouched.
+        </p>
+      </div>
+
+      <div class="steps-3">
+        <div class="step-card">
+          <span class="step-tag" data-i18n="step1_tag">STEP 1</span>
+          <h3 data-i18n="step1_h3">PLUG USB DATA CABLE</h3>
+          <p data-i18n="step1_p">
+            Connect the CYD directly to a PC USB port in desktop Chrome or Edge. No toolchain and no
+            microSD card needed.
+          </p>
+        </div>
+        <div class="step-card">
+          <span class="step-tag" data-i18n="step2_tag">STEP 2</span>
+          <h3 data-i18n="step2_h3">CLICK FLASH &amp; PICK PORT</h3>
+          <p data-i18n-html="step2_p">
+            Select the COM / ttyUSB port and leave <strong>KEEP DATA</strong> selected on updates
+            (or choose <strong>ERASE ALL</strong> for a clean wipe).
+          </p>
+        </div>
+        <div class="step-card">
+          <span class="step-tag" data-i18n="step3_tag">STEP 3</span>
+          <h3 data-i18n="step3_h3">PAIR GAMEPAD ON CONSOLE</h3>
+          <p data-i18n-html="step3_p">
+            Open the first Home tile (<strong>GAMEPADS</strong>), put a classic Bluetooth pad in
+            pairing mode, and tap <strong>+ PAIR A NEW PAD</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div class="flash-map-panel">
+        <div class="flash-map-title">
+          <span data-i18n-html="flashmap_bar_title">ESP32 4 MB FLASH LAYOUT (<code>partitions.csv</code> &middot; DIO 80 MHZ)</span>
+          <span class="sub" data-i18n="flashmap_bar_sub">WRITES 0x1000 / 0x8000 / 0x10000 &middot; SKIPS NVS &amp; SETTINGS</span>
+        </div>
+
+        <div class="flash-bar">
+          <div class="f-cell write">
+            <span class="addr">0x001000</span>
+            <span data-i18n="fcell_boot">BOOTLOADER (25 KB)</span>
+            <span class="tag" data-i18n="tag_flash">FLASH</span>
+          </div>
+          <div class="f-cell write">
+            <span class="addr">0x008000</span>
+            <span data-i18n="fcell_part">PARTITIONS (3 KB)</span>
+            <span class="tag" data-i18n="tag_flash">FLASH</span>
+          </div>
+          <div class="f-cell keep">
+            <span class="addr">0x009000..0x010000</span>
+            <span data-i18n="fcell_nvs">NVS / BT PAD PAIRING</span>
+            <span class="tag" data-i18n="tag_kept">KEPT</span>
+          </div>
+          <div class="f-cell write">
+            <span class="addr">0x010000..0x3F0000</span>
+            <span data-i18n="fcell_app">APP + 14 TITLES (~2.0 MB / 3.88 MB)</span>
+            <span class="tag" data-i18n="tag_flash">FLASH</span>
+          </div>
+          <div class="f-cell keep">
+            <span class="addr">0x3FE000..0x400000</span>
+            <span data-i18n="fcell_set">BRIGHTNESS &amp; BOOT ANIM</span>
+            <span class="tag" data-i18n="tag_kept">KEPT</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cta-panel">
+        <div>
+          <h3 data-i18n="bot_cta_h3">READY TO WRITE POCKETME TO YOUR CYD?</h3>
+          <p data-i18n="bot_cta_p">Press RST on the board if it does not restart automatically when flashing completes.</p>
+        </div>
+        <div class="cta-btn-slot">
+          <div class="pm-cta-frame">
+            <button type="button" class="pm-cta" data-open-flash>
+              <span class="pm-cta-main">
+                <span class="pm-cta-ico" aria-hidden="true">
+                  <svg class="sprite" width="16" height="16" viewBox="0 0 12 12">
+                    <rect x="6" y="1" width="2" height="1" fill="#f7d154"/>
+                    <rect x="5" y="2" width="2" height="1" fill="#f7d154"/>
+                    <rect x="4" y="3" width="2" height="1" fill="#f7d154"/>
+                    <rect x="3" y="4" width="3" height="1" fill="#f7d154"/>
+                    <rect x="2" y="5" width="7" height="2" fill="#f7d154"/>
+                    <rect x="6" y="7" width="3" height="1" fill="#f7d154"/>
+                    <rect x="6" y="8" width="2" height="1" fill="#f7d154"/>
+                    <rect x="5" y="9" width="2" height="1" fill="#f7d154"/>
+                    <rect x="4" y="10" width="2" height="1" fill="#f7d154"/>
+                  </svg>
+                </span>
+                <span class="pm-cta-copy">
+                  <span class="pm-cta-title" data-i18n="bot_cta_title">INSTALL POCKETME NOW</span>
+                  <span class="pm-cta-sub" data-i18n="bot_cta_sub">3-PART SAFE FLASH</span>
+                </span>
+              </span>
+              <span class="pm-cta-tag">
+                <span class="pm-cta-led" aria-hidden="true"></span>
+                <span>WEB SERIAL</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HARDWARE COMPATIBILITY & TROUBLESHOOTING -->
+    <section class="console-sec" id="specs">
+      <div class="sec-bar">
+        <div class="sec-title-group">
+          <span class="sec-eyebrow" data-i18n="specs_eyebrow">04 // COMPATIBILITY &amp; DIAGNOSTICS</span>
+          <h2 data-i18n="specs_h2">HARDWARE SPEC &amp; TROUBLESHOOTING</h2>
+        </div>
+      </div>
+
+      <div class="dual-specs">
+        <div class="pm-box">
+          <div class="pm-box-head" data-i18n="board_spec_head">TARGET BOARD SPEC</div>
+          <div class="pm-box-body">
+            <div class="pm-rows" style="border-top: 0;">
+              <div class="pm-row"><span class="k" data-i18n="hw_k1">BOARD</span><span class="v">ESP32-2432S028 (CYD)</span></div>
+              <div class="pm-row"><span class="k" data-i18n="hw_k2">CHIP REV</span><span class="v gold" data-i18n="hw_v2">ESP32 V3.0+ (V3.1 TESTED)</span></div>
+              <div class="pm-row"><span class="k" data-i18n="hw_k3">PANEL</span><span class="v" data-i18n="hw_v3">320&times;240 ST7789 (NOT ILI9341)</span></div>
+              <div class="pm-row"><span class="k" data-i18n="hw_k4">TOUCH</span><span class="v" data-i18n="hw_v4">XPT2046 + BOOT BUTTON</span></div>
+              <div class="pm-row"><span class="k">FLASH</span><span class="v">4 MB / DIO / 80 MHZ</span></div>
+              <div class="pm-row"><span class="k" data-i18n="hw_k6">BT RADIO</span><span class="v ok" data-i18n="hw_v6">CLASSIC HID + SWITCH IMU</span></div>
+              <div class="pm-row"><span class="k" data-i18n="hw_k7">LOCKING</span><span class="v" data-i18n="hw_v7">NONE (FLASH ANYTHING LATER)</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pm-box">
+          <div class="pm-box-head" data-i18n="faq_head">TROUBLESHOOTING</div>
+          <div class="pm-box-body">
+            <details class="faq-row">
+              <summary data-i18n="faq1_q">NO PORT IN BROWSER PICKER</summary>
+              <div class="faq-text" data-i18n-html="faq1_a">
+                <ul>
+                  <li>Try a USB data cable (charge-only cables show no serial port).</li>
+                  <li><strong>Windows:</strong> check Device Manager &rarr; Ports (WCH <code>CH341SER</code> driver). If attached to WSL, run <code>usbipd detach</code> first.</li>
+                  <li><strong>Linux:</strong> add your user to <code>dialout</code> / <code>uucp</code> and ensure <code>brltty</code> does not grab CH340.</li>
+                  <li>Close Arduino IDE, <code>espflash</code>, <code>boardctl</code>, or serial monitors.</li>
+                </ul>
+              </div>
+            </details>
+
+            <details class="faq-row">
+              <summary data-i18n="faq2_q">STUCK AT "FAILED TO CONNECT"</summary>
+              <div class="faq-text" data-i18n-html="faq2_a">
+                Hold <strong>BOOT</strong>, press and release <strong>RST</strong>, release
+                <strong>BOOT</strong>, then click Flash again. If needed, hold <strong>BOOT</strong>
+                until writing begins.
+              </div>
+            </details>
+
+            <details class="faq-row">
+              <summary data-i18n="faq3_q">DARK, WHITE, OR WRONG-COLOR SCREEN</summary>
+              <div class="faq-text" data-i18n-html="faq3_a">
+                Verify silicon revision is ESP32 v3.0+ and that your CYD uses an
+                <strong>ST7789</strong> display chip (ILI9341 variants are unsupported).
+              </div>
+            </details>
+
+            <details class="faq-row">
+              <summary data-i18n="faq4_q">MANUAL CLI / ESPTOOL-JS FALLBACK</summary>
+              <div class="faq-text" data-i18n-html="faq4_a">
+                Terminal commands for <code>espflash</code> / <code>esptool</code> and manual
+                <a href="https://espressif.github.io/esptool-js/">esptool-js</a> instructions live in
+                <a href="https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md">docs/install.md</a>.
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="site-footer">
+    <span data-i18n="footer_license">POCKETME FIRMWARE &middot; MIT LICENSE</span>
+    <div class="links">
+      <a href="./BUILD.txt">BUILD.txt</a>
+      <a href="./SHA256SUMS.txt">SHA256SUMS.txt</a>
+      <a href="./THIRD_PARTY_NOTICES.txt">THIRD_PARTY_NOTICES.txt</a>
+      <a href="https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md">docs/install.md</a>
+      <a href="https://github.com/hudson-bruno/pocketme">GitHub</a>
+    </div>
+  </footer>
+
+  <!-- AUTHENTIC BOTTOM CONSOLE STATUS BAR (matches crates/console-core/src/bar.rs) -->
+  <div class="status-bar" role="region" data-i18n-aria="statusbar_aria" aria-label="PocketMe console status bar">
+    <div class="status-inner">
+      <div class="bar-left">
+        <span class="bar-clock" id="bar-clock">0:00</span>
+        <!-- PAD_ICON (11x7) colored OK green -->
+        <svg class="sprite" width="22" height="14" viewBox="0 0 11 7" aria-hidden="true">
+          <rect x="1" y="0" width="9" height="1" fill="#5fb04f"/>
+          <rect x="0" y="1" width="11" height="1" fill="#5fb04f"/>
+          <rect x="0" y="2" width="2" height="1" fill="#5fb04f"/><rect x="3" y="2" width="5" height="1" fill="#5fb04f"/><rect x="9" y="2" width="2" height="1" fill="#5fb04f"/>
+          <rect x="0" y="3" width="1" height="1" fill="#5fb04f"/><rect x="4" y="3" width="3" height="1" fill="#5fb04f"/><rect x="8" y="3" width="1" height="1" fill="#5fb04f"/><rect x="10" y="3" width="1" height="1" fill="#5fb04f"/>
+          <rect x="0" y="4" width="2" height="1" fill="#5fb04f"/><rect x="3" y="4" width="5" height="1" fill="#5fb04f"/><rect x="9" y="4" width="2" height="1" fill="#5fb04f"/>
+          <rect x="0" y="5" width="3" height="1" fill="#5fb04f"/><rect x="8" y="5" width="3" height="1" fill="#5fb04f"/>
+          <rect x="1" y="6" width="1" height="1" fill="#5fb04f"/><rect x="9" y="6" width="1" height="1" fill="#5fb04f"/>
+        </svg>
+        <span class="bar-bat">
+          <svg class="sprite" width="20" height="10" viewBox="0 0 10 5" aria-hidden="true">
+            <rect x="0" y="0" width="9" height="1" fill="#7b93b8"/>
+            <rect x="0" y="4" width="9" height="1" fill="#7b93b8"/>
+            <rect x="0" y="1" width="1" height="3" fill="#7b93b8"/>
+            <rect x="8" y="1" width="1" height="3" fill="#7b93b8"/>
+            <rect x="9" y="1" width="1" height="3" fill="#7b93b8"/>
+          </svg>
+          <span>?</span>
+        </span>
+      </div>
+
+      <div class="bar-right">
+        <span class="bar-hints" data-i18n="bar_hints">&lt;&gt; MOVE &nbsp; CLICK ZOOM</span>
+        <!-- GEAR_ICON (9x9) from crates/console-core/src/gfx.rs -->
+        <button type="button" class="gear-btn" id="gear-btn" data-i18n-title="gear_title" data-i18n-aria="gear_aria" title="Open PocketMe quick menu" aria-label="Open quick menu">
+          <svg class="sprite" width="18" height="18" viewBox="0 0 9 9" aria-hidden="true">
+            <rect x="3" y="0" width="3" height="1" fill="currentColor"/>
+            <rect x="1" y="1" width="1" height="1" fill="currentColor"/><rect x="3" y="1" width="3" height="1" fill="currentColor"/><rect x="7" y="1" width="1" height="1" fill="currentColor"/>
+            <rect x="2" y="2" width="5" height="1" fill="currentColor"/>
+            <rect x="0" y="3" width="3" height="3" fill="currentColor"/><rect x="6" y="3" width="3" height="3" fill="currentColor"/>
+            <rect x="2" y="6" width="5" height="1" fill="currentColor"/>
+            <rect x="1" y="7" width="1" height="1" fill="currentColor"/><rect x="3" y="7" width="3" height="1" fill="currentColor"/><rect x="7" y="7" width="1" height="1" fill="currentColor"/>
+            <rect x="3" y="8" width="3" height="1" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUICK MENU OVERLAY (opened from bottom-bar GEAR icon) -->
+  <div class="overlay-backdrop hidden" id="quick-overlay" role="dialog" aria-modal="true" data-i18n-aria="quick_aria" aria-label="Console quick menu">
+    <div class="quick-menu-box">
+      <div class="pm-win-head" style="margin-bottom: 6px;">
+        <span class="win-title" data-i18n="quick_title">QUICK MENU</span>
+        <span class="win-pill">POCKETME</span>
+      </div>
+      <a href="#top" class="quick-item" data-qclose><span data-i18n="quick_flash">FLASH TO CYD</span><span>&gt;</span></a>
+      <a href="#showcase" class="quick-item" data-qclose><span data-i18n="quick_3d">3D SHOWCASE</span><span>&gt;</span></a>
+      <a href="#catalog" class="quick-item" data-qclose><span data-i18n="quick_titles">14 BUILT-IN TITLES</span><span>&gt;</span></a>
+      <a href="#flash-map" class="quick-item" data-qclose><span data-i18n="quick_map">4 MB FLASH MAP</span><span>&gt;</span></a>
+      <a href="#specs" class="quick-item" data-qclose><span data-i18n="quick_specs">SPECS &amp; FAQ</span><span>&gt;</span></a>
+      <button type="button" class="quick-item" id="quick-lang"><span data-i18n="quick_lang">LANGUAGE</span><span id="quick-lang-val">EN</span></button>
+      <button type="button" class="quick-item" id="quick-close"><span data-i18n="quick_close">CLOSE</span><span>ESC</span></button>
+    </div>
+  </div>
+
+  <!-- CARTRIDGE ZOOM LIGHTBOX -->
+  <div class="overlay-backdrop hidden" id="cart-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-box">
+      <div class="modal-head">
+        <button type="button" class="back-btn" id="modal-close" data-i18n="btn_back">&lt; BACK</button>
+        <span class="win-title" id="modal-code">CART-01</span>
+        <span class="win-fps" id="modal-fps">59.7 FPS</span>
+      </div>
+      <div class="modal-screen">
+        <img id="modal-img" class="px-art" src="media/camber-carve-lap.gif" alt="">
+      </div>
+      <div class="modal-copy">
+        <h3 id="modal-title">CAMBER</h3>
+        <p id="modal-desc"></p>
+        <div class="modal-meta" id="modal-meta"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NATIVE POCKETME 1-CLICK FLASH MODAL (esptool-js@0.5.7) -->
+  <div class="overlay-backdrop hidden" id="flash-modal" role="dialog" aria-modal="true" aria-labelledby="flash-modal-title">
+    <div class="flash-box">
+      <div class="modal-head">
+        <button type="button" class="back-btn" id="flash-back" data-i18n="btn_back">&lt; BACK</button>
+        <span class="win-title" id="flash-modal-title" data-i18n="flash_modal_title">FLASH POCKETME</span>
+        <span class="win-fps" id="flash-modal-ver">V0.1.0</span>
+      </div>
+
+      <div class="flash-body">
+        <div id="flash-cfg">
+          <div class="flash-setting-row">
+            <span class="k" data-i18n="fm_preset_lbl">BOARD PRESET</span>
+            <div class="flash-opt-group" id="preset-opts">
+              <button type="button" class="f-opt active" data-preset="cyd-2usb">ESP32-2432S028 (2 USB)</button>
+              <button type="button" class="f-opt" data-preset="custom" data-i18n="fm_preset_custom">CUSTOM</button>
+            </div>
+          </div>
+
+          <div class="flash-preset-note" id="flash-preset-note">
+            ST7789 &middot; 4 MB DIO 80 MHZ &middot; 460800 BAUD &middot; HARD RESET
+          </div>
+
+          <div class="flash-custom-box hidden" id="flash-custom-opts">
+            <div class="flash-setting-row">
+              <span class="k" data-i18n="fm_baud_lbl">BAUD RATE</span>
+              <div class="flash-opt-group" id="baud-opts">
+                <button type="button" class="f-opt" data-baud="115200">115200</button>
+                <button type="button" class="f-opt active" data-baud="460800">460800</button>
+                <button type="button" class="f-opt" data-baud="921600">921600</button>
+              </div>
+            </div>
+
+            <div class="flash-setting-row">
+              <span class="k" data-i18n="fm_after_lbl">AFTER FLASH</span>
+              <div class="flash-opt-group" id="after-opts">
+                <button type="button" class="f-opt active" data-after="hard_reset" data-i18n="fm_after_hard">HARD RESET</button>
+                <button type="button" class="f-opt" data-after="no_reset" data-i18n="fm_after_none">NO RESET</button>
+              </div>
+            </div>
+
+            <div class="flash-setting-row">
+              <span class="k" data-i18n="fm_debug_lbl">DEBUG LOG</span>
+              <div class="flash-opt-group" id="debug-opts">
+                <button type="button" class="f-opt active" data-debug="off" data-i18n="fm_debug_off">OFF</button>
+                <button type="button" class="f-opt" data-debug="on" data-i18n="fm_debug_on">ON</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flash-setting-row">
+            <span class="k" data-i18n="fm_erase_lbl">ERASE FLASH</span>
+            <div class="flash-opt-group" id="erase-opts">
+              <button type="button" class="f-opt active" data-erase="keep" data-i18n="fm_erase_keep">KEEP DATA</button>
+              <button type="button" class="f-opt" data-erase="all" data-i18n="fm_erase_all">ERASE ALL</button>
+            </div>
+          </div>
+
+          <div class="flash-hint" id="flash-erase-hint">
+            KEEPS SAVED BLUETOOTH GAMEPAD PAIRING (0x9000..0x10000) AND BRIGHTNESS / BOOT SETTINGS (0x3FE000).
+          </div>
+
+          <div class="flash-setting-row" style="border-bottom: 0;">
+            <span class="k" data-i18n="fm_img_lbl">IMAGE</span>
+            <span class="v" id="flash-image-summary" style="color: var(--mute);">3 PARTS &middot; BOOTLOADER / PARTITIONS / APP</span>
+          </div>
+
+          <div class="flash-tip" data-i18n-html="fm_cyd_tip">
+            <strong>CYD / CH340 TIP:</strong> If your board does not enter download mode automatically,
+            hold the physical <strong>BOOT</strong> button while clicking <strong>CONNECT &amp; FLASH</strong>,
+            then release once writing begins.
+          </div>
+
+          <div class="slot-warn-box hidden" id="flash-guard" data-i18n-html="fm_guard">
+            WEB SERIAL REQUIRES DESKTOP GOOGLE CHROME OR MICROSOFT EDGE (89+) OVER HTTPS OR HTTP://LOCALHOST.
+            CLI / ESPTOOL-JS STEPS:
+            <a href="https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md">DOCS/INSTALL.MD</a>.
+          </div>
+
+          <div class="flash-status-msg" id="flash-ready-status"></div>
+
+          <div class="pm-cta-frame">
+            <button type="button" class="pm-cta" id="flash-start-btn">
+              <span class="pm-cta-main">
+                <span class="pm-cta-ico" aria-hidden="true">
+                  <svg class="sprite" width="16" height="16" viewBox="0 0 12 12">
+                    <rect x="6" y="1" width="2" height="1" fill="#f7d154"/>
+                    <rect x="5" y="2" width="2" height="1" fill="#f7d154"/>
+                    <rect x="4" y="3" width="2" height="1" fill="#f7d154"/>
+                    <rect x="3" y="4" width="3" height="1" fill="#f7d154"/>
+                    <rect x="2" y="5" width="7" height="2" fill="#f7d154"/>
+                    <rect x="6" y="7" width="3" height="1" fill="#f7d154"/>
+                    <rect x="6" y="8" width="2" height="1" fill="#f7d154"/>
+                    <rect x="5" y="9" width="2" height="1" fill="#f7d154"/>
+                    <rect x="4" y="10" width="2" height="1" fill="#f7d154"/>
+                  </svg>
+                </span>
+                <span class="pm-cta-copy">
+                  <span class="pm-cta-title" data-i18n="fm_connect_title">CONNECT &amp; FLASH</span>
+                  <span class="pm-cta-sub" data-i18n="fm_connect_sub">WRITE FIRMWARE VIA WEB SERIAL</span>
+                </span>
+              </span>
+              <span class="pm-cta-tag">
+                <span class="pm-cta-led" aria-hidden="true"></span>
+                <span data-i18n="fm_port_tag">SELECT PORT</span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div id="flash-run" class="hidden" style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="flash-phase-row">
+            <span class="phase" id="flash-phase">CONNECTING...</span>
+            <span class="pct" id="flash-pct">0%</span>
+          </div>
+
+          <div class="flash-prog-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="flash-prog-bar">
+            <div class="flash-prog-fill" id="flash-fill"></div>
+          </div>
+
+          <div class="parts-track">
+            <div class="part-pill" id="part-pill-0">1 BOOTLOADER</div>
+            <div class="part-pill" id="part-pill-1" data-i18n="part_pill_1">2 PARTITIONS</div>
+            <div class="part-pill" id="part-pill-2">3 APP</div>
+          </div>
+
+          <div class="flash-log-wrap">
+            <span class="flash-log-lbl" data-i18n="fm_log_lbl">CONSOLE LOG</span>
+            <pre class="flash-log" id="flash-log"></pre>
+          </div>
+
+          <div class="flash-result hidden" id="flash-done-box">
+            <span class="px-title" data-i18n="fm_done_title">FLASH COMPLETE!</span>
+            <span class="sub" data-i18n-html="fm_done_sub">
+              Press <strong>RST</strong> on your CYD if the screen does not start automatically.
+              Open the <strong>GAMEPADS</strong> tile on Home to pair your Player 1 Bluetooth controller.
+            </span>
+            <button type="button" class="pm-cta" id="flash-done-btn">
+              <span class="pm-cta-main">
+                <span class="pm-cta-ico" aria-hidden="true">
+                  <svg class="sprite" width="14" height="14" viewBox="0 0 10 10">
+                    <rect x="8" y="2" width="1" height="1" fill="#5fb04f"/>
+                    <rect x="7" y="3" width="1" height="1" fill="#5fb04f"/>
+                    <rect x="6" y="4" width="1" height="1" fill="#5fb04f"/>
+                    <rect x="1" y="5" width="1" height="1" fill="#5fb04f"/>
+                    <rect x="5" y="5" width="1" height="1" fill="#5fb04f"/>
+                    <rect x="2" y="6" width="1" height="1" fill="#5fb04f"/>
+                    <rect x="4" y="6" width="1" height="1" fill="#5fb04f"/>
+                    <rect x="3" y="7" width="1" height="1" fill="#5fb04f"/>
+                  </svg>
+                </span>
+                <span class="pm-cta-copy">
+                  <span class="pm-cta-title" data-i18n="fm_done_btn">DONE</span>
+                </span>
+              </span>
+              <span class="pm-cta-tag" data-i18n="fm_done_close">CLOSE</span>
+            </button>
+          </div>
+
+          <div class="flash-result err hidden" id="flash-err-box">
+            <span class="px-title" data-i18n="fm_err_title">FLASH FAILED</span>
+            <span class="sub" id="flash-err-text"></span>
+            <span class="sub" style="color: var(--gold);" data-i18n="fm_err_tip">
+              HOLD THE PHYSICAL BOOT BUTTON ON YOUR CYD, CLICK RETRY, AND RELEASE ONCE WRITING STARTS.
+            </span>
+            <button type="button" class="pm-cta" id="flash-retry-btn">
+              <span class="pm-cta-main">
+                <span class="pm-cta-ico" aria-hidden="true">
+                  <svg class="sprite" width="14" height="14" viewBox="0 0 12 12">
+                    <rect x="6" y="1" width="2" height="1" fill="#f7d154"/>
+                    <rect x="5" y="2" width="2" height="1" fill="#f7d154"/>
+                    <rect x="4" y="3" width="2" height="1" fill="#f7d154"/>
+                    <rect x="3" y="4" width="3" height="1" fill="#f7d154"/>
+                    <rect x="2" y="5" width="7" height="2" fill="#f7d154"/>
+                    <rect x="6" y="7" width="3" height="1" fill="#f7d154"/>
+                    <rect x="6" y="8" width="2" height="1" fill="#f7d154"/>
+                    <rect x="5" y="9" width="2" height="1" fill="#f7d154"/>
+                    <rect x="4" y="10" width="2" height="1" fill="#f7d154"/>
+                  </svg>
+                </span>
+                <span class="pm-cta-copy">
+                  <span class="pm-cta-title" data-i18n="fm_retry_btn">RETRY FLASH</span>
+                </span>
+              </span>
+              <span class="pm-cta-tag" data-i18n="fm_port_tag">SELECT PORT</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const LANG_STORAGE_KEY = "pocketme_lang";
+
+      const I18N = {
+        en: {
+          page_title: "POCKETME // ESP32 CYD 1-Click Installer",
+          nav_aria: "Console navigation",
+          nav_install: "INSTALL",
+          nav_3d: "3D",
+          nav_games: "14 GAMES",
+          nav_flashmap: "FLASH MAP",
+          nav_specs: "SPECS",
+          nav_github: "GITHUB \u2197",
+          lang_switch_aria: "Language",
+
+          fw_loading: "FW LOADING\u2026",
+          fw_file_blocked: "FILE:// BLOCKED",
+          fw_localhost: "LOCALHOST",
+          fw_manifest_offline: "MANIFEST OFFLINE",
+          fw_badge: "FW V{ver} ({parts} PARTS)",
+          cta_1click: "1 CLICK",
+          img_summary: "{parts} PARTS \u00b7 BOOTLOADER / PARTITIONS / APP",
+
+          file_proto_banner: "OPENED AS FILE:// \u2014 WEB SERIAL REQUIRES HTTPS OR HTTP://LOCALHOST. RUN <code>python3 -m http.server 8765</code> AND OPEN <code>http://localhost:8765</code>.",
+          manifest_err_banner: "FLASH LOADER OR MANIFEST.JSON UNAVAILABLE \u2014 CHECK NETWORK OR USE <a href=\"https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md\">DOCS/INSTALL.MD</a>.",
+
+          hero_aria: "PocketMe console preview and 1-click browser flasher",
+          hero_strip_center: "PLACEMENT E \u00b7 1-CLICK WEB INSTALLER",
+          hero_strip_right: "14 GAMES",
+          grid_toggle: "LCD GRID",
+          hero_frame_info: "FRAME: 160&times;120 &rarr; ST7789 320&times;240",
+          hero_tile_hint: "USE &lt; &gt; OR CLICK TILES",
+          hero_h1: "60 FPS 3D. <span>520 KB RAM.</span>",
+          hero_lead: "Bare-metal Rust console firmware for the Cheap Yellow Display: 14 built-in programs, tear-free video, and on-console Bluetooth gamepad pairing.",
+          spec_k_speed: "SPEED ON CYD",
+          spec_v_speed: "59.99 FPS (9 TITLES)",
+          spec_k_mem: "MEMORY",
+          spec_v_mem: "520 KB SRAM / NO OS",
+          spec_k_video: "VIDEO SYNC",
+          spec_v_video: "CORE 2 DMA / 0 TEARS",
+          spec_k_bt: "BLUETOOTH PAD",
+          spec_v_bt: "PAIR ON CONSOLE + IMU",
+          hero_cta_title: "FLASH POCKETME TO CYD",
+          hero_cta_sub: "1-CLICK USB INSTALLER \u00b7 NO TOOLS",
+          badge_kept: "KEPT",
+          erase_rule_1: "Select <strong>KEEP DATA</strong> in the installer to preserve BT gamepad pairing &amp; settings.",
+          erase_rule_2: "Chrome / Edge over USB data cable. Flashing never locks the ESP32.",
+
+          carousel_aria: "Interactive Home screen tile row",
+          prev_tile_aria: "Previous tile",
+          next_tile_aria: "Next tile",
+          tile_dots_aria: "Tile position dots",
+          select_tile_aria: "Select {label}",
+          jump_tile_aria: "Jump to {label}",
+          running_alt: "{label} running on PocketMe",
+          on_cyd_note: "{title} \u00b7 {fps} ON CYD",
+          home_gamepads_tag: "PAIR / FORGET \u00b7 CLASSIC BLUETOOTH PAD",
+          home_gamepads_fps: "PLAYER 1 BT PAIR",
+          home_settings_tag: "BRIGHTNESS \u00b7 BOOT ANIM \u00b7 ABOUT",
+          home_settings_fps: "2.7S GATHER BOOT",
+
+          showcase_eyebrow: "01 // REAL-TIME INTEGER 3D",
+          showcase_h2: "CAMBER & MERCATOR ON BARE SILICON",
+          showcase_lead: "Fixed-point flat-shaded polygons, spill-RAM slot execution, and XIP flash splitting built without an OS or external PSRAM.",
+          camber_fps: "58.9\u201359.7 FPS ON CYD",
+          clip_lbl: "CLIP",
+          camber_clip_1: "CARVE LAP",
+          camber_clip_2: "GLACIER JUMP",
+          camber_h3: "HOVER-SHIP RACING",
+          camber_p: "Eight ships tearing across Lagoon, Furnace, and Glacier tracks with banked bends, rock tunnels, boost-pad jumps, and shield heat slinging. Defaults to HIGH detail and 60 FPS target.",
+          camber_k1: "RIVALS",
+          camber_v1: "7 AI SHIPS (CATCH-UP)",
+          camber_k2: "TRACKS",
+          camber_v2: "3 COURSES + TUNNELS",
+          camber_k3: "INPUT",
+          camber_v3: "TOUCH OR BT GAMEPAD",
+
+          mercator_fps: "59.99 FPS IN FLIGHT",
+          mercator_clip_1: "FIGHT",
+          mercator_clip_2: "ENTRY",
+          mercator_clip_3: "LANDING",
+          mercator_h3: "SPACE TRADE & PLANET LANDING",
+          mercator_p: "PocketMe's biggest cartridge: buy and haul cargo, hyperspace jump between star systems, fight raider packs, dive through orbital entry rings, touch down on thrusters, and explore wrecks on foot.",
+          mercator_k1: "FLASH SPLIT",
+          mercator_v1: "106 KB XIP CODE + RO",
+          mercator_k2: "VIEWS",
+          mercator_v2: "CHASE / COCKPIT / FOOT",
+          mercator_k3: "INPUT",
+          mercator_v3: "TOUCH OR BT GAMEPAD",
+
+          catalog_eyebrow: "02 // BUILT-IN ROM CARTRIDGE LIST",
+          catalog_h2: "ALL 14 PROGRAMS INCLUDED",
+          filter_aria: "Filter built-in titles",
+          flt_all: "ALL (16)",
+          flt_3d: "3D (7)",
+          flt_arcade: "ARCADE (5)",
+          flt_os: "OS & TOOLS (4)",
+          card_open: "OPEN >",
+          modal_meta: "CONTROLS: {controls} \u00b7 CATEGORY: {cat}",
+          cat_3d: "3D",
+          cat_arcade: "ARCADE",
+          cat_os: "OS & TOOLS",
+          sim_footnote: "* Capture note: every GIF is rendered pixel-for-pixel by the PocketMe simulator executing the same Rust console and game crates; FPS numbers were measured on the real CYD hardware.",
+
+          flashmap_eyebrow: "03 // 3-PART FLASH ARCHITECTURE",
+          flashmap_h2: "UPDATE WITHOUT LOSING YOUR PAIRING",
+          flashmap_lead: "When KEEP DATA stays selected, the web installer writes only bootloader, partitions, and app, leaving Bluetooth link keys and settings untouched.",
+          step1_tag: "STEP 1",
+          step1_h3: "PLUG USB DATA CABLE",
+          step1_p: "Connect the CYD directly to a PC USB port in desktop Chrome or Edge. No toolchain and no microSD card needed.",
+          step2_tag: "STEP 2",
+          step2_h3: "CLICK FLASH & PICK PORT",
+          step2_p: "Select the COM / ttyUSB port and leave <strong>KEEP DATA</strong> selected on updates (or choose <strong>ERASE ALL</strong> for a clean wipe).",
+          step3_tag: "STEP 3",
+          step3_h3: "PAIR GAMEPAD ON CONSOLE",
+          step3_p: "Open the first Home tile (<strong>GAMEPADS</strong>), put a classic Bluetooth pad in pairing mode, and tap <strong>+ PAIR A NEW PAD</strong>.",
+          flashmap_bar_title: "ESP32 4 MB FLASH LAYOUT (<code>partitions.csv</code> &middot; DIO 80 MHZ)",
+          flashmap_bar_sub: "WRITES 0x1000 / 0x8000 / 0x10000 \u00b7 SKIPS NVS & SETTINGS",
+          fcell_boot: "BOOTLOADER (25 KB)",
+          fcell_part: "PARTITIONS (3 KB)",
+          fcell_nvs: "NVS / BT PAD PAIRING",
+          fcell_app: "APP + 14 TITLES (~2.0 MB / 3.88 MB)",
+          fcell_set: "BRIGHTNESS & BOOT ANIM",
+          tag_flash: "FLASH",
+          tag_kept: "KEPT",
+
+          bot_cta_h3: "READY TO WRITE POCKETME TO YOUR CYD?",
+          bot_cta_p: "Press RST on the board if it does not restart automatically when flashing completes.",
+          bot_cta_title: "INSTALL POCKETME NOW",
+          bot_cta_sub: "3-PART SAFE FLASH",
+
+          specs_eyebrow: "04 // COMPATIBILITY & DIAGNOSTICS",
+          specs_h2: "HARDWARE SPEC & TROUBLESHOOTING",
+          board_spec_head: "TARGET BOARD SPEC",
+          hw_k1: "BOARD",
+          hw_k2: "CHIP REV",
+          hw_v2: "ESP32 V3.0+ (V3.1 TESTED)",
+          hw_k3: "PANEL",
+          hw_v3: "320\u00d7240 ST7789 (NOT ILI9341)",
+          hw_k4: "TOUCH",
+          hw_v4: "XPT2046 + BOOT BUTTON",
+          hw_k6: "BT RADIO",
+          hw_v6: "CLASSIC HID + SWITCH IMU",
+          hw_k7: "LOCKING",
+          hw_v7: "NONE (FLASH ANYTHING LATER)",
+          faq_head: "TROUBLESHOOTING",
+          faq1_q: "NO PORT IN BROWSER PICKER",
+          faq1_a: "<ul><li>Try a USB data cable (charge-only cables show no serial port).</li><li><strong>Windows:</strong> check Device Manager &rarr; Ports (WCH <code>CH341SER</code> driver). If attached to WSL, run <code>usbipd detach</code> first.</li><li><strong>Linux:</strong> add your user to <code>dialout</code> / <code>uucp</code> and ensure <code>brltty</code> does not grab CH340.</li><li>Close Arduino IDE, <code>espflash</code>, <code>boardctl</code>, or serial monitors.</li></ul>",
+          faq2_q: "STUCK AT \"FAILED TO CONNECT\"",
+          faq2_a: "Hold <strong>BOOT</strong>, press and release <strong>RST</strong>, release <strong>BOOT</strong>, then click Flash again. If needed, hold <strong>BOOT</strong> until writing begins.",
+          faq3_q: "DARK, WHITE, OR WRONG-COLOR SCREEN",
+          faq3_a: "Verify silicon revision is ESP32 v3.0+ and that your CYD uses an <strong>ST7789</strong> display chip (ILI9341 variants are unsupported).",
+          faq4_q: "MANUAL CLI / ESPTOOL-JS FALLBACK",
+          faq4_a: "Terminal commands for <code>espflash</code> / <code>esptool</code> and manual <a href=\"https://espressif.github.io/esptool-js/\">esptool-js</a> instructions live in <a href=\"https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md\">docs/install.md</a>.",
+
+          footer_license: "POCKETME FIRMWARE \u00b7 MIT LICENSE",
+          statusbar_aria: "PocketMe console status bar",
+          bar_hints: "<> MOVE \u00a0 CLICK ZOOM",
+          gear_title: "Open PocketMe quick menu",
+          gear_aria: "Open quick menu",
+
+          quick_aria: "Console quick menu",
+          quick_title: "QUICK MENU",
+          quick_flash: "FLASH TO CYD",
+          quick_3d: "3D SHOWCASE",
+          quick_titles: "14 BUILT-IN TITLES",
+          quick_map: "4 MB FLASH MAP",
+          quick_specs: "SPECS & FAQ",
+          quick_lang: "LANGUAGE",
+          quick_close: "CLOSE",
+
+          btn_back: "< BACK",
+          flash_modal_title: "FLASH POCKETME",
+          fm_preset_lbl: "BOARD PRESET",
+          fm_preset_custom: "CUSTOM",
+          preset_note_cyd: "ST7789 \u00b7 4 MB DIO 80 MHZ \u00b7 460800 BAUD \u00b7 HARD RESET",
+          preset_note_custom: "CUSTOM OVERRIDE ACTIVE \u2014 ADJUST BAUD RATE, RESET OR DEBUG LOG BELOW.",
+          fm_baud_lbl: "BAUD RATE",
+          fm_after_lbl: "AFTER FLASH",
+          fm_after_hard: "HARD RESET",
+          fm_after_none: "NO RESET",
+          fm_debug_lbl: "DEBUG LOG",
+          fm_debug_off: "OFF",
+          fm_debug_on: "ON",
+          fm_erase_lbl: "ERASE FLASH",
+          fm_erase_keep: "KEEP DATA",
+          fm_erase_all: "ERASE ALL",
+          erase_hint_keep: "KEEPS SAVED BLUETOOTH GAMEPAD PAIRING (0x9000..0x10000) AND BRIGHTNESS / BOOT SETTINGS (0x3FE000).",
+          erase_hint_all: "ERASE ALL WIPES THE ENTIRE 4 MB FLASH \u2014 SAVED BT PAIRING AND SETTINGS WILL BE ERASED.",
+          fm_img_lbl: "IMAGE",
+          fm_cyd_tip: "<strong>CYD / CH340 TIP:</strong> If your board does not enter download mode automatically, hold the physical <strong>BOOT</strong> button while clicking <strong>CONNECT &amp; FLASH</strong>, then release once writing begins.",
+          fm_guard: "WEB SERIAL REQUIRES DESKTOP GOOGLE CHROME OR MICROSOFT EDGE (89+) OVER HTTPS OR HTTP://LOCALHOST. CLI / ESPTOOL-JS STEPS: <a href=\"https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md\">DOCS/INSTALL.MD</a>.",
+          fm_connect_title: "CONNECT & FLASH",
+          fm_connect_sub: "WRITE FIRMWARE VIA WEB SERIAL",
+          fm_port_tag: "SELECT PORT",
+          part_pill_1: "2 PARTITIONS",
+          fm_log_lbl: "CONSOLE LOG",
+          fm_done_title: "FLASH COMPLETE!",
+          fm_done_sub: "Press <strong>RST</strong> on your CYD if the screen does not start automatically. Open the <strong>GAMEPADS</strong> tile on Home to pair your Player 1 Bluetooth controller.",
+          fm_done_btn: "DONE",
+          fm_done_close: "CLOSE",
+          fm_err_title: "FLASH FAILED",
+          fm_err_tip: "HOLD THE PHYSICAL BOOT BUTTON ON YOUR CYD, CLICK RETRY, AND RELEASE ONCE WRITING STARTS.",
+          fm_retry_btn: "RETRY FLASH",
+
+          phase_ready: "READY",
+          phase_connecting: "CONNECTING...",
+          phase_loading: "LOADING FLASHER...",
+          phase_connecting_esp: "CONNECTING TO ESP32...",
+          phase_erasing: "ERASING 4 MB FLASH...",
+          phase_downloading: "DOWNLOADING {n} PARTS...",
+          phase_writing: "WRITING...",
+          phase_writing_part: "WRITING PART {i}/{n}...",
+          phase_resetting: "HARD RESETTING BOARD...",
+          phase_done: "FLASH COMPLETE!",
+          phase_failed: "FLASH FAILED",
+          no_port_err: "No serial port selected.",
+          no_port_short: "NO PORT SELECTED.",
+          no_parts_err: "manifest.json lists no flash parts",
+          rev_err: "Unsupported ESP32 revision ({chip}). PocketMe requires ESP32 rev 3.0 or later.",
+          fetch_err: "Failed to fetch {path} (HTTP {status})",
+          log_header: "PocketMe Web Flasher \u00b7 {preset} @ {baud} baud ({erase})",
+          log_detected: "Detected {chip}. Downloading firmware parts...",
+          log_loaded: "Loaded {path} ({bytes} bytes @ 0x{addr})",
+          log_skip_reset: "Skipping reset (AFTER FLASH = NO RESET). Press RST when ready.",
+          log_err_prefix: "ERROR: {msg}",
+        },
+
+        "pt-BR": {
+          page_title: "POCKETME // Instalador 1-Clique ESP32 CYD",
+          nav_aria: "Navegação do console",
+          nav_install: "INSTALAR",
+          nav_3d: "3D",
+          nav_games: "14 JOGOS",
+          nav_flashmap: "MAPA FLASH",
+          nav_specs: "SPECS",
+          nav_github: "GITHUB \u2197",
+          lang_switch_aria: "Idioma",
+
+          fw_loading: "CARREGANDO FW\u2026",
+          fw_file_blocked: "FILE:// BLOQUEADO",
+          fw_localhost: "LOCALHOST",
+          fw_manifest_offline: "MANIFEST OFFLINE",
+          fw_badge: "FW V{ver} ({parts} PARTES)",
+          cta_1click: "1 CLIQUE",
+          img_summary: "{parts} PARTES \u00b7 BOOTLOADER / PARTIÇÕES / APP",
+
+          file_proto_banner: "ABERTO COMO FILE:// \u2014 WEB SERIAL EXIGE HTTPS OU HTTP://LOCALHOST. RODE <code>python3 -m http.server 8765</code> E ABRA <code>http://localhost:8765</code>.",
+          manifest_err_banner: "GRAVADOR OU MANIFEST.JSON INDISPONÍVEL \u2014 VERIFIQUE A REDE OU VEJA <a href=\"https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md\">DOCS/INSTALL.MD</a>.",
+
+          hero_aria: "Prévia do console PocketMe e instalador Web 1-clique",
+          hero_strip_center: "PLACEMENT E \u00b7 INSTALADOR WEB 1-CLIQUE",
+          hero_strip_right: "14 JOGOS",
+          grid_toggle: "GRADE LCD",
+          hero_frame_info: "QUADRO: 160&times;120 &rarr; ST7789 320&times;240",
+          hero_tile_hint: "USE &lt; &gt; OU CLIQUE NOS ÍCONES",
+          hero_h1: "3D A 60 FPS. <span>520 KB DE RAM.</span>",
+          hero_lead: "Firmware de console em Rust bare-metal para a Cheap Yellow Display: 14 programas integrados, vídeo sem cortes e pareamento Bluetooth direto no console.",
+          spec_k_speed: "VELOCIDADE NA CYD",
+          spec_v_speed: "59.99 FPS (9 TÍTULOS)",
+          spec_k_mem: "MEMÓRIA",
+          spec_v_mem: "520 KB SRAM / SEM SO",
+          spec_k_video: "SINC. VÍDEO",
+          spec_v_video: "CORE 2 DMA / 0 CORTES",
+          spec_k_bt: "CONTROLE BT",
+          spec_v_bt: "PAREAMENTO NO CONSOLE + IMU",
+          hero_cta_title: "INSTALAR POCKETME NA CYD",
+          hero_cta_sub: "INSTALADOR USB 1-CLIQUE \u00b7 SEM FERRAMENTAS",
+          badge_kept: "MANTIDO",
+          erase_rule_1: "Deixe <strong>MANTER DADOS</strong> selecionado para preservar o pareamento Bluetooth e as configurações.",
+          erase_rule_2: "Chrome / Edge via cabo USB de dados. Gravar nunca bloqueia o ESP32.",
+
+          carousel_aria: "Fileira interativa da tela inicial",
+          prev_tile_aria: "Item anterior",
+          next_tile_aria: "Próximo item",
+          tile_dots_aria: "Indicadores de posição",
+          select_tile_aria: "Selecionar {label}",
+          jump_tile_aria: "Ir para {label}",
+          running_alt: "{label} rodando no PocketMe",
+          on_cyd_note: "{title} \u00b7 {fps} NA CYD",
+          home_gamepads_tag: "PAREAR / ESQUECER \u00b7 CONTROLE BLUETOOTH CLÁSSICO",
+          home_gamepads_fps: "PAREAMENTO BT PLAYER 1",
+          home_settings_tag: "BRILHO \u00b7 ANIM. BOOT \u00b7 SOBRE",
+          home_settings_fps: "BOOT GATHER 2.7S",
+
+          showcase_eyebrow: "01 // 3D INTEIRO EM TEMPO REAL",
+          showcase_h2: "CAMBER E MERCATOR DIRETO NO SILÍCIO",
+          showcase_lead: "Polígonos flat-shaded em ponto fixo, execução em slots de spill-RAM e divisão em flash XIP sem sistema operacional nem PSRAM externa.",
+          camber_fps: "58.9\u201359.7 FPS NA CYD",
+          clip_lbl: "CLIPE",
+          camber_clip_1: "CURVA",
+          camber_clip_2: "SALTO",
+          camber_h3: "CORRIDA DE NAVES",
+          camber_p: "Oito naves acelerando pelas pistas Lagoon, Furnace e Glacier com curvas inclinadas, túneis de rocha, saltos em boost e controle térmico do escudo. Padrão em detalhe HIGH e meta de 60 FPS.",
+          camber_k1: "RIVAIS",
+          camber_v1: "7 NAVES IA (CATCH-UP)",
+          camber_k2: "PISTAS",
+          camber_v2: "3 PISTAS + TÚNEIS",
+          camber_k3: "CONTROLES",
+          camber_v3: "TOQUE OU CONTROLE BT",
+
+          mercator_fps: "59.99 FPS EM VOO",
+          mercator_clip_1: "COMBATE",
+          mercator_clip_2: "ENTRADA",
+          mercator_clip_3: "POUSO",
+          mercator_h3: "COMÉRCIO ESPACIAL E POUSO PLANETÁRIO",
+          mercator_p: "O maior cartucho do PocketMe: compre e transporte carga, salte em hiperespaço entre sistemas estelares, enfrente saqueadores, mergulhe por anéis orbitais, pouse com propulsores e explore destroços a pé.",
+          mercator_k1: "DIVISÃO FLASH",
+          mercator_v1: "106 KB CÓDIGO XIP + RO",
+          mercator_k2: "VISÕES",
+          mercator_v2: "EXTERNA / CABINE / A PÉ",
+          mercator_k3: "CONTROLES",
+          mercator_v3: "TOQUE OU CONTROLE BT",
+
+          catalog_eyebrow: "02 // CARTUCHOS INTEGRADOS NA ROM",
+          catalog_h2: "TODOS OS 14 PROGRAMAS INCLUSOS",
+          filter_aria: "Filtrar títulos integrados",
+          flt_all: "TODOS (16)",
+          flt_3d: "3D (7)",
+          flt_arcade: "ARCADE (5)",
+          flt_os: "OS E FERRAM. (4)",
+          card_open: "ABRIR >",
+          modal_meta: "CONTROLES: {controls} \u00b7 CATEGORIA: {cat}",
+          cat_3d: "3D",
+          cat_arcade: "ARCADE",
+          cat_os: "OS E FERRAM.",
+          sim_footnote: "* Nota de captura: cada GIF é renderizado pixel a pixel pelo simulador do PocketMe rodando as mesmas crates Rust do console e dos jogos; os valores de FPS foram medidos no hardware real da CYD.",
+
+          flashmap_eyebrow: "03 // ARQUITETURA FLASH EM 3 PARTES",
+          flashmap_h2: "ATUALIZE SEM PERDER O PAREAMENTO",
+          flashmap_lead: "Com MANTER DADOS selecionado, o instalador grava apenas bootloader, partições e app, mantendo intactos os controles pareados e as configurações.",
+          step1_tag: "PASSO 1",
+          step1_h3: "CONECTE O CABO USB DE DADOS",
+          step1_p: "Ligue a CYD diretamente a uma porta USB do computador no Chrome ou Edge. Sem toolchain e sem cartão microSD.",
+          step2_tag: "PASSO 2",
+          step2_h3: "CLIQUE EM INSTALAR E ESCOLHA A PORTA",
+          step2_p: "Selecione a porta COM / ttyUSB e deixe <strong>MANTER DADOS</strong> ativo nas atualizações (ou escolha <strong>APAGAR TUDO</strong> para limpar por completo).",
+          step3_tag: "PASSO 3",
+          step3_h3: "PAREIE O CONTROLE NO CONSOLE",
+          step3_p: "Abra o primeiro bloco da tela inicial (<strong>GAMEPADS</strong>), coloque um controle Bluetooth clássico em modo de pareamento e toque em <strong>+ PAIR A NEW PAD</strong>.",
+          flashmap_bar_title: "MAPA DA FLASH 4 MB ESP32 (<code>partitions.csv</code> &middot; DIO 80 MHZ)",
+          flashmap_bar_sub: "GRAVA 0x1000 / 0x8000 / 0x10000 \u00b7 PRESERVA NVS E CONFIG.",
+          fcell_boot: "BOOTLOADER (25 KB)",
+          fcell_part: "PARTIÇÕES (3 KB)",
+          fcell_nvs: "NVS / CONTROLE BT",
+          fcell_app: "APP + 14 TÍTULOS (~2.0 MB / 3.88 MB)",
+          fcell_set: "BRILHO E ANIM. BOOT",
+          tag_flash: "GRAVAR",
+          tag_kept: "MANTIDO",
+
+          bot_cta_h3: "PRONTO PARA GRAVAR O POCKETME NA SUA CYD?",
+          bot_cta_p: "Pressione RST na placa caso ela não reinicie automaticamente ao fim da gravação.",
+          bot_cta_title: "INSTALAR POCKETME AGORA",
+          bot_cta_sub: "FLASH SEGURO EM 3 PARTES",
+
+          specs_eyebrow: "04 // COMPATIBILIDADE E DIAGNÓSTICO",
+          specs_h2: "ESPECIFICAÇÕES E SOLUÇÃO DE PROBLEMAS",
+          board_spec_head: "ESPECIFICAÇÕES DA PLACA",
+          hw_k1: "PLACA",
+          hw_k2: "REV. DO CHIP",
+          hw_v2: "ESP32 V3.0+ (V3.1 TESTADA)",
+          hw_k3: "TELA",
+          hw_v3: "320\u00d7240 ST7789 (NÃO ILI9341)",
+          hw_k4: "TOQUE",
+          hw_v4: "XPT2046 + BOTÃO BOOT",
+          hw_k6: "RÁDIO BT",
+          hw_v6: "HID CLÁSSICO + IMU SWITCH",
+          hw_k7: "TRAVAMENTO",
+          hw_v7: "NENHUM (REGRAVÁVEL)",
+          faq_head: "SOLUÇÃO DE PROBLEMAS",
+          faq1_q: "NENHUMA PORTA NA LISTA DO NAVEGADOR",
+          faq1_a: "<ul><li>Teste outro cabo USB de dados (cabos só de carga não criam porta serial).</li><li><strong>Windows:</strong> confira em Gerenciador de Dispositivos &rarr; Portas (driver WCH <code>CH341SER</code>). Se estiver no WSL, rode <code>usbipd detach</code> antes.</li><li><strong>Linux:</strong> adicione seu usuário ao grupo <code>dialout</code> / <code>uucp</code> e garanta que o <code>brltty</code> não capture o CH340.</li><li>Feche Arduino IDE, <code>espflash</code>, <code>boardctl</code> ou monitores seriais.</li></ul>",
+          faq2_q: "TRAVADO EM \"FAILED TO CONNECT\" / NÃO CONECTA",
+          faq2_a: "Segure <strong>BOOT</strong>, aperte e solte <strong>RST</strong>, solte <strong>BOOT</strong> e clique em Gravar de novo. Se preciso, segure <strong>BOOT</strong> até a gravação começar.",
+          faq3_q: "TELA ESCURA, BRANCA OU COM CORES INVERTIDAS",
+          faq3_a: "Confira se a revisão do silício é ESP32 v3.0+ e se a sua CYD usa display <strong>ST7789</strong> (variantes ILI9341 não são suportadas).",
+          faq4_q: "ALTERNATIVA MANUAL VIA CLI / ESPTOOL-JS",
+          faq4_a: "Os comandos de terminal para <code>espflash</code> / <code>esptool</code> e instruções manuais do <a href=\"https://espressif.github.io/esptool-js/\">esptool-js</a> estão em <a href=\"https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md\">docs/install.md</a>.",
+
+          footer_license: "FIRMWARE POCKETME \u00b7 LICENÇA MIT",
+          statusbar_aria: "Barra de status do console PocketMe",
+          bar_hints: "<> MOVER \u00a0 CLIQUE ZOOM",
+          gear_title: "Abrir menu rápido do PocketMe",
+          gear_aria: "Abrir menu rápido",
+
+          quick_aria: "Menu rápido do console",
+          quick_title: "MENU RÁPIDO",
+          quick_flash: "GRAVAR NA CYD",
+          quick_3d: "DESTAQUES 3D",
+          quick_titles: "14 TÍTULOS INCLUSOS",
+          quick_map: "MAPA FLASH 4 MB",
+          quick_specs: "SPECS E DÚVIDAS",
+          quick_lang: "IDIOMA",
+          quick_close: "FECHAR",
+
+          btn_back: "< VOLTAR",
+          flash_modal_title: "INSTALAR POCKETME",
+          fm_preset_lbl: "PERFIL DA PLACA",
+          fm_preset_custom: "PERSONALIZADO",
+          preset_note_cyd: "ST7789 \u00b7 4 MB DIO 80 MHZ \u00b7 460800 BAUD \u00b7 RESET AUTOMÁTICO",
+          preset_note_custom: "MODO PERSONALIZADO ATIVO \u2014 AJUSTE BAUD RATE, RESET OU LOG DEBUG ABAIXO.",
+          fm_baud_lbl: "TAXA (BAUD)",
+          fm_after_lbl: "APÓS GRAVAR",
+          fm_after_hard: "RESET AUTOMÁTICO",
+          fm_after_none: "SEM RESET",
+          fm_debug_lbl: "LOG DEBUG",
+          fm_debug_off: "DESLIGADO",
+          fm_debug_on: "LIGADO",
+          fm_erase_lbl: "APAGAR FLASH",
+          fm_erase_keep: "MANTER DADOS",
+          fm_erase_all: "APAGAR TUDO",
+          erase_hint_keep: "PRESERVA O PAREAMENTO BLUETOOTH SALVO (0x9000..0x10000) E AS CONFIGURAÇÕES DE BRILHO / BOOT (0x3FE000).",
+          erase_hint_all: "APAGAR TUDO LIMPA TODA A FLASH DE 4 MB \u2014 PAREAMENTO BT E CONFIGURAÇÕES SERÃO APAGADOS.",
+          fm_img_lbl: "IMAGEM",
+          fm_cyd_tip: "<strong>DICA CYD / CH340:</strong> Se a placa não entrar em modo de gravação automaticamente, segure o botão físico <strong>BOOT</strong> ao clicar em <strong>CONECTAR E GRAVAR</strong> e solte quando começar a escrever.",
+          fm_guard: "WEB SERIAL EXIGE GOOGLE CHROME OU MICROSOFT EDGE NO COMPUTADOR (89+) VIA HTTPS OU HTTP://LOCALHOST. PASSOS VIA CLI / ESPTOOL-JS: <a href=\"https://github.com/hudson-bruno/pocketme/blob/main/docs/install.md\">DOCS/INSTALL.MD</a>.",
+          fm_connect_title: "CONECTAR E GRAVAR",
+          fm_connect_sub: "GRAVAR FIRMWARE VIA WEB SERIAL",
+          fm_port_tag: "ESCOLHER PORTA",
+          part_pill_1: "2 PARTIÇÕES",
+          fm_log_lbl: "LOG DO CONSOLE",
+          fm_done_title: "GRAVAÇÃO CONCLUÍDA!",
+          fm_done_sub: "Pressione <strong>RST</strong> na sua CYD se a tela não iniciar sozinha. Abra o bloco <strong>GAMEPADS</strong> na tela inicial para parear seu controle Bluetooth.",
+          fm_done_btn: "CONCLUÍDO",
+          fm_done_close: "FECHAR",
+          fm_err_title: "FALHA NA GRAVAÇÃO",
+          fm_err_tip: "SEGURE O BOTÃO FÍSICO BOOT NA SUA CYD, CLIQUE EM TENTAR NOVAMENTE E SOLTE QUANDO A GRAVAÇÃO COMEÇAR.",
+          fm_retry_btn: "TENTAR NOVAMENTE",
+
+          phase_ready: "PRONTO",
+          phase_connecting: "CONECTANDO...",
+          phase_loading: "CARREGANDO GRAVADOR...",
+          phase_connecting_esp: "CONECTANDO AO ESP32...",
+          phase_erasing: "APAGANDO FLASH DE 4 MB...",
+          phase_downloading: "BAIXANDO {n} PARTES...",
+          phase_writing: "GRAVANDO...",
+          phase_writing_part: "GRAVANDO PARTE {i}/{n}...",
+          phase_resetting: "REINICIANDO A PLACA...",
+          phase_done: "GRAVAÇÃO CONCLUÍDA!",
+          phase_failed: "FALHA NA GRAVAÇÃO",
+          no_port_err: "Nenhuma porta serial selecionada.",
+          no_port_short: "NENHUMA PORTA SELECIONADA.",
+          no_parts_err: "manifest.json não lista partes de gravação",
+          rev_err: "Revisão do ESP32 não suportada ({chip}). PocketMe exige ESP32 rev 3.0 ou superior.",
+          fetch_err: "Falha ao baixar {path} (HTTP {status})",
+          log_header: "Gravador Web PocketMe \u00b7 {preset} @ {baud} baud ({erase})",
+          log_detected: "Detectado {chip}. Baixando partes do firmware...",
+          log_loaded: "Carregado {path} ({bytes} bytes @ 0x{addr})",
+          log_skip_reset: "Reset ignorado (APÓS GRAVAR = SEM RESET). Pressione RST quando estiver pronto.",
+          log_err_prefix: "ERRO: {msg}",
+
+          cards: {
+            "CART-01": {
+              tag: "CORRIDA HOVER \u00b7 59.7 FPS \u00b7 TOQUE + CONTROLE",
+              controls: "TOQUE + CONTROLE",
+              desc: "Corrida de naves hover em pistas 3D contra sete rivais, com curvas inclinadas, túneis e saltos com boost.",
+            },
+            "CART-02": {
+              tag: "COMÉRCIO ESPACIAL \u00b7 59.99 FPS \u00b7 TOQUE + CONTROLE",
+              controls: "TOQUE + CONTROLE",
+              desc: "Comércio espacial e combate entre sistemas estelares, com entrada atmosférica e exploração planetária a pé via código dividido na flash.",
+            },
+            "CART-03": {
+              tag: "VOO COURIER \u00b7 59.99 FPS \u00b7 TOQUE + CONTROLE",
+              controls: "TOQUE + CONTROLE",
+              desc: "Pilote uma nave de entrega passando por portões de sinalização em um cinturão de rochas e pouse antes do tempo acabar.",
+            },
+            "CART-04": {
+              tag: "MINA A LAMPIÃO \u00b7 60.0 FPS \u00b7 TOQUE + CONTROLE",
+              controls: "TOQUE + CONTROLE",
+              desc: "Exploração em primeira pessoa via ray-casting por minas escuras: colete cristais e espante mariposas com seu lampião.",
+            },
+            "CART-05": {
+              tag: "KART NA SERRA \u00b7 58.9 FPS \u00b7 TOQUE + CONTROLE",
+              controls: "TOQUE + CONTROLE",
+              desc: "Corrida de kart ao entardecer em três circuitos de montanha contra quatro rivais em detalhe HEAVY.",
+            },
+            "CART-06": {
+              tag: "PROTÓTIPO RALLY \u00b7 30 FPS \u00b7 SÓ CONTROLE",
+              controls: "SÓ CONTROLE",
+              desc: "Protótipo de rally 3D derrapando em cristas de cascalho, acostamentos de grama e travessias de rio.",
+            },
+            "CART-07": {
+              tag: "PLATAFORMA 3D \u00b7 30 FPS \u00b7 CONTROLE + MENU TOQUE",
+              controls: "CONTROLE + MENU TOQUE",
+              desc: "Protótipo de plataforma 3D por quatro áreas em ilhas flutuantes com planador, penhascos e pontes.",
+            },
+            "CART-08": {
+              tag: "ENTREGADOR PARKOUR \u00b7 59.99 FPS \u00b7 CONTROLE",
+              controls: "CONTROLE + MENU TOQUE",
+              desc: "Plataforma de precisão pelos telhados com wall-jumps e dashes aéreos por oito salas.",
+            },
+            "CART-09": {
+              tag: "POUSO LUNAR \u00b7 59.99 FPS \u00b7 CONTROLE + GIROSCÓPIO",
+              controls: "CONTROLE + GIRO + TOQUE",
+              desc: "Pousos lunares de precisão usando analógicos, gatilhos, direção por movimento estilo Switch e toque.",
+            },
+            "CART-10": {
+              tag: "AIR HOCKEY \u00b7 59.99 FPS \u00b7 1-4 JOGADORES",
+              controls: "TOQUE + 1-4 CONTROLES",
+              desc: "Air hockey em tela única com suporte para 1 a 4 jogadores e mesas WILD com para-choque central.",
+            },
+            "CART-11": {
+              tag: "HÓQUEI NO GELO \u00b7 59.99 FPS \u00b7 1-4 JOGADORES",
+              controls: "TOQUE P2 + CONTROLES",
+              desc: "Hóquei no gelo arcade em uma tela com face-offs, passes e adversários controlados por IA.",
+            },
+            "CART-12": {
+              tag: "CAÇA-ESTRELAS \u00b7 30 FPS \u00b7 TOQUE + CONTROLE",
+              controls: "TOQUE + CONTROLE",
+              desc: "Arcade rápido de coleta de estrelas criado para validar a arquitetura de carregamento de jogos em slots do PocketMe.",
+            },
+            "CART-13": {
+              tag: "BENCHMARK DE QUADROS \u00b7 TESTE DE VELOCIDADE",
+              fps: "TESTE VELOC.",
+              controls: "DIAGNÓSTICO",
+              desc: "Benchmark em hardware real estressando cidades 3D, tamanho de polígonos, preenchimentos e envio ao display.",
+            },
+            "CART-14": {
+              tag: "MONITOR DE ENTRADA E IMU \u00b7 CONTROLE + GIRO + TOQUE",
+              fps: "MONITOR IMU",
+              controls: "CONTROLE + GIRO + TOQUE",
+              desc: "Inspetor em tempo real para testar botões, analógicos, gatilhos, tela resistiva e sensor de movimento IMU.",
+            },
+            "OS-01": {
+              tag: "ANIMAÇÃO INICIAL 2.7S \u00b7 TOQUE / BOOT PULA",
+              fps: "2.7S @ 60",
+              controls: "BOOT / TOQUE PULA",
+              desc: "Animação configurável de partículas convergindo no boot, salva junto às configurações de brilho.",
+            },
+            "OS-02": {
+              tag: "TELA INICIAL PLACEMENT-E \u00b7 CORE NO_STD",
+              fps: "CORE NO_STD",
+              controls: "GAMEPADS + SETTINGS",
+              desc: "Launcher Placement-E colocando GAMEPADS no início, 14 títulos na fileira e SETTINGS no final.",
+            },
+          },
+        },
+      };
+
+      function normalizeLang(raw) {
+        const s = String(raw || "").trim().toLowerCase();
+        if (s.startsWith("pt")) return "pt-BR";
+        if (s.startsWith("en")) return "en";
+        return null;
+      }
+
+      function detectInitialLang() {
+        try {
+          const q = new URLSearchParams(window.location.search).get("lang");
+          const fromQuery = normalizeLang(q);
+          if (fromQuery) return fromQuery;
+        } catch (_) {}
+        try {
+          const saved = normalizeLang(window.localStorage.getItem(LANG_STORAGE_KEY));
+          if (saved) return saved;
+        } catch (_) {}
+        const list = Array.isArray(navigator.languages) && navigator.languages.length
+          ? navigator.languages
+          : [navigator.language || ""];
+        for (const raw of list) {
+          const m = normalizeLang(raw);
+          if (m) return m;
+        }
+        return "en";
+      }
+
+      let currentLang = detectInitialLang();
+
+      function t(key, vars) {
+        const dict = I18N[currentLang] || I18N.en;
+        let str = Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : (I18N.en[key] || key);
+        if (vars) {
+          Object.keys(vars).forEach((k) => {
+            str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(vars[k]));
+          });
+        }
+        return str;
+      }
+
+      // Placement E order: GAMEPADS first, 14 built-in titles, SETTINGS last
+      const CARTRIDGES = [
+        {
+          code: "CART-01",
+          cat: "3d",
+          title: "CAMBER",
+          tag: "HOVER RACING \u00b7 59.7 FPS \u00b7 TOUCH + PAD",
+          fps: "59.7 FPS",
+          controls: "TOUCH + PAD",
+          img: "media/camber-carve-lap.gif",
+          desc: "Hover-ship racing across 3D tracks against seven rivals, with banked bends, tunnels and boost jumps.",
+        },
+        {
+          code: "CART-02",
+          cat: "3d",
+          title: "MERCATOR",
+          tag: "SPACE TRADING \u00b7 59.99 FPS \u00b7 TOUCH + PAD",
+          fps: "59.99 FPS",
+          controls: "TOUCH + PAD",
+          img: "media/mercator-fight.gif",
+          desc: "Space trading and combat across star systems, plus planetary entry and landing on foot via flash-split code.",
+        },
+        {
+          code: "CART-03",
+          cat: "3d",
+          title: "KESTREL",
+          tag: "COURIER FLIGHT \u00b7 59.99 FPS \u00b7 TOUCH + PAD",
+          fps: "59.99 FPS",
+          controls: "TOUCH + PAD",
+          img: "media/kestrel-gate-run.gif",
+          desc: "Pilot a courier craft through beacon gates in a rock belt and dock before the timer runs out.",
+        },
+        {
+          code: "CART-04",
+          cat: "3d",
+          title: "LANTERN",
+          tag: "LAMPLIGHT MINE \u00b7 60.0 FPS \u00b7 TOUCH + PAD",
+          fps: "60.0 FPS",
+          controls: "TOUCH + PAD",
+          img: "media/lantern-walk.gif",
+          desc: "Ray-cast first-person exploration through dark mines: gather crystals, flash moths away from your oil lamp.",
+        },
+        {
+          code: "CART-05",
+          cat: "3d",
+          title: "HAIRPIN",
+          tag: "MOUNTAIN KART \u00b7 58.9 FPS \u00b7 TOUCH + PAD",
+          fps: "58.9 FPS",
+          controls: "TOUCH + PAD",
+          img: "media/hairpin-summit.gif",
+          desc: "Dusk mountain kart racing across three courses against four rivals at HEAVY detail.",
+        },
+        {
+          code: "CART-06",
+          cat: "3d",
+          title: "DRIVE3D",
+          tag: "RALLY PROTOTYPE \u00b7 30 FPS \u00b7 PAD ONLY",
+          fps: "30.0 FPS",
+          controls: "PAD ONLY",
+          img: "media/drive3d-crest-ford.gif",
+          desc: "3D rally prototype sliding sideways over gravel crests, grass verges, and river fords.",
+        },
+        {
+          code: "CART-07",
+          cat: "3d",
+          title: "PROTO3D",
+          tag: "3D PLATFORMER \u00b7 30 FPS \u00b7 PAD + MENU TOUCH",
+          fps: "30.0 FPS",
+          controls: "PAD + MENU TOUCH",
+          img: "media/proto3d-island-run.gif",
+          desc: "3D platformer prototype across four floating-island test areas with gliding, cliffs, and bridges.",
+        },
+        {
+          code: "CART-08",
+          cat: "arcade",
+          title: "ROOFTOP",
+          tag: "WALL JUMP COURIER \u00b7 59.99 FPS \u00b7 PAD",
+          fps: "59.99 FPS",
+          controls: "PAD + MENU TOUCH",
+          img: "media/rooftop-wall-jumps.gif",
+          desc: "Precision rooftop courier platformer with wall jumps and air dashes across eight rooms.",
+        },
+        {
+          code: "CART-09",
+          cat: "arcade",
+          title: "LANDER",
+          tag: "MOON LANDER \u00b7 59.99 FPS \u00b7 PAD + TILT",
+          fps: "59.99 FPS",
+          controls: "PAD + TILT + TOUCH",
+          img: "media/lander-ridge.gif",
+          desc: "Precision lunar landings with sticks, triggers, optional Switch-mode tilt steering, and touch.",
+        },
+        {
+          code: "CART-10",
+          cat: "arcade",
+          title: "SKIMMER",
+          tag: "AIR HOCKEY \u00b7 59.99 FPS \u00b7 1-4 PLAYERS",
+          fps: "59.99 FPS",
+          controls: "TOUCH + 1-4 PADS",
+          img: "media/skimmer-goal-run.gif",
+          desc: "Single-screen air hockey supporting 1 to 4 players and center-bumper WILD tables.",
+        },
+        {
+          code: "CART-11",
+          cat: "arcade",
+          title: "TUNDRA",
+          tag: "ICE HOCKEY \u00b7 59.99 FPS \u00b7 1-4 PLAYERS",
+          fps: "59.99 FPS",
+          controls: "TOUCH P2 + PADS",
+          img: "media/tundra-goal-run.gif",
+          desc: "Arcade ice hockey on one screen with face-offs, passes, and computer AI opponents.",
+        },
+        {
+          code: "CART-12",
+          cat: "arcade",
+          title: "STARDUST",
+          tag: "STAR CATCHER \u00b7 30 FPS \u00b7 TOUCH + PAD",
+          fps: "30.0 FPS",
+          controls: "TOUCH + PAD",
+          img: "media/stardust-catches.gif",
+          desc: "Fast arcade comet star-catcher built to validate PocketMe's loadable game-slot architecture.",
+        },
+        {
+          code: "CART-13",
+          cat: "os",
+          title: "BENCH",
+          tag: "FRAME BENCHMARK \u00b7 SPEED TEST",
+          fps: "SPEED TEST",
+          controls: "DIAGNOSTIC",
+          img: "media/bench-city.gif",
+          desc: "Real-hardware benchmark stressing 3D city scenes, polygon sizes, fills, and panel transfer rates.",
+        },
+        {
+          code: "CART-14",
+          cat: "os",
+          title: "PADTEST",
+          tag: "INPUT & IMU SCOPE \u00b7 PAD + GYRO + TOUCH",
+          fps: "INPUT SCOPE",
+          controls: "PAD + GYRO + TOUCH",
+          img: "media/padtest-motion.gif",
+          desc: "Live inspector verifying buttons, analog sticks, triggers, resistive touch, and IMU motion.",
+        },
+        {
+          code: "OS-01",
+          cat: "os",
+          title: "GATHER BOOT",
+          tag: "2.7S STARTUP ANIMATION \u00b7 TOUCH / BOOT SKIP",
+          fps: "2.7S @ 60",
+          controls: "BOOT / TAP SKIP",
+          img: "media/boot-gather.gif",
+          desc: "Configurable startup particle gather animation stored beside display brightness settings.",
+        },
+        {
+          code: "OS-02",
+          cat: "os",
+          title: "HOME & PAIR OS",
+          tag: "PLACEMENT-E HOME \u00b7 NO_STD CONSOLE CORE",
+          fps: "NO_STD CORE",
+          controls: "GAMEPADS + SETTINGS",
+          img: "media/home-row.gif",
+          desc: "Placement-E Home launcher putting GAMEPADS first, 14 titles in the row, and SETTINGS at the end.",
+        },
+      ];
+
+      function localizeCard(item) {
+        if (currentLang !== "pt-BR" || !I18N["pt-BR"].cards[item.code]) return item;
+        return Object.assign({}, item, I18N["pt-BR"].cards[item.code]);
+      }
+
+      function buildHomeTiles() {
+        return [
+          {
+            sys: "GAMEPADS",
+            label: "GAMEPADS",
+            tag: t("home_gamepads_tag"),
+            fps: t("home_gamepads_fps"),
+            img: "media/padtest-motion.gif",
+          },
+          ...CARTRIDGES.slice(0, 14).map((base) => {
+            const c = localizeCard(base);
+            return {
+              sys: null,
+              label: c.title,
+              tag: c.tag,
+              fps: t("on_cyd_note", { title: c.title, fps: c.fps }),
+              img: c.img,
+            };
+          }),
+          {
+            sys: "SETTINGS",
+            label: "SETTINGS",
+            tag: t("home_settings_tag"),
+            fps: t("home_settings_fps"),
+            img: "media/boot-gather.gif",
+          },
+        ];
+      }
+
+      // 1. Live protocol + manifest version check
+      const versionBadge = document.getElementById("version-badge");
+      const ctaVersion = document.getElementById("cta-version");
+      const flashModalVer = document.getElementById("flash-modal-ver");
+      const flashImageSummary = document.getElementById("flash-image-summary");
+      let loadedManifest = null;
+      let esptoolPromise = null;
+      let manifestState = "loading";
+
+      function updateManifestUi() {
+        const badgeText = versionBadge.querySelector("span:last-child");
+        if (window.location.protocol === "file:") {
+          badgeText.textContent = t("fw_file_blocked");
+          ctaVersion.textContent = t("fw_localhost");
+          flashModalVer.textContent = t("fw_localhost");
+          flashImageSummary.textContent = t("img_summary", { parts: 3 });
+          return;
+        }
+        if (manifestState === "loaded" && loadedManifest) {
+          const ver = loadedManifest.version || "0.1.0";
+          const parts = Array.isArray(loadedManifest.builds) && loadedManifest.builds[0] && Array.isArray(loadedManifest.builds[0].parts)
+            ? loadedManifest.builds[0].parts.length
+            : 3;
+          badgeText.textContent = t("fw_badge", { ver, parts });
+          ctaVersion.textContent = `V${ver}`;
+          flashModalVer.textContent = `V${ver}`;
+          flashImageSummary.textContent = t("img_summary", { parts });
+        } else if (manifestState === "error") {
+          badgeText.textContent = t("fw_manifest_offline");
+          ctaVersion.textContent = t("cta_1click");
+          flashModalVer.textContent = "OFFLINE";
+          flashImageSummary.textContent = t("img_summary", { parts: 3 });
+        } else {
+          badgeText.textContent = t("fw_loading");
+          ctaVersion.textContent = t("cta_1click");
+          flashModalVer.textContent = "V0.1.0";
+          flashImageSummary.textContent = t("img_summary", { parts: 3 });
+        }
+      }
+
+      function loadEsptool() {
+        if (!esptoolPromise) {
+          esptoolPromise = import("https://unpkg.com/esptool-js@0.5.7/bundle.js").catch((err) => {
+            window.__ewtLoadFailed = true;
+            esptoolPromise = null;
+            throw err;
+          });
+        }
+        return esptoolPromise;
+      }
+
+      async function ensureManifest() {
+        const res = await fetch("./manifest.json", { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        loadedManifest = await res.json();
+        manifestState = "loaded";
+        return loadedManifest;
+      }
+
+      (async () => {
+        if (window.location.protocol === "file:") {
+          document.getElementById("file-proto-banner").classList.remove("hidden");
+          updateManifestUi();
+          return;
+        }
+        loadEsptool().catch(() => {});
+        try {
+          await ensureManifest();
+          updateManifestUi();
+        } catch (_) {
+          manifestState = "error";
+          updateManifestUi();
+          document.getElementById("ewt-error-banner").classList.remove("hidden");
+        }
+      })();
+
+      // 2. Placement-E Home Carousel + Hero Console Screen
+      const heroLcd = document.getElementById("hero-lcd");
+      const heroImg = document.getElementById("hero-lcd-img");
+      const heroNoteFps = document.getElementById("hero-note-fps");
+      const homeStrip = document.getElementById("home-strip");
+      const homeDots = document.getElementById("home-dots");
+      const homeName = document.getElementById("home-name");
+      const homeTag = document.getElementById("home-tag");
+      const gridToggle = document.getElementById("grid-toggle");
+
+      let activeHome = 1; // CAMBER selected initially
+      let homeTiles = buildHomeTiles();
+
+      homeTiles.forEach((tile, idx) => {
+        const slot = document.createElement("button");
+        slot.type = "button";
+        slot.className = "tile-slot";
+        slot.setAttribute("aria-label", t("select_tile_aria", { label: tile.label }));
+
+        const box = document.createElement("div");
+        box.className = "tile-box";
+        if (tile.sys === "GAMEPADS") {
+          box.innerHTML = `
+            <svg class="sprite" width="33" height="21" viewBox="0 0 11 7" aria-hidden="true">
+              <rect x="1" y="0" width="9" height="1" fill="#7b93b8"/>
+              <rect x="0" y="1" width="11" height="1" fill="#7b93b8"/>
+              <rect x="0" y="2" width="2" height="1" fill="#7b93b8"/><rect x="3" y="2" width="5" height="1" fill="#7b93b8"/><rect x="9" y="2" width="2" height="1" fill="#7b93b8"/>
+              <rect x="0" y="3" width="1" height="1" fill="#7b93b8"/><rect x="4" y="3" width="3" height="1" fill="#7b93b8"/><rect x="8" y="3" width="1" height="1" fill="#7b93b8"/><rect x="10" y="3" width="1" height="1" fill="#7b93b8"/>
+              <rect x="0" y="4" width="2" height="1" fill="#7b93b8"/><rect x="3" y="4" width="5" height="1" fill="#7b93b8"/><rect x="9" y="4" width="2" height="1" fill="#7b93b8"/>
+              <rect x="0" y="5" width="3" height="1" fill="#7b93b8"/><rect x="8" y="5" width="3" height="1" fill="#7b93b8"/>
+              <rect x="1" y="6" width="1" height="1" fill="#7b93b8"/><rect x="9" y="6" width="1" height="1" fill="#7b93b8"/>
+            </svg>
+            <span class="tile-sys-lbl">GAMEPADS</span>
+          `;
+        } else if (tile.sys === "SETTINGS") {
+          box.innerHTML = `
+            <svg class="sprite" width="27" height="27" viewBox="0 0 9 9" aria-hidden="true">
+              <rect x="3" y="0" width="3" height="1" fill="#7b93b8"/>
+              <rect x="1" y="1" width="1" height="1" fill="#7b93b8"/><rect x="3" y="1" width="3" height="1" fill="#7b93b8"/><rect x="7" y="1" width="1" height="1" fill="#7b93b8"/>
+              <rect x="2" y="2" width="5" height="1" fill="#7b93b8"/>
+              <rect x="0" y="3" width="3" height="3" fill="#7b93b8"/><rect x="6" y="3" width="3" height="3" fill="#7b93b8"/>
+              <rect x="2" y="6" width="5" height="1" fill="#7b93b8"/>
+              <rect x="1" y="7" width="1" height="1" fill="#7b93b8"/><rect x="3" y="7" width="3" height="1" fill="#7b93b8"/><rect x="7" y="7" width="1" height="1" fill="#7b93b8"/>
+              <rect x="3" y="8" width="3" height="1" fill="#7b93b8"/>
+            </svg>
+            <span class="tile-sys-lbl">SETTINGS</span>
+          `;
+        } else {
+          const img = document.createElement("img");
+          img.className = "px-art";
+          img.src = tile.img;
+          img.alt = tile.label;
+          box.appendChild(img);
+        }
+        slot.appendChild(box);
+        slot.addEventListener("click", () => selectHomeTile(idx));
+        homeStrip.appendChild(slot);
+
+        const dot = document.createElement("button");
+        dot.type = "button";
+        dot.className = "h-dot";
+        dot.setAttribute("aria-label", t("jump_tile_aria", { label: tile.label }));
+        dot.addEventListener("click", () => selectHomeTile(idx));
+        homeDots.appendChild(dot);
+      });
+
+      const slotEls = Array.from(homeStrip.querySelectorAll(".tile-slot"));
+      const dotEls = Array.from(homeDots.querySelectorAll(".h-dot"));
+
+      function selectHomeTile(idx, scroll = true) {
+        homeTiles = buildHomeTiles();
+        activeHome = (idx + homeTiles.length) % homeTiles.length;
+        const tile = homeTiles[activeHome];
+        heroImg.src = tile.img;
+        heroImg.alt = t("running_alt", { label: tile.label });
+        heroNoteFps.textContent = tile.fps;
+        homeName.textContent = tile.label;
+        homeTag.textContent = tile.tag;
+        slotEls.forEach((el, i) => {
+          el.classList.toggle("active", i === activeHome);
+          el.setAttribute("aria-label", t("select_tile_aria", { label: homeTiles[i].label }));
+        });
+        dotEls.forEach((el, i) => {
+          el.classList.toggle("active", i === activeHome);
+          el.setAttribute("aria-label", t("jump_tile_aria", { label: homeTiles[i].label }));
+        });
+        if (scroll) {
+          slotEls[activeHome].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        }
+      }
+
+      document.getElementById("home-prev").addEventListener("click", () => selectHomeTile(activeHome - 1));
+      document.getElementById("home-next").addEventListener("click", () => selectHomeTile(activeHome + 1));
+
+      gridToggle.addEventListener("click", () => {
+        const on = heroLcd.classList.toggle("grid-on");
+        gridToggle.classList.toggle("on", on);
+      });
+
+      // 3. Flagship Clip Switchers
+      document.querySelectorAll(".opt-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const img = document.getElementById(btn.dataset.target);
+          if (img) img.src = btn.dataset.src;
+          const g = btn.dataset.group;
+          document.querySelectorAll(`.opt-btn[data-group="${g}"]`).forEach((b) => {
+            b.classList.toggle("active", b === btn);
+          });
+        });
+      });
+
+      // 4. Cartridge Matrix + Filter + Lightbox Modal
+      const romGrid = document.getElementById("rom-grid");
+      const fltTabs = Array.from(document.querySelectorAll("#catalog-filters .flt-tab"));
+      const modal = document.getElementById("cart-modal");
+      const modalCode = document.getElementById("modal-code");
+      const modalFps = document.getElementById("modal-fps");
+      const modalTitle = document.getElementById("modal-title");
+      const modalDesc = document.getElementById("modal-desc");
+      const modalMeta = document.getElementById("modal-meta");
+      const modalImg = document.getElementById("modal-img");
+      let currentFilter = "all";
+      let openCardBase = null;
+
+      function openCartModal(baseItem) {
+        openCardBase = baseItem;
+        const item = localizeCard(baseItem);
+        const catLabel = t(`cat_${item.cat}`);
+        modalCode.textContent = item.code;
+        modalFps.textContent = item.fps;
+        modalTitle.textContent = item.title;
+        modalDesc.textContent = item.desc;
+        modalMeta.textContent = t("modal_meta", { controls: item.controls, cat: catLabel });
+        modalImg.src = item.img;
+        modalImg.alt = item.title;
+        modal.classList.remove("hidden");
+      }
+
+      function closeCartModal() {
+        openCardBase = null;
+        modal.classList.add("hidden");
+      }
+
+      document.getElementById("modal-close").addEventListener("click", closeCartModal);
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeCartModal();
+      });
+
+      function renderCatalog(filter) {
+        currentFilter = filter;
+        const items = filter === "all"
+          ? CARTRIDGES
+          : CARTRIDGES.filter((c) => c.cat === filter);
+        const openLabel = t("card_open");
+        romGrid.innerHTML = "";
+        items.forEach((baseItem) => {
+          const item = localizeCard(baseItem);
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "rom-card";
+          card.innerHTML = `
+            <div class="rom-inner">
+              <div class="rom-head">
+                <span class="id">${item.code}</span>
+                <span class="fps">${item.fps}</span>
+              </div>
+              <div class="rom-shot">
+                <img class="px-art" loading="lazy" src="${item.img}" alt="${item.title}">
+              </div>
+              <div class="rom-copy">
+                <div class="rom-name">${item.title}</div>
+                <div class="rom-desc">${item.desc}</div>
+                <div class="rom-foot">
+                  <span>${item.controls}</span>
+                  <span class="zoom">${openLabel}</span>
+                </div>
+              </div>
+            </div>
+          `;
+          card.addEventListener("click", () => openCartModal(baseItem));
+          romGrid.appendChild(card);
+        });
+      }
+
+      fltTabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          fltTabs.forEach((tEl) => tEl.classList.toggle("active", tEl === tab));
+          renderCatalog(tab.dataset.filter);
+        });
+      });
+
+      // 5. Status Bar Clock + Gear Quick Menu
+      const barClock = document.getElementById("bar-clock");
+      const startedAt = Date.now();
+      setInterval(() => {
+        const mins = Math.floor((Date.now() - startedAt) / 60000);
+        const h = Math.floor(mins / 60);
+        const m = String(mins % 60).padStart(2, "0");
+        barClock.textContent = `${h}:${m}`;
+      }, 15000);
+
+      const gearBtn = document.getElementById("gear-btn");
+      const quickOverlay = document.getElementById("quick-overlay");
+
+      function setQuickOpen(open) {
+        quickOverlay.classList.toggle("hidden", !open);
+        gearBtn.classList.toggle("open", open);
+      }
+
+      gearBtn.addEventListener("click", () => setQuickOpen(quickOverlay.classList.contains("hidden")));
+      document.getElementById("quick-close").addEventListener("click", () => setQuickOpen(false));
+      quickOverlay.addEventListener("click", (e) => {
+        if (e.target === quickOverlay) setQuickOpen(false);
+      });
+      quickOverlay.querySelectorAll("[data-qclose]").forEach((link) => {
+        link.addEventListener("click", () => setQuickOpen(false));
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          if (!modal.classList.contains("hidden")) closeCartModal();
+          if (!quickOverlay.classList.contains("hidden")) setQuickOpen(false);
+          if (!flashModal.classList.contains("hidden") && !isFlashing) closeFlashModal();
+          return;
+        }
+        if (
+          modal.classList.contains("hidden")
+          && quickOverlay.classList.contains("hidden")
+          && flashModal.classList.contains("hidden")
+        ) {
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            selectHomeTile(activeHome - 1);
+          } else if (e.key === "ArrowRight") {
+            e.preventDefault();
+            selectHomeTile(activeHome + 1);
+          }
+        }
+      });
+
+      // 6. Native PocketMe Flash Modal (esptool-js@0.5.7)
+      const flashModal = document.getElementById("flash-modal");
+      const flashBack = document.getElementById("flash-back");
+      const flashCfg = document.getElementById("flash-cfg");
+      const flashRun = document.getElementById("flash-run");
+      const flashGuard = document.getElementById("flash-guard");
+      const flashReadyStatus = document.getElementById("flash-ready-status");
+      const flashStartBtn = document.getElementById("flash-start-btn");
+      const flashRetryBtn = document.getElementById("flash-retry-btn");
+      const flashDoneBtn = document.getElementById("flash-done-btn");
+      const flashPhase = document.getElementById("flash-phase");
+      const flashPct = document.getElementById("flash-pct");
+      const flashProgBar = document.getElementById("flash-prog-bar");
+      const flashFill = document.getElementById("flash-fill");
+      const flashLog = document.getElementById("flash-log");
+      const flashDoneBox = document.getElementById("flash-done-box");
+      const flashErrBox = document.getElementById("flash-err-box");
+      const flashErrText = document.getElementById("flash-err-text");
+      const flashEraseHint = document.getElementById("flash-erase-hint");
+      const flashPresetNote = document.getElementById("flash-preset-note");
+      const flashCustomOpts = document.getElementById("flash-custom-opts");
+      const presetOptBtns = Array.from(document.querySelectorAll("#preset-opts .f-opt"));
+      const afterOptBtns = Array.from(document.querySelectorAll("#after-opts .f-opt"));
+      const debugOptBtns = Array.from(document.querySelectorAll("#debug-opts .f-opt"));
+      const eraseOptBtns = Array.from(document.querySelectorAll("#erase-opts .f-opt"));
+      const baudOptBtns = Array.from(document.querySelectorAll("#baud-opts .f-opt"));
+      const partPills = [
+        document.getElementById("part-pill-0"),
+        document.getElementById("part-pill-1"),
+        document.getElementById("part-pill-2"),
+      ];
+
+      let presetMode = "cyd-2usb";
+      let eraseMode = "keep";
+      let selectedBaud = 460800;
+      let afterReset = "hard_reset";
+      let debugLogging = false;
+      let isFlashing = false;
+      let readyPortWarn = false;
+
+      function effectiveFlashOpts() {
+        if (presetMode === "cyd-2usb") {
+          return {
+            label: "ESP32-2432S028 (2 USB)",
+            baudrate: 460800,
+            afterReset: "hard_reset",
+            debugLogging: false,
+          };
+        }
+        return {
+          label: t("fm_preset_custom"),
+          baudrate: selectedBaud,
+          afterReset,
+          debugLogging,
+        };
+      }
+
+      function updateFlashNotes() {
+        const isCustom = presetMode === "custom";
+        flashCustomOpts.classList.toggle("hidden", !isCustom);
+        flashPresetNote.classList.toggle("custom", isCustom);
+        flashPresetNote.textContent = isCustom ? t("preset_note_custom") : t("preset_note_cyd");
+
+        const all = eraseMode === "all";
+        flashEraseHint.classList.toggle("warn", all);
+        flashEraseHint.textContent = all ? t("erase_hint_all") : t("erase_hint_keep");
+
+        if (readyPortWarn) {
+          flashReadyStatus.textContent = t("no_port_short");
+        }
+      }
+
+      function updateFlashSupport() {
+        const supported = ("serial" in navigator) && window.location.protocol !== "file:";
+        flashGuard.classList.toggle("hidden", supported);
+        flashStartBtn.disabled = !supported || isFlashing;
+        return supported;
+      }
+
+      function setPhase(label, state = "") {
+        flashPhase.textContent = label;
+        flashFill.classList.remove("done", "err");
+        if (state === "done") flashFill.classList.add("done");
+        if (state === "err") flashFill.classList.add("err");
+      }
+
+      function setProgress(pct) {
+        const clamped = Math.max(0, Math.min(100, Math.round(pct)));
+        flashFill.style.width = `${clamped}%`;
+        flashPct.textContent = `${clamped}%`;
+        flashProgBar.setAttribute("aria-valuenow", String(clamped));
+      }
+
+      function setPartState(activeIdx, allDone = false) {
+        partPills.forEach((pill, i) => {
+          pill.classList.remove("active", "done");
+          if (allDone || i < activeIdx) {
+            pill.classList.add("done");
+          } else if (i === activeIdx) {
+            pill.classList.add("active");
+          }
+        });
+      }
+
+      function appendLog(text) {
+        flashLog.textContent += text;
+        flashLog.scrollTop = flashLog.scrollHeight;
+      }
+
+      function logLine(text) {
+        appendLog(`${text}\n`);
+      }
+
+      function setUiFlashing(busy) {
+        isFlashing = busy;
+        flashBack.disabled = busy;
+        flashStartBtn.disabled = busy || !("serial" in navigator) || window.location.protocol === "file:";
+        flashRetryBtn.disabled = busy;
+        presetOptBtns.forEach((b) => { b.disabled = busy; });
+        afterOptBtns.forEach((b) => { b.disabled = busy; });
+        debugOptBtns.forEach((b) => { b.disabled = busy; });
+        eraseOptBtns.forEach((b) => { b.disabled = busy; });
+        baudOptBtns.forEach((b) => { b.disabled = busy; });
+      }
+
+      function resetFlashView() {
+        flashRun.classList.add("hidden");
+        flashDoneBox.classList.add("hidden");
+        flashErrBox.classList.add("hidden");
+        flashCfg.classList.remove("hidden");
+        readyPortWarn = false;
+        flashReadyStatus.textContent = "";
+        flashReadyStatus.classList.remove("warn");
+        flashLog.textContent = "";
+        setPhase(t("phase_ready"));
+        setProgress(0);
+        setPartState(-1, false);
+        updateFlashSupport();
+      }
+
+      function openFlashModal() {
+        if (!isFlashing) resetFlashView();
+        flashModal.classList.remove("hidden");
+      }
+
+      function closeFlashModal() {
+        if (isFlashing) return;
+        flashModal.classList.add("hidden");
+      }
+
+      document.querySelectorAll("[data-open-flash]").forEach((btn) => {
+        btn.addEventListener("click", openFlashModal);
+      });
+      flashBack.addEventListener("click", closeFlashModal);
+      flashDoneBtn.addEventListener("click", closeFlashModal);
+      flashModal.addEventListener("click", (e) => {
+        if (e.target === flashModal) closeFlashModal();
+      });
+
+      presetOptBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          presetMode = btn.dataset.preset;
+          presetOptBtns.forEach((b) => b.classList.toggle("active", b === btn));
+          updateFlashNotes();
+        });
+      });
+
+      eraseOptBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          eraseMode = btn.dataset.erase;
+          eraseOptBtns.forEach((b) => b.classList.toggle("active", b === btn));
+          updateFlashNotes();
+        });
+      });
+
+      baudOptBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedBaud = Number(btn.dataset.baud) || 460800;
+          baudOptBtns.forEach((b) => b.classList.toggle("active", b === btn));
+        });
+      });
+
+      afterOptBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          afterReset = btn.dataset.after === "no_reset" ? "no_reset" : "hard_reset";
+          afterOptBtns.forEach((b) => b.classList.toggle("active", b === btn));
+        });
+      });
+
+      debugOptBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          debugLogging = btn.dataset.debug === "on";
+          debugOptBtns.forEach((b) => b.classList.toggle("active", b === btn));
+        });
+      });
+
+      // 7. Apply i18n across DOM + interactive widgets
+      const langBtns = Array.from(document.querySelectorAll("#lang-switch .lang-btn"));
+      const quickLangBtn = document.getElementById("quick-lang");
+      const quickLangVal = document.getElementById("quick-lang-val");
+
+      function applyLang(lang, persist = false) {
+        currentLang = lang === "pt-BR" ? "pt-BR" : "en";
+        document.documentElement.lang = currentLang;
+        document.title = t("page_title");
+
+        if (persist) {
+          try {
+            window.localStorage.setItem(LANG_STORAGE_KEY, currentLang);
+          } catch (_) {}
+        }
+
+        langBtns.forEach((b) => {
+          const on = b.dataset.lang === currentLang;
+          b.classList.toggle("active", on);
+          b.setAttribute("aria-pressed", String(on));
+        });
+        quickLangVal.textContent = currentLang === "pt-BR" ? "PT-BR" : "EN";
+
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          el.textContent = t(el.dataset.i18n);
+        });
+        document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+          el.innerHTML = t(el.dataset.i18nHtml);
+        });
+        document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+          el.setAttribute("aria-label", t(el.dataset.i18nAria));
+        });
+        document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+          el.setAttribute("title", t(el.dataset.i18nTitle));
+        });
+
+        updateManifestUi();
+        selectHomeTile(activeHome, false);
+        renderCatalog(currentFilter);
+        if (openCardBase) openCartModal(openCardBase);
+        updateFlashNotes();
+        if (!isFlashing && flashRun.classList.contains("hidden")) {
+          setPhase(t("phase_ready"));
+        }
+      }
+
+      langBtns.forEach((btn) => {
+        btn.addEventListener("click", () => applyLang(btn.dataset.lang, true));
+      });
+      quickLangBtn.addEventListener("click", () => {
+        applyLang(currentLang === "pt-BR" ? "en" : "pt-BR", true);
+      });
+
+      applyLang(currentLang, false);
+
+      async function runFlash() {
+        if (isFlashing || !updateFlashSupport()) return;
+        const opts = effectiveFlashOpts();
+        readyPortWarn = false;
+        flashReadyStatus.textContent = "";
+        flashReadyStatus.classList.remove("warn");
+
+        let port;
+        try {
+          port = await navigator.serial.requestPort();
+        } catch (err) {
+          if (err && err.name === "NotFoundError") {
+            if (!flashRun.classList.contains("hidden")) {
+              flashErrText.textContent = t("no_port_err");
+            } else {
+              readyPortWarn = true;
+              flashReadyStatus.textContent = t("no_port_short");
+              flashReadyStatus.classList.add("warn");
+            }
+            return;
+          }
+          flashCfg.classList.add("hidden");
+          flashRun.classList.remove("hidden");
+          flashErrBox.classList.remove("hidden");
+          flashErrText.textContent = err && err.message ? err.message : String(err);
+          setPhase(t("phase_failed"), "err");
+          return;
+        }
+
+        let transport = null;
+        setUiFlashing(true);
+        flashCfg.classList.add("hidden");
+        flashRun.classList.remove("hidden");
+        flashDoneBox.classList.add("hidden");
+        flashErrBox.classList.add("hidden");
+        flashLog.textContent = "";
+        setProgress(0);
+        setPartState(-1, false);
+        setPhase(t("phase_loading"));
+
+        try {
+          const [{ ESPLoader, Transport }, man] = await Promise.all([
+            loadEsptool(),
+            loadedManifest ? Promise.resolve(loadedManifest) : ensureManifest(),
+          ]);
+
+          const parts = Array.isArray(man.builds) && man.builds[0] && Array.isArray(man.builds[0].parts)
+            ? man.builds[0].parts
+            : [];
+          if (!parts.length) throw new Error(t("no_parts_err"));
+
+          setPhase(t("phase_connecting_esp"));
+          const eraseText = eraseMode === "all" ? t("fm_erase_all") : t("fm_erase_keep");
+          logLine(t("log_header", { preset: opts.label, baud: opts.baudrate, erase: eraseText }));
+
+          transport = new Transport(port, false);
+          const esploader = new ESPLoader({
+            transport,
+            baudrate: opts.baudrate,
+            debugLogging: opts.debugLogging,
+            terminal: {
+              clean() {},
+              writeLine(data) {
+                if (typeof data === "string" && data.includes("Erasing flash")) {
+                  setPhase(t("phase_erasing"));
+                }
+                logLine(data);
+              },
+              write(data) {
+                appendLog(data);
+              },
+            },
+          });
+
+          const chipDesc = await esploader.main("default_reset");
+          const revMatch = /revision\s+v?(\d+)\./i.exec(chipDesc || "");
+          if (revMatch && Number(revMatch[1]) < 3) {
+            throw new Error(t("rev_err", { chip: chipDesc }));
+          }
+
+          setPhase(t("phase_downloading", { n: parts.length }));
+          logLine(t("log_detected", { chip: chipDesc }));
+
+          const rawLengths = [];
+          const fileArray = [];
+          for (let i = 0; i < parts.length; i++) {
+            const p = parts[i];
+            const res = await fetch(`./${p.path}`, { cache: "no-store" });
+            if (!res.ok) throw new Error(t("fetch_err", { path: p.path, status: res.status }));
+            const bytes = new Uint8Array(await res.arrayBuffer());
+            rawLengths.push(bytes.length);
+            fileArray.push({ data: esploader.ui8ToBstr(bytes), address: p.offset });
+            logLine(t("log_loaded", { path: p.path, bytes: bytes.length, addr: p.offset.toString(16) }));
+          }
+
+          const totalWeight = rawLengths.reduce((acc, n) => acc + n, 0) || 1;
+          const prefixWeight = [];
+          let acc = 0;
+          for (let i = 0; i < rawLengths.length; i++) {
+            prefixWeight.push(acc);
+            acc += rawLengths[i];
+          }
+
+          await esploader.writeFlash({
+            fileArray,
+            flashSize: "keep",
+            flashMode: "keep",
+            flashFreq: "keep",
+            eraseAll: eraseMode === "all",
+            compress: true,
+            reportProgress(fileIndex, written, total) {
+              setPartState(fileIndex, false);
+              if (eraseMode === "all" && fileIndex === 0 && written === 0) {
+                setPhase(t("phase_writing"));
+              } else {
+                setPhase(t("phase_writing_part", { i: fileIndex + 1, n: parts.length }));
+              }
+              const partFrac = total > 0 ? written / total : 0;
+              const overall = ((prefixWeight[fileIndex] || 0) + (rawLengths[fileIndex] || 0) * partFrac) / totalWeight;
+              setProgress(overall * 100);
+            },
+          });
+
+          setPartState(parts.length, true);
+          setProgress(100);
+          if (opts.afterReset === "hard_reset") {
+            setPhase(t("phase_resetting"));
+            await esploader.after("hard_reset");
+          } else {
+            logLine(t("log_skip_reset"));
+          }
+
+          setPhase(t("phase_done"), "done");
+          flashDoneBox.classList.remove("hidden");
+        } catch (err) {
+          const msg = err && err.message ? err.message : String(err);
+          logLine(t("log_err_prefix", { msg }));
+          flashErrText.textContent = msg;
+          setPhase(t("phase_failed"), "err");
+          flashErrBox.classList.remove("hidden");
+        } finally {
+          if (transport) {
+            try {
+              await transport.disconnect();
+            } catch (_) {}
+          }
+          setUiFlashing(false);
+        }
+      }
+
+      flashStartBtn.addEventListener("click", runFlash);
+      flashRetryBtn.addEventListener("click", runFlash);
+    })();
+  </script>
+</body>
+</html>

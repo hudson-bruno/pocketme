@@ -1,9 +1,10 @@
 # Put PocketMe on your own CYD
 
 This page is for people who have a "Cheap Yellow Display" board and want
-to play PocketMe on it without building anything. You download one
-ready-made file and write it to the board from a web browser. No
-programming and no developer tools are needed.
+to play PocketMe on it without building anything. You can flash the
+console in one click directly from Chrome or Edge, or flash ready-made
+files from the command line. No programming and no developer tools are
+needed.
 
 Three words used below: the **firmware** is the program the board runs;
 writing it to the board is called **flashing**; the **port** is the
@@ -12,16 +13,22 @@ name the computer gives the plugged-in board, such as `COM3` on Windows.
 [What you get](#what-you-get) ·
 [What you need](#what-you-need) ·
 [Before you start](#before-you-start) ·
+[The 1-click way](#the-1-click-way-in-the-browser) ·
+[The manual browser way](#the-manual-browser-way-esptool-js) ·
 [Check the download](#check-the-download-optional) ·
-[The easy way](#the-easy-way-in-the-browser) ·
 [The first start](#the-first-start) ·
 [If it does not work](#if-it-does-not-work) ·
 [The command-line way](#the-command-line-way)
 
-> **Not tried on a board yet (2026-11-23).** The ready-made files were
-> checked on a PC, byte by byte, but nobody has written them to a board
-> with the steps below yet. The firmware inside them is built with the
-> same features as the one on the project's own board (the list is in
+> **Tested on the project's CYD board (2026-11-24).** The 1-click
+> browser installer (`index.html` + `manifest.json`) and three-part
+> firmware files (`0x1000`, `0x8000`, `0x10000`) were used to flash the
+> project's `ESP32-2432S028` (2 USB, rev v3.1, ST7789) in Chrome/Edge
+> (holding **BOOT** while clicking **CONNECT & FLASH** on Windows CH340).
+> The manual hosted `esptool-js` page, the single merged `.bin` at `0x0`,
+> the command-line snippets, Windows/macOS checksum commands, and other
+> CYD variants remain untested. The firmware inside the release bundle
+> includes the `pair` feature (see
 > [tools/release/README.md](../tools/release/README.md)).
 
 ## What you get
@@ -29,13 +36,13 @@ name the computer gives the plugged-in board, such as `COM3` on Windows.
 - **The console** with its fourteen programs built in: eleven games, two
   unfinished prototypes (DRIVE3D and PROTO3D) and BENCH, a speed test.
   No microSD card is needed.
-- **Touch and the BOOT button** as controls. The board has only two
-  buttons, BOOT and RST, and only BOOT can be read by the console.
-- **No gamepad.** The console can use a Bluetooth gamepad, but only one
-  that was paired with the board before. Pairing today needs a separate
-  test firmware and the developer tools, so on this easy way you play
-  with touch and BOOT only. **Without a gamepad, only some games can be
-  played.**
+- **Touch and the BOOT button** as built-in controls. The board has only
+  two buttons, BOOT and RST, and only BOOT can be read by the console.
+- **On-console Bluetooth gamepad pairing.** The firmware includes
+  classic Bluetooth gamepad support and a **GAMEPADS** tile on the Home
+  screen to pair or forget a Player 1 controller directly on the board.
+  **Without a paired gamepad, only some games can be played** (ROOFTOP,
+  DRIVE3D and PROTO3D need one).
 - **A prototype.** It runs and is playable on the board it was built
   for, but it is not a product. What is missing is listed in
   [limitations.md](limitations.md).
@@ -78,8 +85,8 @@ the board, and another firmware can be written to it later (see
 
 **An ESP32 of revision 3 or later.** The firmware refuses to run on an
 older ESP32 (its file says so, and the chip library it is built on
-stops at start-up). The flashing page shows the revision when it
-connects (step 5), so you find out before anything is written.
+stops at start-up). In `esptool-js`, the page prints the chip revision
+when it connects so you find out before anything is written.
 
 **A USB data cable** that fits the board. Many cheap cables only charge
 and carry no data; with such a cable the computer does not see the
@@ -108,87 +115,118 @@ is called CH341SER; not checked by the project).
 > program cannot be brought back unless its maker offers it for
 > download.
 
-> **Do not press "Erase Flash", and leave "Erase all" unticked.** They
-> wipe the whole chip and are not needed. On a new board that loses
-> nothing. A board with a paired gamepad was set up with the developer
-> tools, and the one file of the easy way would also forget its pairing
-> (only the developer tools can make it again). On such a board, use
-> the three parts of [the command-line way](#the-command-line-way).
+> **Keeping saved gamepad pairings and settings.** The **1-click web
+> installer** writes the three firmware parts (`0x1000`, `0x8000`,
+> `0x10000`) and leaves `0x9000..0x10000` (saved Bluetooth gamepad
+> pairing) and `0x3FE000..0x400000` (brightness and boot animation)
+> untouched as long as **KEEP DATA** (**MANTER DADOS** in Portuguese)
+> stays selected. Only select **ERASE ALL** / **APAGAR TUDO** (or write
+> the single merged `.bin` at `0x0`) if you want a clean wipe that forgets
+> any saved pairing. You can always re-pair a gamepad on the console
+> afterwards.
 
-**Download the file.** On the Releases page of this repository, open
-the newest release. Under **Assets** (click "Assets" if the list is
-closed), download the one file named like `pocketme-cyd-1.0.bin`, where
-`1.0` stands for the release's number: the one *without* `bootloader`,
-`partitions` or `app` in its name, about 2 MB. Do not download "Source
-code (zip)" or "Source code (tar.gz)": those are the program's text,
-not something you can write to the board.
+**If you use the 1-click web installer below**, you do not need to
+download any `.bin` files manually.
 
-## Check the download (optional)
+**If you prefer the manual browser tool (`esptool-js`) or the command
+line**, open the newest release on the Releases page of this
+repository, click **Assets**, and download either:
 
-`SHA256SUMS.txt` on the same release page gives each file's SHA-256, a
-long number that changes if a single byte of the file changes. To check
-your download, open a terminal in your Downloads folder, type the line
-for your system with the real file name, and compare the number it
-prints with the one for your file in `SHA256SUMS.txt`:
+- the three parts (`*-bootloader-0x1000.bin`, `*-partitions-0x8000.bin`,
+  `*-app-0x10000.bin`) to keep a saved gamepad pairing, or
+- the one merged file named like `pocketme-cyd-1.0.bin` (without
+  `bootloader`, `partitions` or `app` in its name, about 2 MB) for a
+  single-file flash at `0x0`.
 
-- **Windows**: in File Explorer, open Downloads, right-click an empty
-  spot and choose "Open in Terminal" (on Windows 10: hold Shift while
-  you right-click and choose "Open PowerShell window here"). Then type
-  `(Get-FileHash .\pocketme-cyd-1.0.bin).Hash`
-- **macOS**: `shasum -a 256 pocketme-cyd-1.0.bin`
-- **Linux**: `sha256sum pocketme-cyd-1.0.bin`
+Do not download "Source code (zip)" or "Source code (tar.gz)": those
+are the program's text, not something you can write to the board.
 
-Capital and small letters count as the same (Windows prints capitals,
-the list has small letters). If the numbers differ, download the file
-again. The Windows and macOS lines were not tried for this page.
+## The 1-click way: in the browser
 
-## The easy way: in the browser
+This way uses PocketMe's built-in **1-click installer** powered by
+`esptool-js` over Web Serial directly in desktop Chrome or Edge (the
+page automatically opens in Brazilian Portuguese or English matching
+your browser language, and can be switched with `EN | PT-BR` in the top
+bar). Once a public release is published with GitHub Pages enabled, the
+hosted installer lives at <https://hudson-bruno.github.io/pocketme/> (you
+can also run a local copy built with `make_release.py --web-installer`
+over `http://localhost:8765`, see
+[tools/release/README.md](../tools/release/README.md)).
 
-This way uses **esptool-js**, the browser flashing page of Espressif,
-the maker of the ESP32 chip. It writes the file you give it at the
-address you give it.
-
-1. **Have the file ready**: `pocketme-cyd-1.0.bin` (with the release's
-   number) in your Downloads folder, see [Before you start](#before-you-start).
-2. **Plug the board into the computer** with the USB data cable.
+1. **Plug the board into the computer** with the USB data cable.
    *You see:* the board gets power; the screen may show what it ran
    before.
+2. **Open the web installer page** in Google Chrome or Microsoft Edge
+   (over `https://` or `http://localhost`). *You see:* the live
+   Home screen preview, the firmware version badge, and the
+   **FLASH POCKETME TO CYD** button.
+3. **Click FLASH POCKETME TO CYD** to open the installer modal.
+   Leave **BOARD PRESET** on **ESP32-2432S028 (2 USB)** (or switch to
+   **CUSTOM** to adjust baud rate, reset mode or debug logging) and
+   leave **ERASE FLASH** on **KEEP DATA** (**MANTER DADOS**) to keep
+   any saved gamepad pairing and console settings, or choose
+   **ERASE ALL** for a full wipe.
+4. **Hold BOOT (recommended on CH340 CYDs) and click CONNECT & FLASH.**
+   If your board does not enter download mode automatically over DTR/RTS,
+   hold the physical **BOOT** button while clicking **CONNECT & FLASH**
+   and picking the port, then release **BOOT** once writing begins.
+5. **Choose the board's port** in the browser picker and confirm. It is
+   the one that appears when you plug the board in; on Windows its name
+   often contains "USB" or "CH340", with a COM number. (If the list is
+   empty, see [No port in the list](#no-port-in-the-list).)
+   *You see:* chip detection (requiring ESP32 rev v3.0+), a live
+   progress bar, three part pills (`BOOTLOADER`, `PARTITIONS`, `APP`),
+   and the console log. Do not unplug the board.
+6. **Watch the board.** When installation finishes, the board hard-resets
+   automatically (press **RST** if the screen does not restart on its
+   own). *You see:* the PocketMe boot animation, then the home screen.
+
+## The manual browser way: esptool-js
+
+If the 1-click page is not available or you want to flash a downloaded
+file manually, you can use **esptool-js**, Espressif's browser flashing
+page. Writing the single merged file at `0x0` overwrites `0x9000..0x10000`
+and forgets any saved gamepad pairing (you can pair again on the
+console afterwards).
+
+1. **Have the file ready**: `pocketme-cyd-1.0.bin` (with the release's
+   number, *without* `bootloader`, `partitions` or `app` in its name)
+   in your Downloads folder.
+2. **Plug the board into the computer** with the USB data cable.
 3. **Open the flashing page** <https://espressif.github.io/esptool-js/>
    in Chrome or Edge. *You see:* a page titled "ESP Tool" with a
    **Connect** button.
-4. **Click Connect.** *You see:* the browser opens a small window with
-   a list of ports.
-5. **Choose the board's port** and confirm it in the small window. It
-   is the one that appears when you plug the board in: if you are not
-   sure, close the small window, unplug the board, click Connect, and
-   see which name is missing. On Windows its name often contains "USB"
-   or "CH340", with a COM number. (If the list is empty, see
-   [No port in the list](#no-port-in-the-list).) *You see:* "Connected
-   to device:" followed by a name that starts with ESP32 and the
-   chip's revision in brackets, for example "(revision 3)", and a table
-   with the columns "Flash Address" and "File". **If the revision is
-   below 3, stop here**: this firmware cannot run on that board.
-6. **Set the address to 0x0.** The table's one row says `0x1000` in its
-   Flash Address box: replace that with `0x0`. This is the step that
-   matters most; with `0x1000` the board will not start.
-7. **Choose the file.** In the same row, click the file button and pick
-   `pocketme-cyd-1.0.bin`. *You see:* the file's name in the row.
-8. **Leave everything else as the page shows it.** Flash Mode, Flash
-   Frequency and Flash Size do not change a file written at 0x0; "Erase
-   all" stays unticked, and other switches on the page stay as they
-   are.
-9. **Click Program.** *You see:* a progress bar in the row while the
-   page writes (how long it takes was not timed). Do not unplug the
-   board. It has finished when the progress bar is gone. If the log
-   below the table shows a line starting with "Error", see
-   [If the write stopped](#if-the-write-stopped-or-showed-an-error).
-10. **Watch the board.** The page may restart the board by itself; if
-    the screen does not change within a few seconds, press **RST**.
-    *You see:* the PocketMe boot animation, then the home screen.
+4. **Click Connect** and pick the board's port. *You see:* "Connected
+   to device:" followed by ESP32 and its chip revision in brackets (for
+   example `(revision 3)`), and a table with "Flash Address" and "File".
+   **If the revision is below 3, stop here**: this firmware cannot run
+   on that board.
+5. **Set the address to `0x0`.** Replace the default `0x1000` in the
+   Flash Address box with `0x0`. This step matters most; with `0x1000`
+   the board will not start.
+6. **Choose `pocketme-cyd-1.0.bin`** in the same row, leave Flash Mode,
+   Flash Frequency, Flash Size and "Erase all" as they are, and click
+   **Program**. Do not unplug the board until the progress bar is gone.
+7. **Watch the board.** If the screen does not change within a few
+   seconds after completion, press **RST**.
 
-What the page shows in steps 5, 9 and 10, and that the Flash settings
-of step 8 only change a file written at 0x1000, was read from the
-page's source in its repository, not seen with a board.
+What `esptool-js` shows in steps 4, 6 and 7, and that Flash Mode /
+Frequency / Size only rewrite headers for a file at `0x1000`, was read
+from its repository source, not tried with a board.
+
+## Check the download (optional)
+
+If you downloaded release files manually, `SHA256SUMS.txt` on the same
+release page gives each file's SHA-256 checksum. Open a terminal in your
+Downloads folder and check your file against `SHA256SUMS.txt`:
+
+- **Windows**: `(Get-FileHash .\pocketme-cyd-1.0.bin).Hash`
+- **macOS**: `shasum -a 256 pocketme-cyd-1.0.bin`
+- **Linux**: `sha256sum pocketme-cyd-1.0.bin`
+
+Capital and small letters count as the same. If the numbers differ,
+download the file again. The Windows and macOS lines were not tried for
+this page.
 
 ## The first start
 
@@ -196,29 +234,31 @@ A second or so after RST the screen shows the boot animation: points
 gather into the name POCKETME, which then shrinks into the title of the
 home screen. It takes about 2.7 s; a tap or BOOT skips it.
 
-The **home screen** shows the fourteen programs as a row of small tiles.
-The chosen tile has a gold frame, and its name shows below it. The bar
-at the bottom shows the time since the start, a gamepad picture (green
-only when a pad is connected), the battery with a "?" (not measured)
-and a gear at the right end.
+The **home screen** shows **GAMEPADS** as the first tile, the fourteen
+programs next, and **SETTINGS** as the last tile. The chosen tile has a
+gold frame, and its name shows below it. The bar at the bottom shows the
+time since the start, a gamepad picture (green when a pad is connected),
+the battery with a "?" (not measured) and a gear at the right end.
 
 | To | Do this |
 |---|---|
 | choose a tile | tap it, or drag the row sideways to scroll |
-| start the chosen game | tap the chosen tile again, or press BOOT |
+| start a game or open GAMEPADS / SETTINGS | tap the chosen tile again, or press BOOT |
+| pair a Bluetooth gamepad | open **GAMEPADS**, put your classic Bluetooth pad into pairing mode, tap **+ PAIR A NEW PAD**, then pick it when found |
+| forget a saved gamepad | open **GAMEPADS**, tap **FORGET >** on the saved pad and confirm **FORGET** |
 | pause a game | press BOOT: the pause menu opens with RESUME chosen |
 | go on playing | press BOOT again, or tap RESUME |
 | go back home | in the pause menu, tap BACK TO HOME |
-| change the brightness | tap the gear on the home screen, then tap one of the five bars on the BRIGHTNESS line; tap CLOSE |
-| shorten the boot animation | in the same menu, tap BOOT ANIM (FULL, SHORT or OFF; counts from the next start) |
+| open the quick menu | tap the gear on the home screen (has BRIGHTNESS, GAMEPADS, SETTINGS, CLOSE) |
+| change brightness or boot animation | open **SETTINGS** (or change BRIGHTNESS in the quick menu), adjust BRIGHTNESS or BOOT ANIMATION (FULL, SHORT, OFF), then tap BACK |
 
 A tap counts when the finger lifts, if it moved less than a few pixels
 and was held under half a second. Inside a game, the console's pause
 menu opens only with BOOT (some games also have a pause box of their
-own on the screen). The brightness and the BOOT ANIM choice are kept
-when the board is switched off. On a board that ran another firmware
-before, the console starts with its defaults (full brightness, FULL
-animation).
+own on the screen). Saved gamepad pairings (`0x9000..0xB000`) and the
+brightness and BOOT ANIMATION choices (`0x3FE000..0x400000`) are kept
+when the board is switched off. On a clean board, the console starts
+with no saved pad, full brightness, and FULL animation.
 
 ## If it does not work
 
@@ -245,33 +285,34 @@ page usually puts it there by itself. If not:
 
 1. Hold the **BOOT** button down.
 2. While holding it, press and release **RST**.
-3. Let go of BOOT, then click Connect again.
+3. Let go of BOOT, then click **CONNECT & FLASH** (or **Connect** in manual `esptool-js`) again.
 
-If that fails too, keep BOOT held down while you click Connect and
-choose the port, and let go once the page says "Connected to device".
-A slower speed is also worth a try: reload the page, choose 115200 in
-the Baudrate list next to Connect, then click Connect (the list is
-hidden while the page is connected).
+If that fails too, keep BOOT held down while starting the connection
+and choosing the port, and let go once writing begins (or once
+`esptool-js` says "Connected to device"). In `esptool-js`, a slower
+speed is also worth a try: reload the page, choose 115200 in the
+Baudrate list next to Connect, then click Connect (the list is hidden
+while the page is connected).
 
 ### If the write stopped or showed an error
 
 The board is not broken: the part of the chip that accepts a new
 firmware cannot be overwritten (a general fact about the ESP32, not
-tried here). Reload the page and do steps 3 to 10 again. If it does
-not connect, use the BOOT and RST steps above.
+tried here). Reload the page and start the browser flash steps again. If
+it does not connect, use the BOOT and RST steps above.
 
 ### The screen stays dark, or shows a white, blank, mirrored or wrong-coloured picture
 
 Check these first, in this order:
 
-1. **The address and the file.** Did the Flash Address box say `0x0`,
-   and was the file the one *without* `bootloader`, `partitions` or
-   `app` in its name? If not, do steps 3 to 10 again with the right
+1. **In `esptool-js`, the address and the file.** Did the Flash Address
+   box say `0x0`, and was the file the one *without* `bootloader`,
+   `partitions` or `app` in its name? If not, flash again with the right
    ones. A wrong address does no harm and is put right by writing
    again.
-2. **The chip's revision.** If the page showed a revision below 3 in
-   step 5, this firmware cannot run on that board, and the screen stays
-   dark.
+2. **The chip's revision.** An ESP32 older than revision v3.0 stops at
+   start-up and leaves the screen dark (`esptool-js` prints the chip
+   revision on connect).
 3. **Another variant.** If both were right, the write most likely
    worked and the board is another variant of the CYD (for example
    with the ILI9341 display chip). This firmware drives only the ST7789

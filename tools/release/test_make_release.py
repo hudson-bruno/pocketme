@@ -223,14 +223,64 @@ class MergedTests(unittest.TestCase):
 
 class ManifestTests(unittest.TestCase):
     def test_shape(self):
-        man = m.manifest("PocketMe", "1.0", "pocketme-cyd-1.0.bin")
+        parts = [
+            (0x1000, "pocketme-cyd-1.0-bootloader-0x1000.bin"),
+            (0x8000, "pocketme-cyd-1.0-partitions-0x8000.bin"),
+            (0x10000, "pocketme-cyd-1.0-app-0x10000.bin"),
+        ]
+        man = m.manifest("PocketMe", "1.0", parts)
         self.assertEqual(man["name"], "PocketMe")
         # True: the person is asked; false would erase the whole chip.
         self.assertIs(man["new_install_prompt_erase"], True)
+        self.assertEqual(man["new_install_improv_wait_time"], 0)
         self.assertEqual(len(man["builds"]), 1)
         build = man["builds"][0]
         self.assertEqual(build["chipFamily"], "ESP32")
-        self.assertEqual(build["parts"], [{"path": "pocketme-cyd-1.0.bin", "offset": 0}])
+        self.assertEqual(build["parts"], [
+            {"path": "pocketme-cyd-1.0-bootloader-0x1000.bin", "offset": 4096},
+            {"path": "pocketme-cyd-1.0-partitions-0x8000.bin", "offset": 32768},
+            {"path": "pocketme-cyd-1.0-app-0x10000.bin", "offset": 65536},
+        ])
+
+
+class WebInstallerAssetsTests(unittest.TestCase):
+    def test_web_index_has_flash_installer(self):
+        self.assertTrue(os.path.isfile(m.WEB_INDEX), m.WEB_INDEX)
+        with open(m.WEB_INDEX, encoding="utf-8") as f:
+            html = f.read()
+        self.assertIn("esptool-js@0.5.7", html)
+        self.assertIn("manifest.json", html)
+        self.assertIn('id="flash-modal"', html)
+        self.assertIn("navigator.serial", html)
+        self.assertIn('rel="icon"', html)
+        self.assertIn("ESP32-2432S028 (2 USB)", html)
+        self.assertIn('id="flash-custom-opts"', html)
+        self.assertIn('id="lang-switch"', html)
+        self.assertIn('"pt-BR"', html)
+        self.assertIn("navigator.languages", html)
+        self.assertIn("pocketme_lang", html)
+        self.assertNotIn("&blacktriangleright;", html)
+
+    def test_notices_file_exists_and_non_empty(self):
+        self.assertTrue(os.path.isfile(m.NOTICES_FILE), m.NOTICES_FILE)
+        with open(m.NOTICES_FILE, encoding="utf-8") as f:
+            text = f.read().strip()
+        self.assertTrue(text)
+        self.assertIn("MIT", text)
+        self.assertIn("Apache-2.0", text)
+
+    def test_web_media_list_exists_and_matches_html(self):
+        self.assertTrue(os.path.isfile(m.WEB_MEDIA_LIST), m.WEB_MEDIA_LIST)
+        media = m.load_web_media()
+        self.assertGreater(len(media), 0)
+        with open(m.WEB_INDEX, encoding="utf-8") as f:
+            html = f.read()
+        for fname in media:
+            self.assertTrue(
+                os.path.isfile(os.path.join(m.DOCS_MEDIA_DIR, fname)),
+                "missing docs/media asset: %s" % fname,
+            )
+            self.assertIn("media/%s" % fname, html)
 
 
 class BuildTextTests(unittest.TestCase):

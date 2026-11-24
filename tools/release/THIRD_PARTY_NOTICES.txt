@@ -1,0 +1,40 @@
+PocketMe Firmware — License and Third-Party Notices
+======================================================
+
+PocketMe's own source code and documentation are licensed under the MIT License
+(see LICENSE in the repository root).
+
+The ready-to-flash PocketMe CYD firmware binaries include compiled code from
+the following open-source crates, bootloader, and binary libraries:
+
+1. ESP-IDF Second-Stage Bootloader (bundled by espflash)
+   - License: Apache-2.0
+   - Component: Second-stage bootloader image written at flash offset 0x1000.
+
+2. Espressif Binary Radio / Bluetooth Controller Libraries (via esp-radio)
+   - License: Apache-2.0
+   - Copyright (c) Espressif Systems (Shanghai) CO., LTD.
+   - Component: Precompiled classic Bluetooth / BLE controller libraries linked
+     into the ESP32 firmware image through esp-radio.
+
+3. esp-rs Crates (boards/cyd dependencies)
+   - esp-hal, esp-rtos, esp-radio (with dual-mode classic Bluetooth patches),
+     esp-bootloader-esp-idf, esp-storage, esp-alloc, esp-backtrace, esp-println,
+     xtensa-lx
+   - License: MIT OR Apache-2.0
+   - Copyright (c) esp-rs contributors
+
+4. Embassy Async Executor and Time Crates
+   - embassy-executor, embassy-time, embassy-futures
+   - License: MIT OR Apache-2.0
+   - Copyright (c) Embassy project contributors
+
+5. Supporting Embedded Rust Crates
+   - critical-section, static_cell, log (and embedded-hal, embedded-hal-bus,
+     embedded-sdmmc when built with sd-card)
+   - License: MIT OR Apache-2.0
+
+Source repositories and full copyright notices for these components can be
+found in Cargo.lock, experiments/bt-classic-probe/vendor/esp-radio/LICENSE-MIT,
+experiments/bt-classic-probe/vendor/esp-radio/LICENSE-APACHE, and
+docs/credits.md in https://github.com/hudson-bruno/pocketme.

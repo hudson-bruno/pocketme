@@ -1,0 +1,103 @@
+name: Deploy Web Installer
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (defaults to latest release)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          mkdir -p _site
+          args=(
+            --repo "${GITHUB_REPOSITORY}"
+            --dir _site
+            -p "manifest.json"
+            -p "*-bootloader-0x1000.bin"
+            -p "*-partitions-0x8000.bin"
+            -p "*-app-0x10000.bin"
+            -p "BUILD.txt"
+            -p "SHA256SUMS.txt"
+            -p "THIRD_PARTY_NOTICES.txt"
+          )
+          if [ -n "$TAG" ]; then
+            gh release download "$TAG" "${args[@]}"
+          else
+            gh release download "${args[@]}"
+          fi
+          cp tools/release/web/index.html _site/index.html
+          mkdir -p _site/media
+          while IFS= read -r media_file || [ -n "$media_file" ]; do
+            [ -n "$media_file" ] || continue
+            cp "docs/media/$media_file" "_site/media/$media_file"
+          done < tools/release/web/media.txt
+
+      - name: Verify web installer manifest and files
+        run: |
+          python3 - <<'EOF'
+          import json, os, sys
+
+          site = "_site"
+          with open(os.path.join(site, "manifest.json"), encoding="utf-8") as f:
+              man = json.load(f)
+          builds = man.get("builds", [])
+          assert builds, "manifest.json has no builds"
+          parts = builds[0].get("parts", [])
+          assert parts, "manifest.json has no parts"
+          for part in parts:
+              rel = part["path"]
+              full = os.path.join(site, rel)
+              if not os.path.isfile(full):
+                  sys.exit(f"missing part listed in manifest.json: {rel}")
+          for required in ("index.html", "BUILD.txt", "SHA256SUMS.txt", "THIRD_PARTY_NOTICES.txt"):
+              if not os.path.isfile(os.path.join(site, required)):
+                  sys.exit(f"missing required site file: {required}")
+          with open("tools/release/web/media.txt", encoding="utf-8") as f:
+              media = [line.strip() for line in f if line.strip()]
+          for fname in media:
+              if not os.path.isfile(os.path.join(site, "media", fname)):
+                  sys.exit(f"missing media file: media/{fname}")
+          print(f"Verified _site for PocketMe v{man.get('version', '?')} ({len(parts)} parts, {len(media)} media)")
+          EOF
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
